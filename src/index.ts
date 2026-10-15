@@ -9,6 +9,7 @@ export type * from "./auth/types.js";
 export { cookie } from "./auth/cookie.js";
 export { cookieBearer } from "./auth/cookie-bearer.js";
 export { localStorageBearer } from "./auth/localStorage-bearer.js";
+export { pageFormkey } from "./auth/page-formkey.js";
 export { pageSession } from "./auth/page-session.js";
 export type * from "./adapters/types.js";
 export * from "./capture.js";

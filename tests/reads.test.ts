@@ -5,7 +5,7 @@ import { ADAPTERS, type Read, cookie, createHttp, defineReads } from "../src/ind
 
 const ORIGIN = "https://chatgpt.com";
 const SOURCE = "https://example.test/docs#get";
-const page = { fetch: async () => new Response("{}"), storage: { getItem: () => null }, cookie: () => "" };
+const page = { fetch: async () => new Response("{}"), storage: { getItem: () => null }, cookie: () => "", scripts: () => [], call: () => undefined };
 const open = (reads: readonly Read[]) => () => createHttp({ origin: ORIGIN, reads, auth: cookie }, page);
 const get = (path: string, extra: Partial<Read> = {}): Read => ({ method: "GET", path, source: SOURCE, ...extra });
 const op = (queryName: string): Read => get("/graphql", { method: "POST", body: { type: "json", match: { queryName } } });
