@@ -22,7 +22,7 @@ export interface Adapter {
   /** The origin the adapter runs on, such as https://chatgpt.com. */
   origin: string;
   auth?: AuthKind;
-  /** True when the list is sorted by updatedAt, newest first: a capture can then stop at the first page with no change. */
+  /** True when the list is sorted by updatedAt, newest first: a capture that may stop early (CaptureOptions.earlyStop) stops at the first page with no change. */
   newestFirst: boolean;
   /** True when the user is signed in. A 401 or 403 means false. */
   detect(http: Http): Promise<boolean>;

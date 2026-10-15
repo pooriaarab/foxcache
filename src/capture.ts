@@ -46,6 +46,12 @@ export interface CaptureOptions {
   stamps: Record<string, string>;
   /** A checkpoint to resume from. */
   resume?: Checkpoint;
+  /**
+   * Allow the stop at the first page with no change (newest-first lists only).
+   * It is safe only when the last capture of this provider read everything:
+   * it ended done, with no error. A resumed run never stops early (C10).
+   */
+  earlyStop?: boolean;
   delayMs?: number;
   maxPages?: number;
   sleep?: (ms: number) => Promise<void>;
@@ -76,6 +82,7 @@ export async function runCapture(o: CaptureOptions): Promise<Checkpoint> {
   const maxPages = o.maxPages ?? MAX_PAGES;
   const stamps = { ...o.stamps };
   const resumable = o.resume && o.resume.status !== "done" && o.resume.status !== "running";
+  const earlyStop = o.earlyStop === true && o.adapter.newestFirst && !resumable;
   const cp: Checkpoint = resumable
     ? { ...structuredClone(o.resume!), status: "running", updatedAt: now(), error: undefined }
     : {
@@ -180,7 +187,7 @@ export async function runCapture(o: CaptureOptions): Promise<Checkpoint> {
           }
         }
       }
-      if (page.next === undefined || (o.adapter.newestFirst && !changed && page.items.length > 0)) break;
+      if (page.next === undefined || (earlyStop && !changed && page.items.length > 0)) break;
       if (seenCursors.has(page.next)) throw new FoxcacheError("pagination-loop", "The list gave a cursor it gave before.");
       seenCursors.add(page.next);
       cp.cursor = page.next;
