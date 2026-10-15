@@ -5,7 +5,7 @@
 // in docs/failure-modes.md are what it must get right.
 import type { Adapter, Stub } from "./adapters/types.js";
 import { FoxcacheError } from "./errors.js";
-import type { Http, Query } from "./http.js";
+import type { Body, Http, Query } from "./http.js";
 import { type Kind, type ProviderId, check, recordKey } from "./schema.js";
 
 export type CaptureStatus = "running" | "done" | "stopped" | "failed" | "interrupted";
@@ -111,22 +111,25 @@ export async function runCapture(o: CaptureOptions): Promise<Checkpoint> {
   };
 
   // The Http the adapter gets: in order, with the delay, and with the 429 backoff (C2, C3).
-  const polite: Http = {
-    async get(path: string, query?: Query) {
-      for (let tries = 1; ; tries++) {
+  async function politely(request: () => Promise<unknown>): Promise<unknown> {
+    for (let tries = 1; ; tries++) {
+      halt();
+      if (sent++ > 0 && tries === 1) await sleep(delayMs);
+      halt();
+      try {
+        return await request();
+      } catch (error) {
+        if (!(error instanceof FoxcacheError) || error.code !== "rate-limited" || tries >= MAX_TRIES) throw error;
+        if (error.retryAfter !== undefined && error.retryAfter > MAX_RETRY_AFTER_S) throw error;
+        await sleep(error.retryAfter !== undefined ? error.retryAfter * 1000 : Math.min(MAX_BACKOFF_MS, 1000 * 2 ** tries));
         halt();
-        if (sent++ > 0 && tries === 1) await sleep(delayMs);
-        halt();
-        try {
-          return await o.http.get(path, query);
-        } catch (error) {
-          if (!(error instanceof FoxcacheError) || error.code !== "rate-limited" || tries >= MAX_TRIES) throw error;
-          if (error.retryAfter !== undefined && error.retryAfter > MAX_RETRY_AFTER_S) throw error;
-          await sleep(error.retryAfter !== undefined ? error.retryAfter * 1000 : Math.min(MAX_BACKOFF_MS, 1000 * 2 ** tries));
-          halt();
-        }
       }
-    },
+    }
+  }
+  // A POST read goes the same way: it reads, so a retry is safe.
+  const polite: Http = {
+    get: (path: string, query?: Query) => politely(() => o.http.get(path, query)),
+    post: (path: string, body: Body, query?: Query) => politely(() => o.http.post(path, body, query)),
   };
 
   const noteError = (what: string, error: unknown) => {

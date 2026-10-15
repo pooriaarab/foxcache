@@ -136,6 +136,9 @@ describe("chatgpt projects, memories and preferences", () => {
 function sidebar(next: (n: number) => string | null) {
   const asked: unknown[] = [];
   const http: Http = {
+    post: async () => {
+      throw new Error("no POST read here");
+    },
     async get(path, query) {
       if (path !== "/backend-api/gizmos/snorlax/sidebar") throw new FoxcacheError("not-found", path);
       asked.push(query?.cursor);
