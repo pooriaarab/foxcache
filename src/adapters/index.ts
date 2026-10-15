@@ -1,10 +1,10 @@
-// The adapters foxcache has, in the order the pages show them. Gemini has
-// none: docs/providers/README.md says why.
+// The adapters foxcache has, in the order the pages show them.
 import type { ProviderId } from "../schema.js";
 import { chatgpt } from "./chatgpt.js";
 import { claude } from "./claude.js";
 import { deepseek } from "./deepseek.js";
 import { doubao } from "./doubao.js";
+import { gemini } from "./gemini.js";
 import { genspark } from "./genspark.js";
 import { githubCopilot } from "./github-copilot.js";
 import { grok } from "./grok.js";
@@ -39,6 +39,7 @@ export const ADAPTERS: readonly Adapter[] = Object.freeze([
   zai,
   huggingchat,
   genspark,
+  gemini,
 ]);
 
 /** The adapter for a provider id. Throws for a provider with no adapter. */
