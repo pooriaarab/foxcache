@@ -3,6 +3,7 @@
 | Provider | Origin | Adapter | Why |
 |---|---|---|---|
 | ChatGPT | https://chatgpt.com | yes | [chatgpt.md](chatgpt.md) |
+| ChatGPT Codex tasks | https://chatgpt.com | yes, in the ChatGPT adapter | [codex.md](codex.md) |
 | Claude | https://claude.ai | yes | [claude.md](claude.md) |
 | Le Chat (Mistral) | https://chat.mistral.ai | yes, conversations only | [mistral.md](mistral.md) |
 | Gemini | https://gemini.google.com | no: every read is a POST | [gemini.md](gemini.md) |
