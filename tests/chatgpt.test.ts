@@ -58,6 +58,10 @@ describe("chatgpt list", () => {
   it("throws provider-schema when the list shape changes", async () => {
     expect(await code(chatgpt.listConversations(open({ ...fixture("chatgpt"), [MAIN]: { conversations: [] } }).http))).toMatch(/^provider-schema: chatgpt: .*items/);
   });
+  it("throws provider-schema when total is missing, instead of ending after one page", async () => {
+    const page = fixture("chatgpt")[MAIN] as Record<string, unknown>;
+    expect(await code(chatgpt.listConversations(open({ ...fixture("chatgpt"), [MAIN]: { ...page, total: undefined } }).http))).toMatch(/^provider-schema: chatgpt: .*total/);
+  });
 });
 
 describe("P2 the visible thread", () => {
