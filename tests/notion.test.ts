@@ -78,6 +78,21 @@ describe("notion list", () => {
     const second = await notion.listConversations(open(routes).http, first.next);
     expect(second).toEqual({ items: [{ id: `${S2}:${T2}`, title: "chat 2", updatedAt: "2026-09-21T14:15:00.000Z" }], next: undefined });
   });
+  it("N40 resumes in the same workspace after the sidebar is reordered, and passes one that is gone", async () => {
+    type User = { recordMap: { user_root: Record<string, { value: { value: { space_view_pointers: unknown[] } } }> } };
+    const withSpaces = (ids: string[]) => {
+      const user = structuredClone(fixture("notion")[USER]) as User;
+      Object.values(user.recordMap.user_root)[0]!.value.value.space_view_pointers = ids.map((spaceId, i) => ({ id: `6a000000-0000-4000-8000-0000000000c${i}`, spaceId, table: "space_view" }));
+      return { ...fixture("notion"), [USER]: user, [listKey(S)]: page([T1], { hasMore: true, nextCursor: "s-2" }), [listKey(S, "s-2")]: page([T2], { hasMore: false }), [listKey(S2)]: page(["3d4e0000-0000-4000-8000-000000000009"], { hasMore: false }) };
+    };
+    const first = await notion.listConversations(open(withSpaces([S, S2])).http);
+    expect(first.items.map((s) => s.id)).toEqual([`${S}:${T1}`]);
+    const resumed = await notion.listConversations(open(withSpaces([S2, S])).http, first.next);
+    expect(resumed.items.map((s) => s.id)).toEqual([`${S}:${T2}`]);
+    const gone = await notion.listConversations(open(withSpaces([S2])).http, first.next);
+    expect(gone.items).toEqual([]);
+    expect((await notion.listConversations(open(withSpaces([S2])).http, gone.next)).items.map((s) => s.id)).toEqual([`${S2}:3d4e0000-0000-4000-8000-000000000009`]);
+  });
   it("N7 passes a 429 on as rate-limited", async () => {
     expect(await code(notion.listConversations(open({ ...fixture("notion"), [LIST]: { $status: 429 } }).http))).toMatch(/^rate-limited: /);
   });
