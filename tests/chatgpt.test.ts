@@ -3,13 +3,12 @@ import { FoxcacheError, type Http, check, chatgpt } from "../src/index.js";
 import { MAX_SUBPAGES } from "../src/adapters/read.js";
 import { fixture, fixtureHttp } from "./fixture-http.js";
 
-const ORIGIN = "https://chatgpt.com";
 const A = "6710aa00-1111-4222-8333-444455556666";
 const B = "6710aa00-7777-4888-9999-000011112222";
 const C = "6710aa00-aaaa-4bbb-8ccc-dddd00000003";
 const GP = "g-p-0123456789abcdef0123456789abcdef";
 const MAIN = "/backend-api/conversations?offset=0&limit=100&order=updated&is_archived=false&hide_snorlax=true";
-const open = (routes = fixture("chatgpt")) => fixtureHttp(ORIGIN, routes, "chatgpt-session");
+const open = (routes = fixture("chatgpt")) => fixtureHttp(chatgpt, routes);
 const stub = (id: string, updatedAt = "") => ({ id, title: "", updatedAt });
 
 async function code(p: Promise<unknown>): Promise<string> {

@@ -6,7 +6,7 @@
 // foxscope@pooriaarab, one with another id. Then it:
 //   captures ChatGPT and Claude from the popup, with a 429 on the way;
 //   stops and resumes a capture, and resumes one after its tab closed;
-//   checks that every request to a provider was a GET;
+//   checks that every request to a provider was a GET and one of its reads;
 //   browses and searches the archive page, and opens a hostile message;
 //   checks the exports, and imports the archive with the CLI;
 //   asks for SCENT values as foxscope and as another extension;
@@ -20,6 +20,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { crc32 } from "node:zlib";
 import { browserMode, launch, writeArtifact } from "create-foxkit/e2e";
+import { ADAPTERS, findRead } from "../dist/index.js";
 import { serveFixtures } from "./intercept.mjs";
 
 const record = { startedAt: new Date().toISOString(), mode: browserMode(), path: "fixtures at the real provider origins through WebDriver BiDi network interception", checks: [] };
@@ -30,6 +31,14 @@ const ABSENT = "Could not establish connection. Receiving end does not exist.";
 const A = "6710aa00-1111-4222-8333-444455556666";
 const CHATGPT = "https://chatgpt.com";
 const MAIN_LIST = "/backend-api/conversations?offset=0&limit=100&order=updated&is_archived=false&hide_snorlax=true";
+
+/** True when a logged request is one of its adapter's reads, the ChatGPT session that http reads for the token, or the tab's own page load or favicon. */
+function isRead(l) {
+  const u = new URL(l.url);
+  const adapter = ADAPTERS.find((a) => a.origin === u.origin);
+  if (u.pathname === "/" || u.pathname === "/favicon.ico" || (u.origin === CHATGPT && u.pathname === "/api/auth/session" && !u.search)) return true;
+  return Boolean(adapter && findRead(adapter, l.method, u.pathname, [...u.searchParams.keys()]));
+}
 
 /** A stand-in extension directory for one role. MV2, so its content script needs no host grant. */
 function stub(role) {
@@ -292,6 +301,9 @@ try {
   check("turning ChatGPT off stops its capture", "stopped", cp.status);
   check("no record is stored after ChatGPT is turned off", keptBefore, await ask("archive:counts"));
   check("at most the request in flight goes to ChatGPT after it is turned off", true, net.log.slice(sentBefore).filter((l) => l.url.startsWith(CHATGPT)).length <= 1);
+
+  // 11. Every request the adapters sent was one of their reads (X5).
+  check("every request to a provider matched one of its reads", [], net.log.filter((l) => !isRead(l)).map((l) => `${l.method} ${l.url}`));
 } catch (error) {
   record.error = error instanceof Error ? error.message : String(error);
 } finally {

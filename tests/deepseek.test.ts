@@ -2,12 +2,11 @@ import { describe, expect, it } from "vitest";
 import { FoxcacheError, check, deepseek } from "../src/index.js";
 import { fixture, fixtureHttp } from "./fixture-http.js";
 
-const ORIGIN = "https://chat.deepseek.com";
 const S1 = "0b1e0000-0000-4000-8000-000000000001";
 const S2 = "0b1e0000-0000-4000-8000-000000000002";
 const S3 = "0b1e0000-0000-4000-8000-000000000003";
 const storage = { getItem: (k: string) => (k === "userToken" ? JSON.stringify({ value: "synthetic-token" }) : null) };
-const open = (routes = fixture("deepseek")) => fixtureHttp(ORIGIN, routes, "deepseek-local", storage);
+const open = (routes = fixture("deepseek")) => fixtureHttp(deepseek, routes, storage);
 const stub = (id: string) => ({ id, title: "", updatedAt: "" });
 
 async function code(p: Promise<unknown>): Promise<string> {
@@ -25,7 +24,7 @@ describe("deepseek detect", () => {
     expect(await deepseek.detect(open().http)).toBe(true);
   });
   it("is signed out with no token, or when the API says the token is bad (HTTP 200, code 40003)", async () => {
-    expect(await deepseek.detect(fixtureHttp(ORIGIN, fixture("deepseek"), "deepseek-local", { getItem: () => null }).http)).toBe(false);
+    expect(await deepseek.detect(fixtureHttp(deepseek, fixture("deepseek")).http)).toBe(false);
     const routes = { ...fixture("deepseek"), "/api/v0/users/current": { code: 40003, msg: "Authorization Failed (invalid token)", data: null } };
     expect(await deepseek.detect(open(routes).http)).toBe(false);
   });

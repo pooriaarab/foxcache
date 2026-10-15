@@ -27,6 +27,7 @@ function provider(opts: { stubs?: Stub[]; pageSize?: number; reply?: (path: stri
     id: "chatgpt",
     label: "ChatGPT",
     origin: "https://chatgpt.com",
+    reads: [],
     newestFirst: true,
     async detect(h) {
       await h.get("/me");

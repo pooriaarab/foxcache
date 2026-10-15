@@ -1,7 +1,8 @@
 // The interface every provider adapter has. An adapter maps the provider's
-// own JSON to foxcache/v1 and reaches the network only through Http (GET on
-// its own origin). docs/providers/<id>.md lists each endpoint and its source.
-import type { AuthKind, Http } from "../http.js";
+// own JSON to foxcache/v1 and reaches the network only through Http, which
+// sends only the adapter's reads. docs/providers/<id>.md lists each endpoint
+// and its source.
+import type { Http, HttpSite } from "../http.js";
 import type { Conversation, LibraryItem, Memory, Preference, Project, ProviderId } from "../schema.js";
 
 /** One row of a conversation list. */
@@ -16,12 +17,9 @@ export interface ListPage {
   next?: string;
 }
 
-export interface Adapter {
+export interface Adapter extends HttpSite {
   id: ProviderId;
   label: string;
-  /** The origin the adapter runs on, such as https://chatgpt.com. */
-  origin: string;
-  auth?: AuthKind;
   /** True when the list is sorted by updatedAt, newest first: a capture that may stop early (CaptureOptions.earlyStop) stops at the first page with no change. */
   newestFirst: boolean;
   /** True when the user is signed in. A 401 or 403 means false. */

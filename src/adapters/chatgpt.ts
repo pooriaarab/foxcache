@@ -4,11 +4,14 @@
 // docs/providers/chatgpt.md.
 import { FoxcacheError } from "../errors.js";
 import type { Http } from "../http.js";
+import { defineReads } from "../reads.js";
 import type { Attachment, Message, Preference, PreferenceKind, Project } from "../schema.js";
 import type { Adapter, ListPage, Stub } from "./types.js";
 import { MAX_SUBPAGES, type Obj, pathToRoot, reader } from "./read.js";
 
 const r = reader("chatgpt");
+const PX = "https://github.com/pionxzh/chatgpt-exporter/blob/c8bd69c36702b417aa20e2af3d35d77ea7c06d93/src/api.ts";
+const GJ = "https://github.com/grammy-jiang/chatgpt-web-operations/blob/d0659576f3b0eaff8acc43958a6e3e9c3effb585/tests/fixtures/http";
 const LIMIT = 100;
 const PROJECT_LIMIT = 50; // more answers 422 (since 2026-09-29)
 /** Content that is not the visible reply: reasoning, tool traffic and the custom instructions block. */
@@ -71,6 +74,16 @@ export const chatgpt: Adapter = {
   label: "ChatGPT",
   origin: "https://chatgpt.com",
   auth: "chatgpt-session",
+  reads: defineReads([
+    { method: "GET", path: "/backend-api/me", source: `${GJ}/me.shape.json` },
+    { method: "GET", path: "/backend-api/conversations", query: ["offset", "limit", "order", "is_archived", "hide_snorlax"], source: `${PX}#L672-L712` },
+    { method: "GET", path: "/backend-api/gizmos/snorlax/sidebar", query: ["owned_only", "conversations_per_gizmo", "limit", "cursor"], source: `${PX}#L624-L636` },
+    { method: "GET", path: "/backend-api/gizmos/{gizmo}/conversations", query: ["cursor", "limit"], source: `${PX}#L646-L657` },
+    { method: "GET", path: "/backend-api/conversation/{id}", source: `${PX}#L601-L622` },
+    { method: "GET", path: "/backend-api/gizmos/{gizmo}", source: `${GJ}/gizmo.shape.json` },
+    { method: "GET", path: "/backend-api/memories", query: ["include_memory_entries"], source: `${GJ}/memories.shape.json` },
+    { method: "GET", path: "/backend-api/user_system_messages", source: `${GJ}/user_system_messages.shape.json` },
+  ]),
   // Three lists in a row, so a page with no change does not end the capture.
   newestFirst: false,
 
