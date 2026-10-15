@@ -67,7 +67,8 @@ flowchart LR
    agent calls the JSON endpoints that the site's own web app calls, from the same origin,
    so the request carries the session that your tab already has. foxcache never reads a
    password or a cookie.
-3. Every request is a GET (`src/http.ts` has nothing else), so foxcache cannot send, edit or
+3. Every request is one of the reads the adapter lists (`src/reads.ts`): GETs, and POSTs
+   that only read, such as Grok's message text by id. So foxcache cannot send, edit or
    delete anything on the site. ChatGPT and DeepSeek send a bearer token that their own
    page script reads; foxcache's agent reads it the same way, keeps it in the tab, and
    never stores or passes it on.
@@ -110,7 +111,8 @@ Checked on 2026-10-15 against the linked pages.
 | Library (`foxcache`) | Implemented | 175 vitest tests, written from the failure modes |
 | ChatGPT, Claude adapters | Implemented | vitest on synthetic fixtures, and E2E at the real origins |
 | Le Chat, DeepSeek adapters | Implemented, conversations only | vitest on synthetic fixtures |
-| Gemini, Perplexity, Grok | No adapter: their reads need POST | [docs/providers/](docs/providers/README.md) |
+| Grok adapter | Implemented, conversations only | vitest on synthetic fixtures, and E2E at grok.com |
+| Gemini, Perplexity | No adapter: their reads need POST | [docs/providers/](docs/providers/README.md) |
 | File store, CLI, MCP server | Implemented | vitest, the MCP server with the SDK in-memory client |
 | Firefox extension | Implemented | E2E on Ichabod (remote Firefox 158) and local Firefox, 32 checks |
 | SCENT with the real foxscope | Not tested | A stand-in extension with the foxscope id is used |
@@ -187,7 +189,7 @@ The memory list has one memory per line, for foxpack:
 
 ## Limits
 
-- Gemini, Perplexity and Grok have no adapter yet: their chat lists or message texts are read
+- Gemini and Perplexity have no adapter yet: their chat lists are read
   by POST, and each POST read must be listed and checked by hand first. [docs/providers/](docs/providers/README.md) has the sources.
 - Not captured: Claude's topic memory (POST only), ChatGPT's GPTs (no confirmed endpoint),
   Le Chat and DeepSeek projects and memories (no known endpoint), and the contents of any file.
