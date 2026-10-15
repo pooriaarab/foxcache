@@ -1,15 +1,16 @@
-// The only way an adapter reaches the network: GET on a path of its own
-// origin, with the page's cookies, and only a path its reads list
-// (src/reads.ts). No other method exists here, so an adapter cannot send,
-// edit or delete anything on the provider (H1, H8).
+// The only way an adapter reaches the network: a GET or POST on its own
+// origin, with the page's cookies, and only a request its reads list
+// (src/reads.ts): the exact path, the query keys and, for a POST, the read
+// operation in the body. So an adapter cannot send, edit or delete
+// anything on the provider (H1, H8, H9).
 //
 // Some sites send a bearer token that their own script gets from the page.
 // http gets it the same way, keeps it in this closure, and adds it to its
 // own requests. It never returns it and never puts it in an error (H5).
 import { FoxcacheError } from "./errors.js";
-import { type Query, type Site, checkSite, readUrl } from "./reads.js";
+import { type Body, type Prepared, type Query, type Site, checkSite, prepare } from "./reads.js";
 
-export { type Query, type Read, type Site, defineReads, findRead } from "./reads.js";
+export { type Body, type BodyRule, type Query, type Read, type Site, defineReads, findRead } from "./reads.js";
 
 export const MAX_RESPONSE_BYTES = 50 * 1024 * 1024;
 
@@ -24,6 +25,8 @@ export type AuthKind = "chatgpt-session" | "deepseek-local";
 export interface Http {
   /** GET a path of the origin that is one of the site's reads, and parse the JSON answer. */
   get(path: string, query?: Query): Promise<unknown>;
+  /** POST a body that one of the site's POST reads allows, and parse the JSON answer. */
+  post(path: string, body: Body, query?: Query): Promise<unknown>;
 }
 /** A site with the way it authenticates. */
 export interface HttpSite extends Site {
@@ -78,10 +81,11 @@ export function createHttp(site: HttpSite, page: Page): Http {
   const origin = new URL(site.origin).origin;
   let token: string | undefined;
 
-  async function send(u: URL, auth?: string): Promise<unknown> {
+  async function send({ url: u, body }: Prepared, auth?: string): Promise<unknown> {
     const headers: Record<string, string> = { accept: "application/json" };
     if (auth) headers.authorization = `Bearer ${auth}`;
-    const res = await page.fetch(u.href, { method: "GET", credentials: "include", redirect: "manual", headers });
+    if (body) headers["content-type"] = body.type;
+    const res = await page.fetch(u.href, { method: body ? "POST" : "GET", credentials: "include", redirect: "manual", headers, ...(body ? { body: body.text } : {}) });
     const where = `${origin}${u.pathname}`;
     // redirect: "manual" gives an opaque redirect: a login page is where it goes.
     if (res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400)) throw new FoxcacheError("logged-out", `${where} redirected: sign in to ${origin}.`);
@@ -111,7 +115,7 @@ export function createHttp(site: HttpSite, page: Page): Http {
     }
     if (site.auth === "chatgpt-session") {
       if (token && !fresh) return token;
-      const session = (await send(new URL(SESSION_PATH, origin))) as { accessToken?: unknown } | null;
+      const session = (await send({ url: new URL(SESSION_PATH, origin) })) as { accessToken?: unknown } | null;
       if (typeof session?.accessToken !== "string" || !session.accessToken) throw new FoxcacheError("logged-out", `No session on ${origin}: sign in.`);
       token = session.accessToken;
       return token;
@@ -119,17 +123,19 @@ export function createHttp(site: HttpSite, page: Page): Http {
     return undefined;
   }
 
+  async function read(request: Prepared): Promise<unknown> {
+    try {
+      return await send(request, await bearer(false));
+    } catch (error) {
+      // A token can expire during a long capture: get a new one once.
+      if (site.auth !== "chatgpt-session" || !(error instanceof FoxcacheError) || error.code !== "logged-out" || error.status !== 401) throw error;
+      return send(request, await bearer(true));
+    }
+  }
+
+  // No read names SESSION_PATH, so no spelling of it reads the token out (H7).
   return {
-    async get(path, query) {
-      // No read names SESSION_PATH, so no spelling of it reads the token out (H7).
-      const u = readUrl(site, "GET", path, query);
-      try {
-        return await send(u, await bearer(false));
-      } catch (error) {
-        // A token can expire during a long capture: get a new one once.
-        if (site.auth !== "chatgpt-session" || !(error instanceof FoxcacheError) || error.code !== "logged-out" || error.status !== 401) throw error;
-        return send(u, await bearer(true));
-      }
-    },
+    get: async (path, query) => read(prepare(site, "GET", path, query)),
+    post: async (path, body, query) => read(prepare(site, "POST", path, query, body)),
   };
 }

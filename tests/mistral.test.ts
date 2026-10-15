@@ -86,6 +86,9 @@ function endless(size: number) {
   let calls = 0;
   const page = () => ok({ items: Array.from({ length: size }, (_, i) => ({ id: `m${calls}-${i}`, role: "user", content: "hi", createdAt: "2026-08-01T10:00:00Z", turn: i })), nextCursor: `c${calls}` });
   const http: Http = {
+    post: async () => {
+      throw new Error("no POST read here");
+    },
     async get(path) {
       calls += 1;
       if (path === "/api/trpc/chat.byId,message.all") return [ok({ id: C1, createdAt: "2026-08-01T10:00:00Z", updatedAt: "2026-08-01T10:00:00Z" }), page()];

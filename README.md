@@ -187,8 +187,8 @@ The memory list has one memory per line, for foxpack:
 
 ## Limits
 
-- Gemini, Perplexity and Grok have no adapter: their chat lists or message texts are read
-  by POST, and foxcache sends GET only. [docs/providers/](docs/providers/README.md) has the sources.
+- Gemini, Perplexity and Grok have no adapter yet: their chat lists or message texts are read
+  by POST, and each POST read must be listed and checked by hand first. [docs/providers/](docs/providers/README.md) has the sources.
 - Not captured: Claude's topic memory (POST only), ChatGPT's GPTs (no confirmed endpoint),
   Le Chat and DeepSeek projects and memories (no known endpoint), and the contents of any file.
 - The endpoints are private web APIs that the sites can change. A changed shape fails
@@ -222,8 +222,9 @@ flowchart LR
 
 ### Can foxcache post or delete anything on a site?
 
-No. The only request it can make is a GET on the site's own origin (`src/http.ts`), and the
-E2E checks that every request it sent was a GET.
+No. It can only send the reads its adapter lists (`src/reads.ts`): exact paths, and for a
+POST the read operation in the body. The four sites it reads today get GET requests only,
+and the E2E checks that every request it sent was one of those reads.
 
 ### Does foxcache see my password?
 
