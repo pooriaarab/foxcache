@@ -44,9 +44,17 @@ export function reader(provider: string) {
     if (typeof x !== "number" || !Number.isFinite(x) || x < 0) throw fail(where, "is not a time in seconds");
     return new Date(Math.round(x * 1000)).toISOString();
   };
+  /** Google's [seconds, nanos] time, as ISO-8601 UTC (P4). */
+  const stamp = (x: unknown, where: string): string => {
+    const t = arr(x, where);
+    const nanos = t[1] === null || t[1] === undefined ? 0 : num(t[1], `${where}[1]`);
+    return seconds(num(t[0], `${where}[0]`) + nanos / 1e9, where);
+  };
+  /** The value at a path of nested lists (Google's positional JSON), each step checked: pos(x, [2, 0], "w") reads w[2][0]. */
+  const pos = (x: unknown, path: number[], where: string): unknown => path.reduce<unknown>((v, i, n) => arr(v, `${where}${path.slice(0, n).map((p) => `[${p}]`).join("")}`)[i], x);
   const optTime = (x: unknown, where: string): string | undefined => (x === null || x === undefined ? undefined : time(x, where));
   const optSeconds = (x: unknown, where: string): string | undefined => (x === null || x === undefined ? undefined : seconds(x, where));
-  return { fail, obj, arr, str, bool, num, optStr, time, optTime, seconds, optSeconds, optSize };
+  return { fail, obj, arr, str, bool, num, optStr, time, optTime, seconds, optSeconds, optSize, stamp, pos };
 }
 
 /**

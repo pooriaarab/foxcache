@@ -21,12 +21,14 @@
 | HuggingChat | https://huggingface.co (under /chat) | yes, conversations only | [huggingchat.md](huggingchat.md) |
 | Genspark | https://www.genspark.ai | yes, conversations only; exact paths only | [genspark.md](genspark.md) |
 | Gemini | https://gemini.google.com | yes: conversations, Gems, saved info | [gemini.md](gemini.md) |
+| NotebookLM | https://notebook.google.com | yes: notebooks, each one's latest chat | [notebooklm.md](notebooklm.md) |
 
 foxcache sends only the reads each adapter lists (`src/reads.ts`): exact
 GET paths, and POST calls whose body names a read operation, each
 checked by hand against its source. ChatGPT, Claude, Le Chat, DeepSeek,
 Kagi Assistant, Qwen Chat, Z.ai, HuggingChat and Genspark send GET only.
-Grok, Perplexity, Kimi, Doubao, Notion AI, Poe, Meta AI and Gemini read
-by POST, each on its own read paths, commands or rpc ids.
+Grok, Perplexity, Kimi, Doubao, Notion AI, Poe, Meta AI, Gemini and
+NotebookLM read by POST, each on its own read paths, commands or rpc
+ids.
 
 To add a provider, follow [ADDING.md](ADDING.md).
