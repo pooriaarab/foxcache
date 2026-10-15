@@ -5,6 +5,7 @@ import { chatgpt } from "./chatgpt.js";
 import { claude } from "./claude.js";
 import { deepseek } from "./deepseek.js";
 import { doubao } from "./doubao.js";
+import { genspark } from "./genspark.js";
 import { githubCopilot } from "./github-copilot.js";
 import { grok } from "./grok.js";
 import { huggingchat } from "./huggingchat.js";
@@ -37,6 +38,7 @@ export const ADAPTERS: readonly Adapter[] = Object.freeze([
   qwen,
   zai,
   huggingchat,
+  genspark,
 ]);
 
 /** The adapter for a provider id. Throws for a provider with no adapter. */
