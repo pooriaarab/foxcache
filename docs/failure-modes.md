@@ -106,6 +106,7 @@ All errors are `FoxcacheError` with a `code`. The codes are in the rows.
 | P8 | The ChatGPT project sidebar gives a cursor it gave before. | The adapter throws `pagination-loop`. It does not return the projects read so far, which would drop the rest and their chats with no error (C4). | `tests/chatgpt.test.ts` |
 | P9 | A list inside one call never ends: the ChatGPT project sidebar or the Le Chat `message.all` pages give a new cursor each time. | The adapter throws `pagination-loop` after 1 000 pages. Le Chat throws `too-large` once a chat passes 20 000 messages, while it reads them, not after (S4). | `tests/chatgpt.test.ts`, `tests/mistral.test.ts` |
 | P10 | Claude's `detect` gets an answer that is not JSON (a "Just a moment..." challenge page) or a changed shape. | `detect` throws that error, so the capture ends with `provider-schema` and does not tell the user to sign in. Only a 401, a 403 or an account with no chat organization means signed out. | `tests/claude.test.ts` |
+| P30 | A library user imports an adapter the extension ships, or an auth kind an adapter uses (`withHeaders`), and `foxcache` does not export it. | `src/index.ts` exports every adapter in `ADAPTERS` and every auth kind in `src/auth/`. A test checks both lists. | `tests/exports.test.ts` |
 
 ## SCENT
 
