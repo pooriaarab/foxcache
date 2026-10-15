@@ -19,20 +19,33 @@ const saveCapture = (id, capture) => store.setCheckpoint(id, capture);
 const stopKey = (id) => `${id}:stop`;
 const stopAsked = async (id) => (await store.backend.get("checkpoints", stopKey(id))) === true;
 
-async function interrupt(id, capture) {
+// Delete all counts up. A write that read the store before a delete all
+// and wrote after it is removed again (X7, X9). `since` is the count before
+// that read.
+let generation = 0;
+/** Save a capture that was read at `since`. False if a delete all came between: the capture is gone again. */
+async function saveSince(id, capture, since) {
+  await saveCapture(id, capture);
+  if (generation === since) return true;
+  await store.clearCheckpoint(id);
+  return false;
+}
+
+async function interrupt(id, capture, since) {
   const checkpoint = { ...capture.checkpoint, status: "interrupted", updatedAt: new Date().toISOString() };
-  await saveCapture(id, { ...capture, checkpoint });
+  await saveSince(id, { ...capture, checkpoint }, since);
   return checkpoint;
 }
 
 /** A "running" capture whose agent is gone (the tab closed or reloaded) is interrupted (X4). */
 async function refresh(adapter) {
+  const since = generation;
   const capture = await captureOf(adapter.id);
   if (capture?.checkpoint.status !== "running") return capture;
   // An agent that answers but runs nothing is dead, unless the capture just started.
   const starting = Date.now() < (capture.startingUntil ?? 0);
   const alive = await browser.tabs.sendMessage(capture.tabId, { type: "agent:ping" }).then((r) => r?.running === true || starting, () => false);
-  return alive ? capture : { ...capture, checkpoint: await interrupt(adapter.id, capture) };
+  return alive ? capture : { ...capture, checkpoint: await interrupt(adapter.id, capture, since) };
 }
 
 const providerTab = async (adapter) => {
@@ -71,6 +84,7 @@ export const handlers = {
   "capture:start": async ({ provider, fresh }) => {
     const adapter = adapterFor(provider);
     if (!(await browser.permissions.contains({ origins: [pattern(adapter)] }))) fail("not-allowed", `Allow ${adapter.origin} in the settings first.`);
+    const since = generation;
     const previous = await refresh(adapter);
     if (previous?.checkpoint.status === "running") fail("bad-request", `A ${adapter.label} capture is running.`);
     const tab = (await providerTab(adapter)) ?? fail("not-found", `Open ${adapter.origin} in a tab and sign in.`);
@@ -82,10 +96,10 @@ export const handlers = {
     const checkpoint = resume ? { ...resume, status: "running" } : { provider: adapter.id, status: "running", startedAt: now, updatedAt: now, extrasDone: false, pages: 0, counts, lastErrors: [] };
     await inject(tab.id);
     await store.backend.delete("checkpoints", stopKey(adapter.id));
-    await saveCapture(adapter.id, { tabId: tab.id, startingUntil: Date.now() + 10_000, checkpoint });
+    if (!(await saveSince(adapter.id, { tabId: tab.id, startingUntil: Date.now() + 10_000, checkpoint }, since))) fail("bad-request", "Delete all ran while the capture started. Start it again.");
     const answer = await browser.tabs.sendMessage(tab.id, { type: "agent:capture", resume, earlyStop, stamps: await store.stamps(adapter.id) });
     if (!answer?.started) {
-      await interrupt(adapter.id, { tabId: tab.id, checkpoint });
+      await interrupt(adapter.id, { tabId: tab.id, checkpoint }, since);
       fail("provider-error", answer?.error ?? "The capture did not start.");
     }
     return checkpoint;
@@ -125,29 +139,26 @@ export const handlers = {
   },
 };
 
-// Delete all counts up. A record whose write raced a delete all is removed again (X7).
-let generation = 0;
-
 /** Only this extension's own pages, not a content script or a web page, may read, export or delete (X1). */
 export const fromOwnPage = (sender) => sender?.id === browser.runtime.id && typeof sender.url === "string" && sender.url.startsWith(browser.runtime.getURL(""));
 
-/** The agent of a running capture: in the capture's tab, on the provider's own origin (X1). */
+/** The agent of a running capture: in the capture's tab, on the provider's own origin (X1). `since` is the delete all count before the capture was read. */
 async function fromAgent(sender) {
+  const since = generation;
   if (sender?.id !== browser.runtime.id || !sender.tab || typeof sender.url !== "string") return null;
   const adapter = adapterAt(new URL(sender.url).origin);
   if (!adapter) return null;
   const capture = await captureOf(adapter.id);
   if (!capture || capture.tabId !== sender.tab.id || capture.checkpoint.status !== "running") return null;
-  return { adapter, capture };
+  return { adapter, capture, since };
 }
 
 /** The messages that the agent sends. A sender that is not the agent of a running capture is told to stop and stores nothing. */
 const agentHandlers = {
   "capture:put": async ({ kind, record }, from) => {
     if (record?.provider !== from.adapter.id) return { error: `A ${from.adapter.label} tab cannot add a record of ${record?.provider}.` };
-    const before = generation;
     await store.put(kind, record);
-    if (generation !== before) {
+    if (generation !== from.since) {
       await store.backend.delete(kind, recordKey(kind, check(kind, record)));
       return { stop: true };
     }
@@ -162,7 +173,7 @@ const agentHandlers = {
   },
   "capture:checkpoint": async ({ checkpoint }, from) => {
     if (checkpoint?.provider !== from.adapter.id) return { error: "The checkpoint is for another provider." };
-    await saveCapture(from.adapter.id, { ...from.capture, checkpoint });
+    if (!(await saveSince(from.adapter.id, { ...from.capture, checkpoint }, from.since))) return { stop: true };
     return { stop: await stopAsked(from.adapter.id) };
   },
 };
@@ -186,8 +197,9 @@ browser.runtime.onMessage.addListener((message, sender) => {
 // A closed tab ends its capture (X4).
 browser.tabs.onRemoved.addListener(async (tabId) => {
   for (const adapter of ADAPTERS) {
+    const since = generation;
     const capture = await captureOf(adapter.id);
-    if (capture?.tabId === tabId && capture.checkpoint.status === "running") await interrupt(adapter.id, capture);
+    if (capture?.tabId === tabId && capture.checkpoint.status === "running") await interrupt(adapter.id, capture, since);
   }
 });
 
