@@ -28,6 +28,13 @@ export interface Read {
   query?: readonly string[];
   /** POST only, and required there: what the body must be. */
   body?: BodyRule;
+  /**
+   * Reads an answer that is not JSON: Google's )]}' prefix, stream frames,
+   * HTML. It gets the whole text, after the size cap. A FoxcacheError it
+   * throws passes on; any other throw becomes provider-schema (H15).
+   * Left out: JSON.parse.
+   */
+  decode?: (text: string) => unknown;
   /** Where the endpoint is documented: an https URL. */
   source: string;
 }
@@ -82,6 +89,7 @@ export function checkSite(site: Site): void {
     const segments = read.path.split("/");
     if (segments[0] !== "" || segments.length < 2 || !segments.slice(1).every((s) => PLACEHOLDER.test(s) || (LITERAL.test(s) && s !== "." && s !== ".."))) throw bad(`${at} is not an exact path`);
     if (!/^https:\/\/\S+$/.test(read.source)) throw bad(`${at} has no https source`);
+    if (read.decode !== undefined && typeof read.decode !== "function") throw bad(`${at} has a decode that is not a function`);
     if (read.method === "GET" && seen.has(at)) throw bad(`${at} is listed twice`);
     seen.add(at);
   }
@@ -139,10 +147,11 @@ function encode(rule: BodyRule, body: Body, query: Query): { type: string; text:
   return ids?.every((id) => rule.rpcids.includes(id)) && query.rpcids === [...new Set(ids)].join(",") ? form : undefined;
 }
 
-/** A request that is a read: its URL, and its body on the wire for a POST. */
+/** A request that is a read: its URL, its body on the wire for a POST, and the read's decoder. */
 export interface Prepared {
   url: URL;
   body?: { type: string; text: string };
+  decode?: (text: string) => unknown;
 }
 
 /**
@@ -165,7 +174,7 @@ export function prepare(site: Site, method: "GET" | "POST", target: string, quer
     const wire = read.body && encode(read.body, body ?? {}, query);
     if (read.body && !wire) continue;
     for (const k of keys) u.searchParams.set(k, String(query[k]));
-    return wire ? { url: u, body: wire } : { url: u };
+    return { url: u, ...(wire ? { body: wire } : {}), ...(read.decode ? { decode: read.decode } : {}) };
   }
   throw refuse();
 }
