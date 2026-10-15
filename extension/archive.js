@@ -7,7 +7,9 @@ const ask = async (type, data = {}) => {
   return reply.value;
 };
 const $ = (id) => document.getElementById(id);
-const LABELS = { chatgpt: "ChatGPT", claude: "Claude", mistral: "Le Chat", gemini: "Gemini", perplexity: "Perplexity", grok: "Grok", deepseek: "DeepSeek", "github-copilot": "GitHub Copilot", kimi: "Kimi", doubao: "Doubao", notion: "Notion AI", kagi: "Kagi Assistant", poe: "Poe", meta: "Meta AI", qwen: "Qwen Chat", zai: "Z.ai", huggingchat: "HuggingChat", genspark: "Genspark" };
+// Each site's name comes from its adapter, through the event page (X60).
+let labels = new Map();
+const label = (id) => labels.get(id);
 function make(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -27,7 +29,7 @@ function row(title, meta, onOpen) {
 function showConversation(c) {
   const d = $("detail");
   const head = make("div", "head");
-  head.append(make("h2", "", c.title || "Untitled"), make("p", "hint", `${LABELS[c.provider]} · ${c.model ?? "model not given"} · updated ${new Date(c.updatedAt).toLocaleString()}`));
+  head.append(make("h2", "", c.title || "Untitled"), make("p", "hint", `${label(c.provider)} · ${c.model ?? "model not given"} · updated ${new Date(c.updatedAt).toLocaleString()}`));
   const messages = c.messages.map((m) => {
     const box = make("div", `message ${m.role}`);
     box.append(make("div", "role", m.role === "user" ? "You" : m.role[0].toUpperCase() + m.role.slice(1)), make("div", "text", m.text));
@@ -43,9 +45,9 @@ function showRecord(kind, r) {
   const d = $("detail");
   const body = make("div");
   if (kind === "projects") {
-    body.append(make("h2", "", r.name), make("p", "hint", `${LABELS[r.provider]} project`), make("div", "text", r.instructions ?? "No instructions."));
+    body.append(make("h2", "", r.name), make("p", "hint", `${label(r.provider)} project`), make("div", "text", r.instructions ?? "No instructions."));
     if (r.files.length) body.append(make("p", "hint", `Files: ${r.files.map((f) => f.name).join(", ")}`));
-  } else body.append(make("h2", "", `${LABELS[r.provider]} ${kind === "preferences" ? r.kind : kind.replace(/s$/, "")}`), make("div", "text", r.text ?? r.name));
+  } else body.append(make("h2", "", `${label(r.provider)} ${kind === "preferences" ? r.kind : kind.replace(/s$/, "")}`), make("div", "text", r.text ?? r.name));
   d.replaceChildren(body);
   d.hidden = false;
 }
@@ -64,16 +66,16 @@ async function render() {
   let rows;
   if (query) {
     const hits = await ask("archive:search", { query, provider, kind });
-    rows = hits.map((h) => row(h.title, `${LABELS[h.provider]} · ${h.snippet}`, () => open(h.kind, h.key)));
+    rows = hits.map((h) => row(h.title, `${label(h.provider)} · ${h.snippet}`, () => open(h.kind, h.key)));
   } else if (kind === "conversations") {
     const list = await ask("archive:list", { kind, provider });
-    rows = list.map((c) => row(c.title, `${LABELS[c.provider]} · ${day(c.updatedAt)} · ${c.messages} message${c.messages === 1 ? "" : "s"}`, () => open(kind, `${c.provider}:${c.id}`)));
+    rows = list.map((c) => row(c.title, `${label(c.provider)} · ${day(c.updatedAt)} · ${c.messages} message${c.messages === 1 ? "" : "s"}`, () => open(kind, `${c.provider}:${c.id}`)));
   } else {
     const list = await ask("archive:list", { kind, provider });
     rows = list.map((r) => {
       const key = kind === "preferences" ? `${r.provider}:${r.kind}` : `${r.provider}:${r.id ?? ""}`;
       const title = r.name ?? r.text;
-      return row(title, `${LABELS[r.provider]}${kind === "preferences" ? ` · ${r.kind}` : ""}`, () => (kind === "memories" && !r.id ? showRecord(kind, r) : open(kind, key)));
+      return row(title, `${label(r.provider)}${kind === "preferences" ? ` · ${r.kind}` : ""}`, () => (kind === "memories" && !r.id ? showRecord(kind, r) : open(kind, key)));
     });
   }
   $("list").replaceChildren(...(rows.length ? rows : [make("p", "empty", query ? "No match." : "Nothing here yet.")]));
@@ -82,9 +84,9 @@ async function render() {
 async function counts() {
   const all = await ask("archive:counts");
   const ONE = { conversations: "conversation", projects: "project", memories: "memory", preferences: "preference", library: "library item" };
-  const parts = Object.entries(all).map(([p, c]) => `${LABELS[p]}: ${Object.entries(c).map(([k, n]) => `${n} ${n === 1 ? ONE[k] : k === "library" ? "library items" : k}`).join(", ")}`);
+  const parts = Object.entries(all).map(([p, c]) => `${label(p)}: ${Object.entries(c).map(([k, n]) => `${n} ${n === 1 ? ONE[k] : k === "library" ? "library items" : k}`).join(", ")}`);
   $("counts").textContent = parts.length ? parts.join(" · ") : "Nothing captured yet. Use the toolbar button to capture.";
-  for (const p of Object.keys(all)) if (![...$("provider").options].some((o) => o.value === p)) $("provider").append(Object.assign(make("option", "", LABELS[p]), { value: p }));
+  for (const p of Object.keys(all)) if (![...$("provider").options].some((o) => o.value === p)) $("provider").append(Object.assign(make("option", "", label(p)), { value: p }));
 }
 
 /** Save a file through a link: no downloads permission needed. */
@@ -109,4 +111,7 @@ $("query").addEventListener("input", () => {
 });
 $("provider").addEventListener("change", render);
 $("kind").addEventListener("change", render);
-counts().then(render, (error) => ($("counts").textContent = error.message));
+ask("providers:labels")
+  .then((list) => (labels = new Map(list.map((a) => [a.id, a.label]))))
+  .then(counts)
+  .then(render, (error) => ($("counts").textContent = error.message));

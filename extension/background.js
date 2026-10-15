@@ -82,6 +82,8 @@ const fail = (code, message) => {
 /** The messages that the extension's own pages send. */
 export const handlers = {
   "providers:status": () => Promise.all(ADAPTERS.map(status)),
+  // The archive page's names for the sites: no detect, no request to a site (X60).
+  "providers:labels": () => ADAPTERS.map((a) => ({ id: a.id, label: a.label })),
 
   // fresh: start over and leave a stopped or failed capture behind, instead of resuming it.
   "capture:start": async ({ provider, fresh }) => {
