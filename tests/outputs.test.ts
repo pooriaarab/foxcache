@@ -57,6 +57,10 @@ describe("O2 hostile text", () => {
     const md = toMarkdown(conv({ messages: [{ role: "assistant", text: "[click](javascript:alert(1)) [x]( data:text/html,hi)", attachments: [] }] }));
     expect(md).not.toMatch(/\]\(\s*(javascript|data):/i);
   });
+  it("disarms reference-style script links", () => {
+    const md = toMarkdown(conv({ messages: [{ role: "assistant", text: "see [a]\n\n[a]: javascript:alert(1)\n  [b]:  DATA:text/html,x", attachments: [] }] }));
+    expect(md).not.toMatch(/^\s*\[[^\]]*\]:\s*(javascript|data):/im);
+  });
 });
 
 describe("O3 memory list", () => {
