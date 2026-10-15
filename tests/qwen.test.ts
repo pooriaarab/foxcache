@@ -37,6 +37,14 @@ describe("qwen detect and sign-in", () => {
   });
 });
 
+describe("qwen errors (QWEN41)", () => {
+  it("keeps the site's text out of a provider-error", async () => {
+    const message = await code(qwen.listConversations(open(swap("/api/v2/chats/?page=1", fail({ details: "SECRET chat text" }))).http));
+    expect(message).toMatch(/^provider-error: qwen: \/api\/v2\/chats\/ /);
+    expect(message).not.toContain("SECRET");
+  });
+});
+
 describe("qwen list", () => {
   it("reads the main list, then each project's list, each to an empty page", async () => {
     const f = open();

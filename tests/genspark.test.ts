@@ -78,7 +78,12 @@ describe("genspark detect", () => {
     expect(await code(genspark.detect(challenge))).toMatch(/^provider-schema: .*did not answer JSON/);
   });
   it("throws provider-error on a status other than 0", async () => {
-    expect(await code(genspark.detect(open({ "/api/is_login": { status: -5, message: "busy", data: null } }).http))).toMatch(/^provider-error: genspark: .*busy/);
+    expect(await code(genspark.detect(open({ "/api/is_login": { status: -5, message: "busy", data: null } }).http))).toMatch(/^provider-error: genspark: \/api\/is_login answered status -5\.$/);
+  });
+  it("GENSPARK40 keeps the site's message and a status that is not a number out of the error", async () => {
+    const message = await code(genspark.detect(open({ "/api/is_login": { status: -1, message: "SECRET prompt", data: null } }).http));
+    expect([message.startsWith("provider-error: "), message.includes("SECRET")]).toEqual([true, false]);
+    expect(await code(genspark.detect(open({ "/api/is_login": { status: "SECRET", data: null } }).http))).not.toContain("SECRET");
   });
 });
 
