@@ -12,13 +12,14 @@
 | GitHub Copilot | https://github.com | yes, conversations only; read from https://api.individual.githubcopilot.com | [github-copilot.md](github-copilot.md) |
 | Kimi | https://www.kimi.com | yes, conversations only, by read POST | [kimi.md](kimi.md) |
 | Doubao | https://www.doubao.com | yes, conversations only, by read POST | [doubao.md](doubao.md) |
+| Notion AI | https://app.notion.com | yes, AI chats only (read POSTs) | [notion.md](notion.md) |
 
-foxcache sends only the reads each adapter lists (`src/reads.ts`): exact GET
-paths, and POST calls whose body names a read operation, each checked by
-hand against its source. ChatGPT, Claude, Le Chat and DeepSeek send GET
-only. Grok, Perplexity, Kimi and Doubao read by POST, each a read method,
-a read operation or an IM `cmd` on its own path. Gemini reads by POST, so
-it needs its list of read-only POST
-calls before it gets an adapter.
+foxcache sends only the reads each adapter lists (`src/reads.ts`): exact
+GET paths, and POST calls whose body names a read operation, each
+checked by hand against its source. ChatGPT, Claude, Le Chat and
+DeepSeek send GET only. Grok, Perplexity, Kimi, Doubao and Notion AI
+read by POST, each on its own read paths or commands. Gemini reads by
+POST, so it needs its list of read-only POST calls before it gets an
+adapter.
 
 To add a provider, follow [ADDING.md](ADDING.md).
