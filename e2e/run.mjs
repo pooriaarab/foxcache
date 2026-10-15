@@ -177,6 +177,12 @@ try {
     net.override(CHATGPT, MAIN_LIST, () => ({ status: 200, body: JSON.stringify(list) }));
   };
   bumpList("2026-10-20T00:00:00.000Z");
+  // The user deleted one memory on the site and added another (C11).
+  const MEMORIES = "/backend-api/memories?include_memory_entries=true";
+  const memoryPage = structuredClone(net.fixture("chatgpt").routes[MEMORIES]);
+  const gone = memoryPage.memories[1].id;
+  memoryPage.memories[1] = { ...memoryPage.memories[1], id: "0c1d2e3f-0000-4111-8222-333344445599", content: "Moved to Lisbon." };
+  net.override(CHATGPT, MEMORIES, () => ({ status: 200, body: JSON.stringify(memoryPage) }));
   await click("chatgpt", "Capture again");
   await running("chatgpt");
   await click("chatgpt", "Stop");
@@ -189,6 +195,8 @@ try {
   await click("chatgpt", "Resume");
   await running("chatgpt");
   cp = await ended("chatgpt");
+  const memoryIds = (await ask("archive:list", { kind: "memories", provider: "chatgpt" })).map((m) => m.id).toSorted();
+  check("a memory deleted on the site is gone from the store", { has: [memoryPage.memories[0].id, memoryPage.memories[1].id].toSorted(), gone: false }, { has: memoryIds, gone: memoryIds.includes(gone) });
   check("Resume finishes it and fetches the changed conversation", { status: "done", conversations: 1, skipped: 2 }, { status: cp.status, conversations: cp.counts.conversations, skipped: cp.counts.skipped });
 
   // 4. A closed tab interrupts the capture, and Resume goes on in a new tab (X4).
