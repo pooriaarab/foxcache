@@ -12,8 +12,8 @@ import type { Read } from "./reads.js";
 /** The query keys of a batchexecute read: the adapter's, and bl and f.sid that the page-token auth adds. */
 const QUERY = ["rpcids", "source-path", "hl", "rt", "bl", "f.sid"];
 
-/** A google.rpc.Status code that means something to a capture. Any other code is provider-error. */
-const STATUS: Record<number, ErrorCode> = { 5: "not-found", 8: "rate-limited", 16: "logged-out" };
+/** A google.rpc.Status code that means something to a capture. Any other code is provider-error. Gemini-API reads 7 as UNAUTHENTICATED, not PERMISSION_DENIED (H40). */
+const STATUS: Record<number, ErrorCode> = { 5: "not-found", 7: "logged-out", 8: "rate-limited", 16: "logged-out" };
 /** An "er" frame carries an HTTP-like code. */
 const ER: Record<number, ErrorCode> = { 401: "logged-out", 403: "logged-out", 404: "not-found", 429: "rate-limited" };
 
