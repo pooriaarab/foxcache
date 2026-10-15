@@ -72,10 +72,12 @@ Each adapter names its auth kind, one file each in `src/auth/`:
 
 | Kind | Token | Used by |
 |---|---|---|
-| `cookie` | none: the cookies alone | Claude, Le Chat |
+| `cookie` | none: the cookies alone | Claude, Le Chat, Grok, Perplexity, Doubao, Notion AI, Kagi Assistant, Meta AI, HuggingChat, Genspark |
 | `page-session` | a field of a session answer the page reads with its cookies | ChatGPT (`/api/auth/session`) |
 | `localStorage-bearer` | a localStorage key, or a field of its JSON | DeepSeek (`userToken`) |
 | `page-formkey` | a key a page function gives, found by name in the inline JavaScript (H31), plus an md5 tag of each POST body (`src/md5.ts`) | Poe (`poe-formkey`, `poe-tag-id`) |
+| `with-headers` | fixed headers the page adds, on top of another kind | Qwen Chat (`source: web`, on `localStorage-bearer`) |
+| `google-page-tokens` | `at`, `bl` and `f.sid` from the HTML of a page | Gemini, NotebookLM |
 
 `http` opens the kind once, inside the content script, so the token lives
 in a closure there. It goes only onto requests that are reads, and never to

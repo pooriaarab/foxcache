@@ -25,10 +25,11 @@
 
 foxcache sends only the reads each adapter lists (`src/reads.ts`): exact
 GET paths, and POST calls whose body names a read operation, each
-checked by hand against its source. ChatGPT, Claude, Le Chat, DeepSeek,
-Kagi Assistant, Qwen Chat, Z.ai, HuggingChat and Genspark send GET only.
-Grok, Perplexity, Kimi, Doubao, Notion AI, Poe, Meta AI, Gemini and
-NotebookLM read by POST, each on its own read paths, commands or rpc
-ids.
+checked by hand against its source.
+
+- GET only: ChatGPT, Claude, Le Chat, DeepSeek, GitHub Copilot, Kagi Assistant, Qwen Chat, Z.ai, HuggingChat and Genspark.
+- By POST as well: Grok, Perplexity, Kimi, Doubao, Notion AI, Poe, Meta AI, Gemini and NotebookLM.
+
+Each POST is on its own read paths, commands or rpc ids.
 
 To add a provider, follow [ADDING.md](ADDING.md).
