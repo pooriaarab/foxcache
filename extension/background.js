@@ -11,9 +11,12 @@ const resolver = cacheResolver(store);
 const pattern = (adapter) => `${adapter.origin}/*`;
 const RESUMABLE = new Set(["stopped", "failed", "interrupted"]);
 
-// The capture of one provider: { tabId, stop, startingUntil, checkpoint }, in the checkpoints area.
+// The capture of one provider: { tabId, startingUntil, checkpoint }, in the checkpoints area.
 const captureOf = async (id) => (await store.checkpoint(id)) ?? null;
 const saveCapture = (id, capture) => store.setCheckpoint(id, capture);
+// Stop has its own key, so a checkpoint the agent saves cannot write over it.
+const stopKey = (id) => `${id}:stop`;
+const stopAsked = async (id) => (await store.backend.get("checkpoints", stopKey(id))) === true;
 
 async function interrupt(id, capture) {
   const checkpoint = { ...capture.checkpoint, status: "interrupted", updatedAt: new Date().toISOString() };
@@ -74,10 +77,11 @@ export const handlers = {
     const counts = { conversations: 0, skipped: 0, errors: 0, projects: 0, memories: 0, preferences: 0, library: 0 };
     const checkpoint = resume ? { ...resume, status: "running" } : { provider: adapter.id, status: "running", startedAt: now, updatedAt: now, extrasDone: false, pages: 0, counts, lastErrors: [] };
     await inject(tab.id);
-    await saveCapture(adapter.id, { tabId: tab.id, stop: false, startingUntil: Date.now() + 10_000, checkpoint });
+    await store.backend.delete("checkpoints", stopKey(adapter.id));
+    await saveCapture(adapter.id, { tabId: tab.id, startingUntil: Date.now() + 10_000, checkpoint });
     const answer = await browser.tabs.sendMessage(tab.id, { type: "agent:capture", resume, stamps: await store.stamps(adapter.id) });
     if (!answer?.started) {
-      await interrupt(adapter.id, { tabId: tab.id, stop: false, checkpoint });
+      await interrupt(adapter.id, { tabId: tab.id, checkpoint });
       fail("provider-error", answer?.error ?? "The capture did not start.");
     }
     return checkpoint;
@@ -89,7 +93,10 @@ export const handlers = {
   "capture:stop": async ({ provider }) => {
     const adapter = adapterFor(provider);
     const capture = await captureOf(adapter.id);
-    if (capture?.checkpoint.status === "running") await saveCapture(adapter.id, { ...capture, stop: true });
+    if (capture?.checkpoint.status !== "running") return true;
+    await store.backend.put("checkpoints", stopKey(adapter.id), true);
+    // The agent stops before its next request; the flag also stops it if this message is lost.
+    await browser.tabs.sendMessage(capture.tabId, { type: "agent:stop" }).catch(() => undefined);
     return true;
   },
 
@@ -131,12 +138,12 @@ const agentHandlers = {
   "capture:put": async ({ kind, record }, from) => {
     if (record?.provider !== from.adapter.id) return { error: `A ${from.adapter.label} tab cannot add a record of ${record?.provider}.` };
     await store.put(kind, record);
-    return { stop: from.capture.stop };
+    return { stop: await stopAsked(from.adapter.id) };
   },
   "capture:checkpoint": async ({ checkpoint }, from) => {
     if (checkpoint?.provider !== from.adapter.id) return { error: "The checkpoint is for another provider." };
     await saveCapture(from.adapter.id, { ...from.capture, checkpoint });
-    return { stop: from.capture.stop };
+    return { stop: await stopAsked(from.adapter.id) };
   },
 };
 
