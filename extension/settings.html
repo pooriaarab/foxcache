@@ -5,17 +5,17 @@
   <header><img class="mark" src="icons/icon-48.png" alt="" width="22" height="22"><h1>Settings</h1></header>
   <fieldset>
     <legend>Sites foxcache may read</legend>
-    <p class="note">foxcache reads a site only after you allow it here, and only when you click Capture. It reads with the session your tab already has, and only sends GET requests: it never sends, edits or deletes anything there.</p>
+    <p class="note">foxcache reads a site only when you allow it and click Capture. It uses your open session and only reads. It never posts, edits or deletes.</p>
     <div id="sites"></div>
   </fieldset>
   <fieldset>
     <legend>What foxcache keeps</legend>
-    <p class="note">Conversations, projects (name, instructions and file names), memories, and custom instructions. Never a password, a cookie or a token, and never a file's contents. Everything stays in this browser.</p>
-    <p class="note">foxscope may ask for your memories, preferences and project names, and you approve each request there. It can never get your conversations.</p>
+    <p class="note">Conversations, projects (names, instructions, file names), memories and custom instructions. Never passwords, cookies, tokens or file contents. Everything stays in this browser.</p>
+    <p class="note">foxscope can ask for memories, preferences and project names. You approve each request. It never gets your conversations.</p>
   </fieldset>
   <fieldset>
     <legend>Delete everything</legend>
-    <p class="note">Delete every captured record and every capture in progress from this browser. The sites themselves keep your data.</p>
+    <p class="note">Remove all captured data from this browser. The sites keep their copy.</p>
     <div class="row"><button id="delete" class="danger">Delete all captured data</button><span id="status" class="hint" role="status"></span></div>
   </fieldset>
   <script src="settings.js"></script>
