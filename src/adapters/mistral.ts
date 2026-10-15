@@ -3,6 +3,7 @@
 // Endpoints and sources: docs/providers/mistral.md.
 import { FoxcacheError } from "../errors.js";
 import type { Http } from "../http.js";
+import { defineReads } from "../reads.js";
 import { MAX_MESSAGES, type Message, type Role } from "../schema.js";
 import type { Adapter } from "./types.js";
 import { MAX_SUBPAGES, type Obj, reader } from "./read.js";
@@ -46,6 +47,13 @@ export const mistral: Adapter = {
   id: "mistral",
   label: "Le Chat",
   origin: "https://chat.mistral.ai",
+  // Each tRPC procedure, or batch of them, is its own path.
+  reads: defineReads([
+    { method: "GET", path: "/api/trpc/user.session", query: ["batch", "input"], source: "https://github.com/vkop007/mikacli/blob/324874123916ca5e687531cd9b50345af68f9eac/src/platforms/llm/mistral/service.ts#L311-L313" },
+    { method: "GET", path: "/api/trpc/chat.last", query: ["batch", "input"], source: "https://github.com/breakwater2026/TotalRecalls/blob/ae17f9350dd19728a1bd48e7e5731097eb03ff70/totalrecalls/adapters/mistral/adapter.py#L84-L137" },
+    { method: "GET", path: "/api/trpc/chat.byId,message.all", query: ["batch", "input"], source: "https://github.com/L-a-r-t/chatgpt-to-notion/blob/54eca1ed27603921b08bedbbc4e792a09f7d4e7a/src/models/mistral/types/index.ts#L1-L73" },
+    { method: "GET", path: "/api/trpc/message.all", query: ["batch", "input"], source: "https://github.com/lordmacu/mistral-proxy/blob/658fdd38015a21d52fdd5fe4df15bb5924844ac9/api/routes/conversations.py#L75-L123" },
+  ]),
   // No source confirms the order of chat.last.
   newestFirst: false,
 

@@ -3,6 +3,7 @@
 // Endpoints and sources: docs/providers/deepseek.md.
 import { FoxcacheError } from "../errors.js";
 import type { Http, Query } from "../http.js";
+import { defineReads } from "../reads.js";
 import type { Message } from "../schema.js";
 import type { Adapter } from "./types.js";
 import { type Obj, pathToRoot, reader } from "./read.js";
@@ -43,6 +44,11 @@ export const deepseek: Adapter = {
   label: "DeepSeek",
   origin: "https://chat.deepseek.com",
   auth: "deepseek-local",
+  reads: defineReads([
+    { method: "GET", path: "/api/v0/users/current", source: "https://github.com/NIyueeE/ds-free-api/blob/99f77302cebc0b32f10066f96b863f2f27752708/ds_core/raw-api-reference.md#L126-L131" },
+    { method: "GET", path: "/api/v0/chat_session/fetch_page", query: ["lte_cursor.pinned", "lte_cursor.updated_at", "lte_cursor.id"], source: "https://github.com/agoramachina/deepseek-exporter/blob/791847f92402739fa4692597f569e5ee6509688d/firefox/content.js#L67-L97" },
+    { method: "GET", path: "/api/v0/chat/history_messages", query: ["chat_session_id"], source: "https://github.com/pinguarmy/ai-chat-exporter/blob/d760b045dd19ae17af4f21c7765e1c14e5d29671/tests/fixtures/providers/deepseek/2026-08-24-normal.json" },
+  ]),
   // Pinned chats come first, so a page with no change does not mean the rest is unchanged.
   newestFirst: false,
 
