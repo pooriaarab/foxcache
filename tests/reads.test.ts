@@ -53,6 +53,16 @@ describe("H11 a wrong reads table", () => {
   it("refuses a decode that is not a function", () => {
     expect(open(defineReads([get("/a", { decode: "json" as never })]))).toThrow(/decode/);
   });
+  it.each([["authorization"], ["cookie"], ["host"], ["origin"], ["referer"], ["content-length"], ["Agw-Js-Conv"], ["x y"], [""]])("refuses the fixed header %j", (name) => {
+    expect(open(defineReads([get("/a", { headers: { [name]: "str" } })]))).toThrow(/header/);
+  });
+  it("refuses a fixed header value with a line break or a control character", () => {
+    expect(open(defineReads([get("/a", { headers: { "agw-js-conv": "str\r\nx-evil: 1" } })]))).toThrow(/header/);
+    expect(open(defineReads([get("/a", { headers: { "agw-js-conv": "s\u0000" } })]))).toThrow(/header/);
+  });
+  it("takes a fixed header the page sends", () => {
+    expect(open(defineReads([get("/a", { headers: { "agw-js-conv": "str", "content-type": "application/json; encoding=utf-8" } })]))).not.toThrow();
+  });
   it("refuses a method it does not know", () => {
     expect(open(defineReads([get("/a", { method: "DELETE" as "GET" })]))).toThrow(/method/);
   });

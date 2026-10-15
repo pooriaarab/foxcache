@@ -62,6 +62,9 @@ table and your manifest lines with no edit.
   run before the PR.
 - An answer that is not JSON: give the read a `decode(text)`. Throw
   `r.fail(...)` from it for a changed shape.
+- A header the site's page sends on a read (Doubao's `agw-js-conv: str`,
+  a content-type with `encoding=utf-8`): give the read `headers`. They
+  are fixed text, sent on that read only; a token is the auth kind's.
 - Volatile ids (Google rpc ids, Poe query hashes, Meta doc ids): one constant
   each at the top of the adapter. A changed id must fail with
   `provider-schema` through `reader`, never fall back.
