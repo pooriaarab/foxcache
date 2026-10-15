@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type Conversation, FoxcacheError, createStore, memoryBackend } from "../src/index.js";
+import { type Conversation, FoxcacheError, createStore, memoryBackend, recordKey } from "../src/index.js";
 
 const conv = (id: string, updatedAt: string, text = "hello", title = "A chat"): Conversation => ({
   provider: "chatgpt",
@@ -114,5 +114,23 @@ describe("ST6 many hits", () => {
     expect((await store.search("tea")).map((h) => h.kind).toSorted()).toEqual(["conversations", "memories", "preferences"]);
     expect((await store.search("tea", { provider: "claude" })).map((h) => h.kind).toSorted()).toEqual(["memories", "preferences"]);
     expect((await store.search("tea", { kind: "conversations" })).map((h) => h.title)).toEqual(["Tea notes"]);
+  });
+});
+
+describe("ST7 a record removed on the site", () => {
+  it("keep deletes the records of one provider and kind that are not in the list", async () => {
+    const backend = memoryBackend();
+    const store = createStore(backend);
+    await store.put("memories", { provider: "claude", text: "Lives in Berlin" });
+    await store.put("memories", { provider: "claude", text: "Has a dog" });
+    await store.put("memories", { provider: "chatgpt", id: "m1", text: "Lives in Paris" });
+    await store.put("preferences", { provider: "claude", kind: "about-me", text: "Teacher" });
+    await backend.put("memories", "claude:broken", { provider: "claude" });
+    const toronto = { provider: "claude" as const, text: "Lives in Toronto" };
+    await store.put("memories", toronto);
+    expect(await store.keep("memories", "claude", [recordKey("memories", toronto)])).toBe(2);
+    expect((await store.all("memories")).map((m) => m.text).toSorted()).toEqual(["Lives in Paris", "Lives in Toronto"]);
+    expect(await store.all("preferences")).toHaveLength(1);
+    expect((await store.problems()).map((p) => p.key)).toEqual(["claude:broken"]);
   });
 });

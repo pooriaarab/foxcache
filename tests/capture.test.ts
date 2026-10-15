@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type Adapter, type Checkpoint, type Conversation, FoxcacheError, type Http, type Kind, type Stub, runCapture } from "../src/index.js";
+import { type Adapter, type Checkpoint, type Conversation, FoxcacheError, type Http, type Kind, type Stub, recordKey, runCapture } from "../src/index.js";
 
 const T = (n: number) => new Date(Date.UTC(2026, 0, 1, 0, 0, n)).toISOString();
 const conv = (s: Stub): Conversation => ({ provider: "chatgpt", id: s.id, title: s.title, createdAt: T(0), updatedAt: s.updatedAt, messages: [{ role: "user", text: `text of ${s.id}`, attachments: [] }] });
@@ -52,9 +52,15 @@ function provider(opts: { stubs?: Stub[]; pageSize?: number; reply?: (path: stri
 function sink(stopAfter = Infinity) {
   const records: Array<[Kind, unknown]> = [];
   const checkpoints: Checkpoint[] = [];
+  const keeps: Array<[Kind, string[]]> = [];
   return {
     records,
     checkpoints,
+    keeps,
+    async keep(kind: Kind, keys: string[]) {
+      keeps.push([kind, keys]);
+      return { stop: false };
+    },
     async put(kind: Kind, record: unknown) {
       records.push([kind, record]);
       return { stop: records.length >= stopAfter };
@@ -289,5 +295,35 @@ describe("C9 optional kinds", () => {
   it("ends on logged-out in a kind", async () => {
     const p = provider({ extras: { projects: async () => Promise.reject(err("logged-out")) } });
     expect((await run(p, sink())).error?.code).toBe("logged-out");
+  });
+});
+
+describe("C11 a kind read in full", () => {
+  it("sends keep with the keys of every record of the kind", async () => {
+    const p = provider({
+      extras: {
+        memories: async () => [{ provider: "chatgpt", id: "m1", text: "Has a dog" }, { provider: "chatgpt", text: "Lives in Toronto" }],
+        preferences: async () => [],
+      },
+    });
+    const s = sink();
+    expect((await run(p, s)).status).toBe("done");
+    expect(s.keeps).toEqual([
+      ["memories", ["chatgpt:m1", recordKey("memories", { provider: "chatgpt", text: "Lives in Toronto" })]],
+      ["preferences", []],
+    ]);
+  });
+  it("sends no keep for a kind that failed or was stopped", async () => {
+    const p = provider({
+      extras: {
+        memories: async () => {
+          throw err("provider-schema");
+        },
+        preferences: async () => [{ provider: "chatgpt", kind: "about-me", text: "I teach" }, { provider: "chatgpt", kind: "name", text: "Sam" }],
+      },
+    });
+    const s = sink(1);
+    expect((await run(p, s)).status).toBe("stopped");
+    expect(s.keeps).toEqual([]);
   });
 });
