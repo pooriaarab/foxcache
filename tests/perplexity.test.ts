@@ -19,6 +19,8 @@ const stub = (id: string, updatedAt = "") => ({ id, title: "", updatedAt });
 const listBody = (offset: number) => JSON.stringify({ limit: 50, ascending: false, offset, search_term: "", exclude_asi: false });
 const row = (i: number) => ({ uuid: `t${i}`, title: `T${i}`, last_query_datetime: "2026-09-01T00:00:00" });
 const loopPage = (n: number) => ({ entries: [{ uuid: `e${n}`, query_str: "q", entry_created_datetime: "2026-08-01T09:00:00", blocks: [] }], has_next_page: true, next_cursor: "same" });
+const block = (usage: string, answer: string) => ({ intended_usage: usage, markdown_block: { answer } });
+const entry = (blocks: unknown[]) => ({ entries: [{ uuid: "e3", query_str: "q", entry_created_datetime: "2026-08-01T09:00:00", blocks }], has_next_page: false });
 const memoryNode = (id: string) => ({ node: { id, displayValue: id } });
 const memoryBody = (after: string | null) => JSON.stringify({ operationName: "KnowledgeContextKnowledgeRelayQuery", variables: { knowledgeFirst: null, knowledgeAfter: null, memoriesFirst: 100, memoriesAfter: after, includeKnowledgePage: false, includeMemoriesPage: true, includeContent: true, includeOutboundLinks: true }, extensions: { persistedQuery: { version: 1, sha256Hash: "2884580667156294c2dfab80de32b737ef7bdf1d2c765a1f37e45e0207afcc50" } } });
 const memories = (edges: unknown[], pageInfo: unknown, status = "OK") => ({ data: { viewer: { knowledgeContext: { scopeByKind: { id: "s", memoryCategories: [{ id: "individual:memories", items: { status, edges, pageInfo } }] } } } } });
@@ -90,6 +92,12 @@ describe("perplexity threads", () => {
       ["user", "And back?"],
       ["assistant", "Take the 15E back."],
     ]);
+  });
+  it("PX42 skips an empty markdown answer for the real one", async () => {
+    const real = await perplexity.getConversation(open({ [THREAD(T2)]: entry([block("ask_text_0_markdown", ""), block("ask_text", "The real answer.")]) }).http, stub(T2));
+    expect(real.messages.map((m) => [m.role, m.text])).toEqual([["user", "q"], ["assistant", "The real answer."]]);
+    const none = await perplexity.getConversation(open({ [THREAD(T2)]: entry([block("ask_text_0_markdown", "")]) }).http, stub(T2));
+    expect(none.messages.map((m) => m.role)).toEqual(["user"]);
   });
   it("PX7 keeps hostile text as text", async () => {
     const c = await perplexity.getConversation(open().http, stub(T2));
