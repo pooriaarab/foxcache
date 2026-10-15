@@ -7,6 +7,7 @@ import { deepseek } from "./deepseek.js";
 import { doubao } from "./doubao.js";
 import { githubCopilot } from "./github-copilot.js";
 import { grok } from "./grok.js";
+import { kagi } from "./kagi.js";
 import { kimi } from "./kimi.js";
 import { mistral } from "./mistral.js";
 import { notion } from "./notion.js";
@@ -25,6 +26,7 @@ export const ADAPTERS: readonly Adapter[] = Object.freeze([
   kimi,
   doubao,
   notion,
+  kagi,
 ]);
 
 /** The adapter for a provider id. Throws for a provider with no adapter. */
