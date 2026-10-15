@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FoxcacheError, check, chatgpt } from "../src/index.js";
+import { FoxcacheError, type Http, check, chatgpt } from "../src/index.js";
 import { fixture, fixtureHttp } from "./fixture-http.js";
 
 const ORIGIN = "https://chatgpt.com";
@@ -129,5 +129,27 @@ describe("chatgpt projects, memories and preferences", () => {
     ]);
     const routes = { ...fixture("chatgpt"), "/backend-api/user_system_messages": { about_user_message: "", about_model_message: null } };
     expect(await chatgpt.preferences!(open(routes).http)).toEqual([]);
+  });
+});
+
+/** The project sidebar: page n (0 first) gives one project and the cursor next(n). */
+function sidebar(next: (n: number) => string | null) {
+  const asked: unknown[] = [];
+  const http: Http = {
+    async get(path, query) {
+      if (path !== "/backend-api/gizmos/snorlax/sidebar") throw new FoxcacheError("not-found", path);
+      asked.push(query?.cursor);
+      const n = asked.length - 1;
+      return { items: [{ gizmo: { gizmo: { id: `g-p-${n + 1}` } } }], cursor: next(n) };
+    },
+  };
+  return { http, asked };
+}
+
+describe("chatgpt project sidebar", () => {
+  it("throws pagination-loop when a cursor comes again (P8)", async () => {
+    const s = sidebar((n) => (n < 2 ? "A" : null));
+    expect(await code(chatgpt.projects!(s.http))).toMatch(/^pagination-loop: chatgpt: snorlax\/sidebar.cursor/);
+    expect(s.asked).toEqual([undefined, "A"]);
   });
 });

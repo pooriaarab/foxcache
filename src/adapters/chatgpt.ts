@@ -2,6 +2,7 @@
 // page's own script gets from /api/auth/session; http gets it the same way
 // and keeps it (auth "chatgpt-session"). Endpoints and sources:
 // docs/providers/chatgpt.md.
+import { FoxcacheError } from "../errors.js";
 import type { Http } from "../http.js";
 import type { Attachment, Message, Preference, PreferenceKind, Project } from "../schema.js";
 import type { Adapter, ListPage, Stub } from "./types.js";
@@ -40,7 +41,8 @@ async function projectIds(http: Http): Promise<string[]> {
       ids.push(r.str(gizmo.id, `snorlax/sidebar.items[${i}].gizmo.id`));
     }
     const next = r.optStr(page.cursor, "snorlax/sidebar.cursor");
-    if (!next || seen.has(next)) return ids;
+    if (!next) return ids;
+    if (seen.has(next)) throw new FoxcacheError("pagination-loop", "chatgpt: snorlax/sidebar.cursor came again (a loop). The site may have changed; foxcache needs an update.");
     seen.add(next);
     cursor = next;
   }
