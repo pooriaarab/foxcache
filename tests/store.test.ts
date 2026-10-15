@@ -65,6 +65,17 @@ describe("ST3 a broken stored record", () => {
   });
 });
 
+describe("ST3 a broken stored record is replaced by a good one", () => {
+  it("treats a stored copy that fails its check as absent", async () => {
+    const backend = memoryBackend();
+    const store = createStore(backend);
+    await backend.put("conversations", "chatgpt:c1", { provider: "chatgpt", id: "c1", updatedAt: "2026-02-01T00:00:00.000Z", messages: "broken" });
+    expect(await store.put("conversations", conv("c1", "2026-01-02T00:00:00.000Z", "good"))).toBe("updated");
+    expect((await store.all("conversations")).map((c) => c.messages[0]!.text)).toEqual(["good"]);
+    expect(await store.problems()).toEqual([]);
+  });
+});
+
 describe("ST4 delete all", () => {
   it("empties every kind and the checkpoints", async () => {
     const store = createStore(memoryBackend());

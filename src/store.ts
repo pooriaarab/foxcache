@@ -104,11 +104,17 @@ export function createStore(backend: Backend) {
       const record = check(kind, input);
       const key = recordKey(kind, record);
       const stored = await backend.get(kind, key);
-      if (stored !== undefined) {
+      // A stored copy that fails its check counts as absent, so a good copy replaces it (ST3).
+      let valid: RecordOf[K] | undefined;
+      try {
+        valid = stored === undefined ? undefined : check(kind, stored);
+      } catch {
+        valid = undefined;
+      }
+      if (valid !== undefined) {
         if (kind === "conversations") {
-          const old = stored as Partial<Conversation>;
-          if (typeof old.updatedAt === "string" && old.updatedAt >= (record as Conversation).updatedAt) return "same";
-        } else if (JSON.stringify(stored) === JSON.stringify(record)) return "same";
+          if ((valid as Conversation).updatedAt >= (record as Conversation).updatedAt) return "same";
+        } else if (JSON.stringify(valid) === JSON.stringify(record)) return "same";
       }
       await backend.put(kind, key, record);
       return stored === undefined ? "added" : "updated";
