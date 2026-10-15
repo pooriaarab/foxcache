@@ -13,6 +13,8 @@ import type { Adapter, Stub } from "./types.js";
 const r = reader("meta");
 const CHUNKS = "https://www.meta.ai/_next/static/immutable/chunks";
 const GQL = "/api/graphql";
+/** The only top-level keys of a read body: no query_id or query text beside the doc_id (H30). */
+const KEYS = ["doc_id", "variables"];
 // doc_ids change with Meta's deploys. A changed one answers GraphQL errors: provider-schema.
 const LIST = "f9f2f515cf675e127f619401193b6992"; // EctoConversationListWithPaginationRouterQuery
 const PINNED = "28e9d6b1d7fe4b32a62f622dbd33ddc3"; // EctoPinnedConversationsRouterRefetchQuery
@@ -54,10 +56,10 @@ export const meta: Adapter = {
   // The page adds a bearer only for a signed-out temporary user.
   auth: cookie,
   reads: defineReads([
-    { method: "POST", path: GQL, body: { type: "json", match: { doc_id: LIST } }, source: `${CHUNKS}/21xl7171h-_0s.js` },
-    { method: "POST", path: GQL, body: { type: "json", match: { doc_id: PINNED } }, source: `${CHUNKS}/1k4fkow1u-kuz.js` },
-    { method: "POST", path: GQL, body: { type: "json", match: { doc_id: UNPINNED } }, source: `${CHUNKS}/21xl7171h-_0s.js` },
-    { method: "POST", path: GQL, body: { type: "json", match: { doc_id: MESSAGES } }, source: `${CHUNKS}/1co5ovyqc5vs_.js` },
+    { method: "POST", path: GQL, body: { type: "json", match: { doc_id: LIST }, keys: KEYS }, source: `${CHUNKS}/21xl7171h-_0s.js` },
+    { method: "POST", path: GQL, body: { type: "json", match: { doc_id: PINNED }, keys: KEYS }, source: `${CHUNKS}/1k4fkow1u-kuz.js` },
+    { method: "POST", path: GQL, body: { type: "json", match: { doc_id: UNPINNED }, keys: KEYS }, source: `${CHUNKS}/21xl7171h-_0s.js` },
+    { method: "POST", path: GQL, body: { type: "json", match: { doc_id: MESSAGES }, keys: KEYS }, source: `${CHUNKS}/1co5ovyqc5vs_.js` },
   ]),
   // No source states the order.
   newestFirst: false,

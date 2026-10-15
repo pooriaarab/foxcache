@@ -16,6 +16,8 @@ const PAW = "https://github.com/snowby666/poe-api-wrapper/blob/bbb6831eb1ccbc2be
 const ERICBLUE = "https://github.com/ericblue/poe-chat-exporter/blob/49df39b9b6436b7986ca15a2a50535f3c3027f6e/poe-exporter.py";
 const GQL = "/api/gql_POST";
 const PAGE = 50;
+/** The only top-level keys of a read body: a query text would run whatever it says (H30). */
+const KEYS = ["queryName", "variables", "extensions"];
 // Persisted query hashes change with Poe's builds. A changed one answers GraphQL errors: provider-schema.
 const LIST = { name: "ChatHistoryListPaginationQuery", hash: "6ce01455b0201e625489da90c65f87a2809d212ea41ab6e39412b6913990e81f" };
 const MESSAGES = { name: "ChatListPaginationQuery", hash: "c1a8fd96dd6e0a4679814182951b1e256e175587513c81b223addf931833a692" };
@@ -38,8 +40,8 @@ export const poe: Adapter = {
   // poe-formkey from the page function paw finds with this pattern; poe-tag-id = md5(body + formkey + salt).
   auth: pageFormkey({ fn: /window\.([a-zA-Z0-9]+)=function\(\)\{return window/, length: 32, header: "poe-formkey", tag: { header: "poe-tag-id", salt: "4LxgHM6KpFqokX0Ox" } }),
   reads: defineReads([
-    { method: "POST", path: GQL, body: { type: "json", match: { queryName: LIST.name, "extensions.hash": LIST.hash } }, source: `${ERICBLUE}#L98-L131` },
-    { method: "POST", path: GQL, body: { type: "json", match: { queryName: MESSAGES.name, "extensions.hash": MESSAGES.hash } }, source: `${PAW}/api.py#L1002-L1056` },
+    { method: "POST", path: GQL, body: { type: "json", match: { queryName: LIST.name, "extensions.hash": LIST.hash }, keys: KEYS }, source: `${ERICBLUE}#L98-L131` },
+    { method: "POST", path: GQL, body: { type: "json", match: { queryName: MESSAGES.name, "extensions.hash": MESSAGES.hash }, keys: KEYS }, source: `${PAW}/api.py#L1002-L1056` },
   ]),
   // The list has no time; no source states its order.
   newestFirst: false,
