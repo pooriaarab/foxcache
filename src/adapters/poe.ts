@@ -89,7 +89,8 @@ export const poe: Adapter = {
       seen.add(cursor);
     }
     const rows = pages.flat();
-    if (rows.length === 0) throw r.fail("the chat", "has no messages");
+    // Nothing to store and no time to give it: not-found, so the runner goes on past empty chats (PO40).
+    if (rows.length === 0) throw new FoxcacheError("not-found", `poe: chat ${stub.id} has no messages; nothing is stored for it.`);
     // author is "human" or the bot's handle.
     const messages: Message[] = rows.map((m, i) => {
       const author = r.str(m.author, `messages[${i}].author`);
