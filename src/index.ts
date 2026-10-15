@@ -16,6 +16,7 @@ export * from "./scent.js";
 export { chatgpt } from "./adapters/chatgpt.js";
 export { claude } from "./adapters/claude.js";
 export { deepseek } from "./adapters/deepseek.js";
+export { doubao } from "./adapters/doubao.js";
 export { kimi } from "./adapters/kimi.js";
 export { mistral } from "./adapters/mistral.js";
 export { ADAPTERS, adapterAt, adapterFor } from "./adapters/index.js";
