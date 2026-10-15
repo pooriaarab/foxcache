@@ -11,7 +11,12 @@ GraphQL call (auth `page-formkey`):
   Its name changes with each build; paw finds it in the page's inline
   scripts with `window\.([a-zA-Z0-9]+)=function\(\)\{return window`, and
   ChatALL calls `window.ereNdsRqhp2Rd3LEW()` in the page. foxcache finds it
-  the same way and calls it in the page (Firefox `wrappedJSObject`).
+  the same way and calls it in the page (Firefox `wrappedJSObject`). It
+  reads only inline JavaScript (no `type`, or `text/javascript`), never a
+  data block such as `__NEXT_DATA__`, and needs exactly one match (H31).
+  Unverified live: where the formkey script sits on the page and whether
+  the pattern matches once. paw takes the first match of the whole HTML;
+  foxcache takes the safe reading and refuses two (PO30).
   ([paw bundles.py](https://github.com/snowby666/poe-api-wrapper/blob/bbb6831eb1ccbc2bed7bae89cfbd29a106bdd707/poe_api_wrapper/bundles.py#L7-L83),
   [ChatALL background.js](https://github.com/ai-shifu/ChatALL/blob/6d089c2ab72dde2ba1010cc1e910ceb766458546/src/background.js#L344-L347),
   [poe-api](https://github.com/ading2210/poe-api/blob/9286c02017f3102dc665afb631a3ebd00bd566ee/src/poe/__init__.py#L214-L248), confirmed)
@@ -70,3 +75,4 @@ So a name ending in `Query` is not enough: only the two pairs above pass.
 | PO3 | The list has no time. | Every stub gets the capture's time, so each chat is read again; nothing is skipped by a guessed time. | `tests/poe.test.ts` |
 | PO4 | The message pages give a `startCursor` they gave before. | `provider-schema` (a loop); `pagination-loop` after 1 000 pages; `too-large` past 20 000 messages. | `tests/poe.test.ts` |
 | PO5 | A chat with no messages. | `provider-schema`: no time to give it. | `tests/poe.test.ts` |
+| PO30 | The page's JavaScript names two formkey functions, or a bot's text in a data block quotes the pattern. | The data block is not read. Two matches in the JavaScript: `provider-schema`, and no page function is called (H31). | `tests/page-formkey-scripts.test.ts`, E2E (Poe) |
