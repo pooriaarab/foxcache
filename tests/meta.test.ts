@@ -14,7 +14,7 @@ const M2 = "a1b2c3d4-0000-4000-8000-000000000002";
 const op = (docId: string, variables: Record<string, unknown>) => `POST /api/graphql ${JSON.stringify({ doc_id: docId, variables })}`;
 const messages = (id: string, before: string | null) => op(MESSAGES, { conversationId: id, before, last: 10 });
 const open = (routes: Routes = fixture("meta")) => fixtureHttp(meta, routes);
-const raw = (fetch: (url: string, init: RequestInit) => Promise<Response>) => createHttp(meta, { fetch, storage: { getItem: () => null }, cookie: () => "", scripts: () => [], call: () => undefined });
+const raw = (fetch: (url: string, init: RequestInit) => Promise<Response>) => createHttp(meta, { fetch, storage: { getItem: () => null }, scripts: () => [], call: () => undefined });
 const stub = (id: string, title = "Porto weekend") => ({ id, title, updatedAt: "2026-10-14T09:30:00.000Z" });
 const conn = (ids: string[], hasNextPage: boolean, endCursor: string | null) => ({ edges: ids.map((id) => ({ node: { id, updatedAt: "2026-10-01T00:00:00.000Z", title: `t ${id}`, displayTitle: `d ${id}`, __typename: "Conversation" }, cursor: id })), pageInfo: { hasNextPage, endCursor } });
 const chat = (edges: unknown[], pageInfo: unknown = { hasPreviousPage: false, startCursor: "s0" }) => ({ data: { conversation: { id: M1, latestBranchPath: "1", messages: { edges, pageInfo } } } });

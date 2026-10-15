@@ -12,7 +12,7 @@ const go = async () => ({ stop: false });
 const listWith = (body: unknown) => chatgpt.listConversations(open({ ...fixture("chatgpt"), [LIST]: body }).http, CODEX);
 /** A ChatGPT Http whose token comes from the session and whose fetch is fetch. */
 const withFetch = (fetch: (url: string) => Promise<Response>) =>
-  createHttp(chatgpt, { storage: { getItem: () => null }, cookie: () => "", scripts: () => [], call: () => undefined, fetch: async (url) => (url.endsWith("/api/auth/session") ? Response.json({ accessToken: "synthetic-token" }) : fetch(url)) });
+  createHttp(chatgpt, { storage: { getItem: () => null }, scripts: () => [], call: () => undefined, fetch: async (url) => (url.endsWith("/api/auth/session") ? Response.json({ accessToken: "synthetic-token" }) : fetch(url)) });
 
 async function code(p: Promise<unknown>): Promise<string> {
   try {

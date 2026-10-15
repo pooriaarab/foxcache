@@ -10,8 +10,6 @@ export interface AuthPage {
   origin: string;
   /** The page's localStorage. */
   storage: { getItem(key: string): string | null };
-  /** The page's document.cookie (cookies that are not HttpOnly). */
-  cookie(): string;
   /** The text of each inline script of the page that is JavaScript: no src, and no type or text/javascript (H31). */
   scripts(): string[];
   /** Call a function the page's own script set on window, with no arguments, in the page, and give what it returns. undefined when there is none. */
@@ -43,7 +41,7 @@ export interface AuthParts {
 export type Sign = (request: AuthRequest, fresh: boolean) => Promise<AuthParts>;
 
 export interface Auth {
-  /** The kind, as in the file name: cookie, page-session, localStorage-bearer, cookie-bearer, page-formkey, with-headers, google-page-tokens. */
+  /** The kind, as in the file name: cookie, page-session, localStorage-bearer, page-formkey, with-headers, google-page-tokens. */
   readonly kind: string;
   /** Paths on the site's origin that the kind reads itself because they hold the token. No read may name one (H7). */
   readonly tokenPaths: readonly string[];

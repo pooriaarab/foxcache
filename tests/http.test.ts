@@ -5,8 +5,8 @@ import { reader } from "../src/adapters/read.js";
 const ORIGIN = "https://chatgpt.com";
 const SOURCE = "https://example.test/docs";
 const get = (path: string, query?: string[]): Read => ({ method: "GET", path, ...(query ? { query } : {}), source: SOURCE });
-/** A page with no storage, no cookie, no scripts and no globals. */
-const NO_PAGE = { storage: { getItem: () => null }, cookie: () => "", scripts: () => [], call: () => undefined };
+/** A page with no storage, no scripts and no globals. */
+const NO_PAGE = { storage: { getItem: () => null }, scripts: () => [], call: () => undefined };
 const schema = reader("test");
 /** A decoder that finds a changed shape. */
 const strict = (): never => {

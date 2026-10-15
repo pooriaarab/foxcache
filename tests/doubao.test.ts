@@ -46,7 +46,7 @@ describe("doubao requests", () => {
       sent.push({ url, init });
       return new Response(JSON.stringify(fixture("doubao")["POST /im/chain/recent_conv"]));
     };
-    await doubao.detect(createHttp(doubao, { fetch, storage: { getItem: () => null }, cookie: () => "", scripts: () => [], call: () => undefined }));
+    await doubao.detect(createHttp(doubao, { fetch, storage: { getItem: () => null }, scripts: () => [], call: () => undefined }));
     const headers = new Headers(sent[0]!.init.headers);
     expect([headers.get("content-type"), headers.get("agw-js-conv"), headers.get("authorization")]).toEqual(["application/json; encoding=utf-8", "str", null]);
     expect(sent[0]!.url).toBe(`https://www.doubao.com/im/chain/recent_conv?${Q}`);

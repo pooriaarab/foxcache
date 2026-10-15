@@ -20,7 +20,7 @@ const site = {
     { method: "GET", origin: CROSS, path: "/no-cors", source: SOURCE },
   ]),
 };
-const http = createHttp(site, { fetch: (url, init) => fetch(url, init), storage: window.localStorage, cookie: () => document.cookie, scripts: () => [], call: () => undefined });
+const http = createHttp(site, { fetch: (url, init) => fetch(url, init), storage: window.localStorage, scripts: () => [], call: () => undefined });
 const outcome = (p) => p.then((value) => ({ value }), (error) => ({ error: error.code ?? String(error) }));
 
 // A site cookie (Domain=chatgpt.com), which a same-site API host gets with credentials: "include".

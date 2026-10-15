@@ -15,7 +15,7 @@ async function run(scripts: string[]) {
   const called: string[] = [];
   const sent: Headers[] = [];
   const fetch = async (_url: string, init: RequestInit) => (sent.push(new Headers(init.headers)), Response.json({}));
-  const http = createHttp({ origin: ORIGIN, reads, auth: kind }, { fetch, storage: { getItem: () => null }, cookie: () => "", scripts: () => scripts, call: (name) => (called.push(name), name === "realKey" ? KEY : "") });
+  const http = createHttp({ origin: ORIGIN, reads, auth: kind }, { fetch, storage: { getItem: () => null }, scripts: () => scripts, call: (name) => (called.push(name), name === "realKey" ? KEY : "") });
   const error = await http.get("/api/me").then(() => undefined, (e: unknown) => e);
   return { called, sent, error };
 }
