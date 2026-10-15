@@ -140,6 +140,16 @@ describe("C4 endless list", () => {
     const p = provider({ reply: (path) => (path.startsWith("/list") ? { items: [{ id: "same", title: "x", updatedAt: T(1) }], next: String(++page) } : undefined) });
     expect((await run(p, sink())).error?.code).toBe("pagination-loop");
   });
+  it("goes on when a later part of the list repeats an id (DeepSeek: pinned chats, then the rest)", async () => {
+    const pages: Record<string, { items: { id: string; title: string; updatedAt: string }[]; next?: string }> = {
+      "/list?0": { items: [{ id: "c0", title: "pinned", updatedAt: T(3) }, { id: "c1", title: "pinned", updatedAt: T(2) }], next: "1" },
+      "/list?1": { items: [{ id: "c0", title: "pinned", updatedAt: T(3) }], next: "2" },
+      "/list?2": { items: [{ id: "c2", title: "x", updatedAt: T(1) }] },
+    };
+    const p = provider({ reply: (path) => pages[path] });
+    const cp = await run(p, sink());
+    expect([cp.status, cp.error?.code, cp.counts.conversations]).toEqual(["done", undefined, 3]);
+  });
   it("stops after the page limit", async () => {
     let page = 0;
     const p = provider({ reply: (path) => (path.startsWith("/list") ? { items: [{ id: `id${page}`, title: "x", updatedAt: T(1) }], next: String(++page) } : path.startsWith("/c/") ? undefined : undefined) });
