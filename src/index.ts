@@ -20,4 +20,5 @@ export { deepseek } from "./adapters/deepseek.js";
 export { doubao } from "./adapters/doubao.js";
 export { kimi } from "./adapters/kimi.js";
 export { mistral } from "./adapters/mistral.js";
+export { poe } from "./adapters/poe.js";
 export { ADAPTERS, adapterAt, adapterFor } from "./adapters/index.js";
