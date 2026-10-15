@@ -76,7 +76,14 @@ const describe = (error: unknown) => (error instanceof FoxcacheError ? `${error.
 const codeOf = (error: unknown) => (error instanceof FoxcacheError ? error.code : "error");
 
 export async function runCapture(o: CaptureOptions): Promise<Checkpoint> {
-  const sleep = o.sleep ?? ((ms: number) => new Promise<void>((done) => setTimeout(done, ms)));
+  // The default sleep ends early on Stop, so a long backoff does not hold it (C6).
+  const sleep =
+    o.sleep ??
+    ((ms: number) =>
+      new Promise<void>((done) => {
+        const timer = setTimeout(done, ms);
+        o.signal?.addEventListener("abort", () => (clearTimeout(timer), done()), { once: true });
+      }));
   const now = () => (o.now ?? (() => new Date()))().toISOString();
   const delayMs = o.delayMs ?? DEFAULT_DELAY_MS;
   const maxPages = o.maxPages ?? MAX_PAGES;
@@ -107,12 +114,14 @@ export async function runCapture(o: CaptureOptions): Promise<Checkpoint> {
       for (let tries = 1; ; tries++) {
         halt();
         if (sent++ > 0 && tries === 1) await sleep(delayMs);
+        halt();
         try {
           return await o.http.get(path, query);
         } catch (error) {
           if (!(error instanceof FoxcacheError) || error.code !== "rate-limited" || tries >= MAX_TRIES) throw error;
           if (error.retryAfter !== undefined && error.retryAfter > MAX_RETRY_AFTER_S) throw error;
           await sleep(error.retryAfter !== undefined ? error.retryAfter * 1000 : Math.min(MAX_BACKOFF_MS, 1000 * 2 ** tries));
+          halt();
         }
       }
     },
