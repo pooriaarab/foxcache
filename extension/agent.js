@@ -13,11 +13,19 @@ async function send(message) {
   return { stop: answer?.stop !== false };
 }
 
+/** The text of the page's inline scripts, for an auth kind that finds a page function by name (page-formkey). */
+const pageScripts = () => [...document.scripts].filter((s) => !s.src).map((s) => s.text);
+/** Call a function the page's own script set on window. It runs in the page, as the page's own call would; wrappedJSObject is how Firefox reaches it. */
+function callPage(name) {
+  const fn = window.wrappedJSObject[name];
+  return typeof fn === "function" ? fn() : undefined;
+}
+
 // executeScript can inject the file again into the same tab.
 if (!globalThis.foxcacheAgent) {
   globalThis.foxcacheAgent = true;
   const adapter = adapterAt(location.origin);
-  const http = () => createHttp(adapter, { fetch: (url, init) => fetch(url, init), storage: window.localStorage, cookie: () => document.cookie });
+  const http = () => createHttp(adapter, { fetch: (url, init) => fetch(url, init), storage: window.localStorage, cookie: () => document.cookie, scripts: pageScripts, call: callPage });
   let running = false;
   let stopper;
 
