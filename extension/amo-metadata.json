@@ -2,17 +2,17 @@
   "default_locale": "en-US",
   "slug": "foxcache",
   "name": {
-    "en-US": "foxcache"
+    "en-US": "foxcache — your AI chats in your browser"
   },
   "summary": {
-    "en-US": "Capture your own AI chats, projects, memories and preferences into your browser."
+    "en-US": "Copy your own conversations, projects, memories and custom instructions from ChatGPT, Claude, Le Chat and DeepSeek into your browser. Read-only, and nothing leaves your computer."
   },
   "description": {
-    "en-US": "Capture your own AI chats, projects, memories and preferences into your browser.\n\n**Who it is for:** people who want to see foxcache work in their own browser before they build on the foxcache library.\n\n**What leaves your computer:** nothing. foxcache has no server, sends no data off this device, and has no analytics.\n\n**Permissions**\n\n- Storage: keep a value in your browser that the toolbar popup shows.\n\nThe source code is MIT licensed."
+    "en-US": "foxcache copies your own data from the AI chat sites you are signed in to, into this browser: conversations, projects (name, instructions and file names), saved memories, and custom instructions or response style.\n\n**Who it is for:** people who use several AI chat sites and want one copy of their own history and context that they keep, search and move.\n\n**What it does**\n\n- In the settings page you allow each site one at a time: ChatGPT, Claude, Le Chat (Mistral) and DeepSeek.\n- Open the site and sign in as you always do, then click Capture in the toolbar popup. foxcache reads your data with the session the tab already has. It never sees your password and never reads a cookie.\n- It only reads. Every request it makes is a GET to the site's own address, one at a time with a pause between them. It never sends, edits or deletes anything on the site.\n- Stop ends a capture; Resume goes on from where it stopped. A second capture fetches only what changed.\n- The archive page lets you browse and search everything by site and kind, and export it as one archive file, as Markdown files, or as a memory list.\n- Delete all removes everything foxcache keeps.\n\n**What leaves your computer:** nothing. foxcache has no server and no analytics. The only network requests are the reads from the AI site you are signed in to, from your own tab. It answers one other add-on, foxscope (foxscope@pooriaarab), which runs in this browser and asks you before it shares your memories, preferences or project names. It never shares conversations. Every other add-on gets no answer.\n\n**Permissions**\n\n- Access to chatgpt.com, claude.ai, chat.mistral.ai and chat.deepseek.com: optional, and asked for one site at a time when you allow it in the settings. foxcache reads a site only when you click Capture.\n- Scripting: run the capture inside the site's tab, so it uses the session you already have.\n- Unlimited storage: a large chat history must not hit the browser's storage quota.\n\nThe source code is MIT licensed."
   },
   "categories": {
     "firefox": [
-      "other"
+      "privacy-security"
     ]
   },
   "homepage": {
@@ -23,6 +23,6 @@
   },
   "version": {
     "license": "MIT",
-    "approval_notes": "The uploaded source.zip is the git tree of this release. To build: install Node 24 and pnpm (corepack enable), run `pnpm install --frozen-lockfile`, then `pnpm build:ext`. The output is dist-ext/. esbuild bundles extension/*.js; the other files are copied unmodified. To try it: click the toolbar button. The popup shows the value that the background script stores at install. No account is needed."
+    "approval_notes": "The uploaded source.zip is the git tree of this release. To build: install Node 24 and pnpm 11 (corepack enable), run `pnpm install --frozen-lockfile`, then `pnpm build:ext`. The output is dist-ext/. esbuild bundles extension/*.js with src/; the other files are copied unmodified. To try it without an AI account: there is no demo mode. With an account: open the add-on preferences, allow chatgpt.com (or claude.ai), open that site and sign in, then click Capture in the toolbar popup and open the archive. Every request goes through src/http.ts, which has GET on the site's own origin and nothing else. onMessageExternal answers only the sender foxscope@pooriaarab."
   }
 }
