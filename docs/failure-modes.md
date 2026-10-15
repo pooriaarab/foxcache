@@ -85,6 +85,7 @@ All errors are `FoxcacheError` with a `code`. The codes are in the rows.
 | P4 | A time is epoch seconds on one site and ISO-8601 on another. | Every adapter gives ISO-8601 UTC. | `tests/<provider>.test.ts` |
 | P5 | An attachment has file contents or extracted text. | Only name, id, type and size are kept. | `tests/<provider>.test.ts` |
 | P6 | A Le Chat message has no `turn`, or a `turn` that is not a number. | The adapter throws `provider-schema` and names the message. It does not guess an order, which would store the thread out of order and never fix it. | `tests/mistral.test.ts` |
+| P7 | A message in the thread names a parent that is not in the conversation. | The adapter throws `provider-schema` and names the message and the parent. It does not store the part below the gap. Each adapter names its own root: `parent: null` (ChatGPT), `parent_id: null` (DeepSeek), the all-zero uuid (Claude). | `tests/chatgpt.test.ts`, `tests/deepseek.test.ts`, `tests/claude.test.ts` |
 
 ## SCENT
 

@@ -80,8 +80,9 @@ export const deepseek: Adapter = {
       }),
     );
     const leaf = session.current_message_id;
-    const ids = list.length && leaf !== null && leaf !== undefined ? pathToRoot(String(leaf), (id) => (byId.get(id)!.parent_id === null ? undefined : String(byId.get(id)!.parent_id)), (id) => byId.has(id), r.fail) : [];
-    if (list.length && ids.length === 0) throw r.fail("chat_session.current_message_id", "is not a message of the chat (no leaf)");
+    if (list.length && (leaf === null || leaf === undefined || !byId.has(String(leaf)))) throw r.fail("chat_session.current_message_id", "is not a message of the chat (no leaf)");
+    // The first message has parent_id null.
+    const ids = list.length ? pathToRoot(String(leaf), (id) => (byId.get(id)!.parent_id === null ? undefined : String(byId.get(id)!.parent_id)), (id) => byId.has(id), r.fail) : [];
     const messages: Message[] = ids.map((id) => {
       const m = byId.get(id)!;
       const where = `message ${id}`;

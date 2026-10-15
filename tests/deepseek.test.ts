@@ -78,4 +78,11 @@ describe("deepseek conversations", () => {
     bad.data.biz_data.chat_messages[0]!.role = "ROBOT";
     expect(await code(deepseek.getConversation(open({ ...routes, [key]: bad }).http, stub(S2)))).toMatch(/^provider-schema: deepseek: .*role/);
   });
+  it("throws provider-schema when a parent is not in the chat (P7)", async () => {
+    const routes = fixture("deepseek");
+    const key = `/api/v0/chat/history_messages?chat_session_id=${S2}`;
+    const gap = structuredClone(routes[key]) as { data: { biz_data: { chat_messages: Array<{ parent_id: number | null }> } } };
+    gap.data.biz_data.chat_messages[1]!.parent_id = 9;
+    expect(await code(deepseek.getConversation(open({ ...routes, [key]: gap }).http, stub(S2)))).toMatch(/^provider-schema: deepseek: message 2 has the parent 9, which is not in the conversation/);
+  });
 });

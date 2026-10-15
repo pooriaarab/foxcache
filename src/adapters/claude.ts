@@ -6,6 +6,8 @@ import { type Obj, pathToRoot, reader } from "./read.js";
 
 const r = reader("claude");
 const PAGE = 50;
+/** The parent_message_uuid of the first message. */
+const ROOT = "00000000-0000-4000-8000-000000000000";
 const DETAIL = { tree: "True", rendering_mode: "messages", render_all_tools: "true" };
 
 // One organization lookup per capture: the runner gives every call the same Http.
@@ -91,7 +93,15 @@ export const claude: Adapter = {
     if (list.length > 0) {
       const leaf = r.str(c.current_leaf_message_uuid, "current_leaf_message_uuid");
       if (!byId.has(leaf)) throw r.fail("current_leaf_message_uuid", "is not a message of the conversation (no leaf)");
-      ids = pathToRoot(leaf, (id) => byId.get(id)!.parent_message_uuid as string | undefined, (id) => byId.has(id), r.fail);
+      ids = pathToRoot(
+        leaf,
+        (id) => {
+          const parent = r.str(byId.get(id)!.parent_message_uuid, `message ${id}.parent_message_uuid`);
+          return parent === ROOT ? undefined : parent;
+        },
+        (id) => byId.has(id),
+        r.fail,
+      );
     }
     const messages: Message[] = ids.map((id) => {
       const m = byId.get(id)!;
