@@ -83,7 +83,7 @@ describe("H9 a batchexecute read through http", () => {
       calls.push({ url, body: String(init.body) });
       return new Response(frames([wrb("MaZiqc", '["ok"]')]));
     };
-    return { http: createHttp(site, { fetch, storage: { getItem: () => null }, cookie: () => "", scripts: () => [], call: () => undefined }), calls };
+    return { http: createHttp(site, { fetch, storage: { getItem: () => null }, scripts: () => [], call: () => undefined }), calls };
   }
   it("sends the rpc id in the query and the three-level f.req in compact JSON, and decodes the answer", async () => {
     const f = open();

@@ -2,7 +2,7 @@
 // in the tab, inside http, and sends it only with a read.
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { type Auth, FoxcacheError, type Read, chatgpt, cookie, cookieBearer, createHttp, defineReads, localStorageBearer, pageFormkey, pageSession } from "../src/index.js";
+import { type Auth, FoxcacheError, type Read, chatgpt, cookie, createHttp, defineReads, localStorageBearer, pageFormkey, pageSession } from "../src/index.js";
 
 const ORIGIN = "https://chat.example";
 const TOKEN = "eyJ-synthetic-secret-token";
@@ -33,21 +33,20 @@ function fakeFetch(routes: Record<string, string | { status: number; body?: stri
   };
   return { fetch, calls };
 }
-/** A page with no storage, no cookie, no scripts and no globals. */
-const NO_PAGE = { storage: { getItem: () => null }, cookie: () => "", scripts: () => [], call: () => undefined };
+/** A page with no storage, no scripts and no globals. */
+const NO_PAGE = { storage: { getItem: () => null }, scripts: () => [], call: () => undefined };
 const header = (c: Call | undefined, name: string) => new Headers(c?.init.headers).get(name);
 const md5 = (text: string) => createHash("md5").update(text, "utf8").digest("hex");
 const bearerOf = (c: Call | undefined) => new Headers(c?.init.headers).get("authorization");
 
 interface PageParts {
   storage?: Record<string, string>;
-  cookie?: string;
   scripts?: string[];
   globals?: Record<string, () => unknown>;
 }
 function open(auth: Auth, fetch: (url: string, init: RequestInit) => Promise<Response>, page: PageParts = {}) {
   const storage = { getItem: (k: string) => page.storage?.[k] ?? null };
-  return createHttp({ origin: ORIGIN, reads: READS, auth }, { fetch, storage, cookie: () => page.cookie ?? "", scripts: () => page.scripts ?? [], call: (name) => page.globals?.[name]?.() });
+  return createHttp({ origin: ORIGIN, reads: READS, auth }, { fetch, storage, scripts: () => page.scripts ?? [], call: (name) => page.globals?.[name]?.() });
 }
 
 async function err(p: Promise<unknown>): Promise<FoxcacheError> {
@@ -145,24 +144,6 @@ describe("localStorage-bearer", () => {
   ])("H14 throws logged-out on %s, sends nothing, and names no value", async (_, storage, field) => {
     const f = fakeFetch({ "/api/me": "{}" });
     const e = await err(open(localStorageBearer({ key: "userToken", ...(field ? { field } : {}) }), f.fetch, { storage }).get("/api/me"));
-    expect([e.code, leaks(e), f.calls.length]).toEqual(["logged-out", false, 0]);
-  });
-});
-
-describe("cookie-bearer", () => {
-  it("reads the named cookie (Manus session_id), decoded", async () => {
-    const f = fakeFetch({ "/api/me": "{}" });
-    await open(cookieBearer({ name: "session_id" }), f.fetch, { cookie: `xsession_id=evil; session_id=${encodeURIComponent(`${TOKEN}+/=`)}; b=2` }).get("/api/me");
-    expect(bearerOf(f.calls[0])).toBe(`Bearer ${TOKEN}+/=`);
-  });
-  it("reads a field of a JSON cookie", async () => {
-    const f = fakeFetch({ "/api/me": "{}" });
-    await open(cookieBearer({ name: "sb-auth-token", field: "access_token" }), f.fetch, { cookie: `sb-auth-token=${encodeURIComponent(JSON.stringify({ access_token: TOKEN }))}` }).get("/api/me");
-    expect(bearerOf(f.calls[0])).toBe(`Bearer ${TOKEN}`);
-  });
-  it.each([["no cookie", ""], ["another cookie that ends with the name", `xsession_id=${TOKEN}`], ["an empty cookie", "session_id="], ["a broken escape", `session_id=%ZZ${TOKEN}`]])("H14 throws logged-out on %s", async (_, jar) => {
-    const f = fakeFetch({ "/api/me": "{}" });
-    const e = await err(open(cookieBearer({ name: "session_id" }), f.fetch, { cookie: jar }).get("/api/me"));
     expect([e.code, leaks(e), f.calls.length]).toEqual(["logged-out", false, 0]);
   });
 });

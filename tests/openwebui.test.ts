@@ -26,7 +26,7 @@ describe("open-webui read paths (H10, H18)", () => {
     { method: "GET", path: "/api/v1/chats/", source: "https://example.test/list" },
     { method: "GET", path: "/api/v1/chats/{id}", source: "https://example.test/chat" },
   ]) };
-  const http = createHttp(site, { fetch: async (url) => (sent.push(url), new Response("{}")), storage: { getItem: () => TOKEN }, cookie: () => "", scripts: () => [], call: () => undefined });
+  const http = createHttp(site, { fetch: async (url) => (sent.push(url), new Response("{}")), storage: { getItem: () => TOKEN }, scripts: () => [], call: () => undefined });
 
   it("fills the id into the template, and http refuses an id that would leave its segment", async () => {
     expect(fill("/api/v1/chats/{id}", "c-1")).toBe("/api/v1/chats/c-1");

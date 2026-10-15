@@ -10,7 +10,7 @@ const FIRST = "/api/project/my?from=agents&offset=0&limit=50";
 const open = (routes: Routes = fixture("genspark")) => fixtureHttp(genspark, routes);
 const PATHS = genspark.reads.map((r) => r.path);
 /** An Http on the adapter's own reads over a fetch stand-in. */
-const httpOver = (fetch: () => Promise<Response>) => createHttp(genspark, { fetch, storage: { getItem: () => null }, cookie: () => "", scripts: () => [], call: () => undefined });
+const httpOver = (fetch: () => Promise<Response>) => createHttp(genspark, { fetch, storage: { getItem: () => null }, scripts: () => [], call: () => undefined });
 const stub = (id: string) => ({ id, title: "", updatedAt: "" });
 const project = (n: number) => ({ id: `p-${n}`, name: `Chat ${n}`, type: "ai_chat", ctime: "2026-09-01T00:00:00.000000" });
 const list = (projects: unknown[]) => ({ status: 0, data: { projects } });

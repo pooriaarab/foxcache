@@ -25,7 +25,7 @@ function callPage(name) {
 if (!globalThis.foxcacheAgent) {
   globalThis.foxcacheAgent = true;
   const adapter = adapterAt(location.origin);
-  const http = () => createHttp(adapter, { fetch: (url, init) => fetch(url, init), storage: window.localStorage, cookie: () => document.cookie, scripts: pageScripts, call: callPage });
+  const http = () => createHttp(adapter, { fetch: (url, init) => fetch(url, init), storage: window.localStorage, scripts: pageScripts, call: callPage });
   let running = false;
   let stopper;
 

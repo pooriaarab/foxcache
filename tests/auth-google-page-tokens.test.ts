@@ -27,7 +27,7 @@ function open(html: (n: number) => string | { status: number }, read: (n: number
     const r = new URL(url).pathname === PATH ? read(++reads) : html(++pages);
     return typeof r === "string" ? new Response(r) : new Response("", { status: r.status });
   };
-  return { http: createHttp(site(), { fetch, storage: { getItem: () => null }, cookie: () => "", scripts: () => [], call: () => undefined }), calls };
+  return { http: createHttp(site(), { fetch, storage: { getItem: () => null }, scripts: () => [], call: () => undefined }), calls };
 }
 const list = (http: ReturnType<typeof open>["http"]) => callBatch(http, PATH, "MaZiqc", [13, null, [0, null, 1]], "/app");
 async function err(p: Promise<unknown>): Promise<FoxcacheError> {
@@ -85,6 +85,6 @@ describe("google-page-tokens", () => {
   });
   it("H7 refuses a reads table that names the token page", () => {
     const reads = defineReads([{ method: "GET", path: "/app", source: "https://example.test/src" }]);
-    expect(() => createHttp({ origin: ORIGIN, reads, auth: googlePageTokens({ path: "/app" }) }, { fetch: async () => new Response(""), storage: { getItem: () => null }, cookie: () => "", scripts: () => [], call: () => undefined })).toThrow(/token/);
+    expect(() => createHttp({ origin: ORIGIN, reads, auth: googlePageTokens({ path: "/app" }) }, { fetch: async () => new Response(""), storage: { getItem: () => null }, scripts: () => [], call: () => undefined })).toThrow(/token/);
   });
 });
