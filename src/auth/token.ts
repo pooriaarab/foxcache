@@ -16,8 +16,8 @@ export function field(json: string, path: string): unknown {
   }
 }
 
-/** Authorization: Bearer <token>, or logged-out when the token is not a non-empty string. */
-export function bearer(token: unknown, origin: string): AuthParts {
+/** Authorization: <scheme> <token>, or logged-out when the token is not a non-empty string. */
+export function bearer(token: unknown, origin: string, scheme = "Bearer"): AuthParts {
   if (typeof token !== "string" || !token) throw new FoxcacheError("logged-out", `No session on ${origin}: sign in.`);
-  return { headers: { authorization: `Bearer ${token}` } };
+  return { headers: { authorization: `${scheme} ${token}` } };
 }
