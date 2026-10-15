@@ -71,10 +71,11 @@ table and your manifest lines with no edit.
 |---|---|---|
 | `cookie` | the session cookies alone | `cookie` |
 | `page-session` | a token the page reads from a session endpoint | `pageSession({ path, field })` |
-| `localStorage-bearer` | a token in localStorage | `localStorageBearer({ key, field? })` |
+| `localStorage-bearer` | a token in localStorage | `localStorageBearer({ key, field?, scheme? })` |
 | `cookie-bearer` | a token in a cookie the page's script can read | `cookieBearer({ name, field? })` |
 
-`field` is a dotted path into a JSON value. A site that needs another kind
+`field` is a dotted path into a JSON value. `scheme` is the word the page
+puts before the token in `Authorization` when it is not `Bearer`. A site that needs another kind
 (page tokens, a header the page sends, a signature) gets a new file
 `src/auth/<kind>.ts` that exports an `Auth`, with its own
 `tests/auth-<kind>.test.ts`. Its `sign` can return headers, query values
