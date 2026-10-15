@@ -118,8 +118,11 @@ export const perplexity: Adapter = {
       const page = r.obj(await http.post("/rest/perplexity_ask/graphql", { operationName: MEMORY_QUERY.name, variables, extensions: { persistedQuery: { version: 1, sha256Hash: MEMORY_QUERY.hash } } }), "memory query");
       if (page.errors !== undefined) throw r.fail("memory query", "answered errors (the persisted query hash may be stale)");
       const scope = r.obj(r.obj(r.obj(r.obj(page.data, "data").viewer, "data.viewer").knowledgeContext, "knowledgeContext").scopeByKind, "scopeByKind");
+      const categories = r.arr(scope.memoryCategories, "memoryCategories");
+      // No category is a changed or partial answer, not "no memories": it would delete every stored one (PX40).
+      if (categories.length === 0) throw r.fail("memoryCategories", "is empty");
       let info: Obj | undefined;
-      for (const [i, x] of r.arr(scope.memoryCategories, "memoryCategories").entries()) {
+      for (const [i, x] of categories.entries()) {
         const items = r.obj(r.obj(x, `memoryCategories[${i}]`).items, `memoryCategories[${i}].items`);
         if (items.status !== "OK") throw r.fail(`memoryCategories[${i}].items.status`, `is ${JSON.stringify(items.status)}`);
         const pageInfo = r.obj(items.pageInfo, `memoryCategories[${i}].items.pageInfo`);
