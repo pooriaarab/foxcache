@@ -18,8 +18,9 @@ const BATCH = "/_/BardChatUi/data/batchexecute";
 /** A batchexecute f.req that calls these rpc ids. */
 const fReq = (...ids: string[]) => JSON.stringify([ids.map((id) => [id, "[]", null, "generic"])]);
 const NO_STORAGE = { getItem: () => null };
+const NO_COOKIE = () => "";
 /** An Http on ORIGIN with READS and cookie auth. */
-const open = (fetch: (url: string, init: RequestInit) => Promise<Response>) => createHttp({ origin: ORIGIN, reads: READS, auth: cookie }, { fetch, storage: NO_STORAGE });
+const open = (fetch: (url: string, init: RequestInit) => Promise<Response>) => createHttp({ origin: ORIGIN, reads: READS, auth: cookie }, { fetch, storage: NO_STORAGE, cookie: NO_COOKIE });
 
 interface Call {
   url: string;
@@ -172,7 +173,7 @@ describe("H12 a read on an API origin", () => {
   let calls: Call[] = [];
   it("sends it from the tab with the page cookies", async () => {
     calls = [];
-    const http = createHttp(site, { fetch: answer, storage: NO_STORAGE });
+    const http = createHttp(site, { fetch: answer, storage: NO_STORAGE, cookie: NO_COOKIE });
     expect(await http.get(`${API}/github/chat/threads`, { limit: 5 })).toEqual({ ok: true });
     expect(await http.get(`${NEO}/chats/c1`)).toEqual({ ok: true });
     expect(calls.map((c) => c.url)).toEqual([`${API}/github/chat/threads?limit=5`, `${NEO}/chats/c1`]);
@@ -190,7 +191,7 @@ describe("H12 a read on an API origin", () => {
     ["a dot segment", `${NEO}/chats/../chats/c1`],
   ])("refuses %s before any request", async (_, target) => {
     calls = [];
-    expect((await err(createHttp(site, { fetch: answer, storage: NO_STORAGE }).get(target))).code).toBe("not-allowed");
+    expect((await err(createHttp(site, { fetch: answer, storage: NO_STORAGE, cookie: NO_COOKIE }).get(target))).code).toBe("not-allowed");
     expect(calls).toHaveLength(0);
   });
 });

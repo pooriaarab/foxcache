@@ -228,8 +228,9 @@ and the E2E checks that every request it sent was one of those reads.
 
 ### Does foxcache see my password?
 
-No. It uses the session your tab already has and never reads a cookie, a password or a
-login form. A bearer token that a site's own page uses stays inside the tab.
+No. It uses the session your tab already has and never reads a password or a login form.
+It reads no cookie on the four sites it supports. A bearer token that a site's own page
+uses stays inside the tab.
 
 ### Can an agent read my chats?
 
