@@ -116,3 +116,20 @@ a { color: var(--accent); text-underline-offset: 2px; }
 header .icon-button { display: grid; place-items: center; width: 34px; height: 34px; margin-left: auto; border-radius: 50%; color: var(--muted); transition: color var(--fast) var(--ease-out); }
 header .icon-button:hover { color: var(--text); }
 header .icon-button svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Archive */
+body.wide { max-width: 860px; }
+.toolbar { margin-top: 14px; }
+.toolbar input { flex: 1 1 260px; width: auto; }
+.toolbar select { width: auto; }
+.list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.item { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; height: auto; padding: 10px 14px; text-align: left; background: var(--panel); border-color: var(--line); border-radius: 12px; font-weight: 400; }
+.item .title { font-weight: 600; overflow-wrap: anywhere; }
+.item .meta { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+#detail { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+#detail h2 { margin: 0; }
+.message { border-top: 1px solid var(--line); padding-top: 10px; }
+.message .role { font-size: 12.5px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+.message.user .role { color: var(--accent); }
+.text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.exports { margin-top: 4px; }
