@@ -63,11 +63,19 @@ The agent sends `credentials: "include"` from the provider's own origin, so
 the request carries the session cookies that the site already set. foxcache
 never reads a cookie or a password and never sees the login.
 
-Some sites send a bearer token that their own script gets from the page
-(ChatGPT gets it from `/api/auth/session`). The adapter's `http` asks for the
-token the same way, keeps it in a variable inside the content script, and
-adds it to its own GET requests. The token never goes to the event page, the
-store, an export or a log. `tests/http.test.ts` checks that.
+Some sites send a bearer token that their own script gets from the page.
+Each adapter names its auth kind, one file each in `src/auth/`:
+
+| Kind | Token | Used by |
+|---|---|---|
+| `cookie` | none: the cookies alone | Claude, Le Chat |
+| `page-session` | a field of a session answer the page reads with its cookies | ChatGPT (`/api/auth/session`) |
+| `localStorage-bearer` | a localStorage key, or a field of its JSON | DeepSeek (`userToken`) |
+
+`http` opens the kind once, inside the content script, so the token lives
+in a closure there. It goes only onto requests that are reads, and never to
+the event page, the store, an export, an error or a log. No read may name a
+path that holds a token. `tests/auth.test.ts` checks each kind.
 
 ## Capture
 

@@ -1,9 +1,10 @@
 // chatgpt.com. Every /backend-api call carries the bearer token that the
 // page's own script gets from /api/auth/session; http gets it the same way
-// and keeps it (auth "chatgpt-session"). Endpoints and sources:
+// and keeps it (auth page-session). Endpoints and sources:
 // docs/providers/chatgpt.md.
 import { FoxcacheError } from "../errors.js";
 import type { Http } from "../http.js";
+import { pageSession } from "../auth/page-session.js";
 import { defineReads } from "../reads.js";
 import type { Attachment, Message, Preference, PreferenceKind, Project } from "../schema.js";
 import type { Adapter, ListPage, Stub } from "./types.js";
@@ -73,7 +74,7 @@ export const chatgpt: Adapter = {
   id: "chatgpt",
   label: "ChatGPT",
   origin: "https://chatgpt.com",
-  auth: "chatgpt-session",
+  auth: pageSession({ path: "/api/auth/session", field: "accessToken" }),
   reads: defineReads([
     { method: "GET", path: "/backend-api/me", source: `${GJ}/me.shape.json` },
     { method: "GET", path: "/backend-api/conversations", query: ["offset", "limit", "order", "is_archived", "hide_snorlax"], source: `${PX}#L672-L712` },

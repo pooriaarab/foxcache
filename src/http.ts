@@ -6,22 +6,16 @@
 // anything on the provider (H1, H8, H9).
 //
 // Some sites send a bearer token that their own script gets from the page.
-// http gets it the same way, keeps it in this closure, and adds it to its
-// own requests. It never returns it and never puts it in an error (H5).
+// The site's auth kind (src/auth/) gets it the same way, inside this
+// closure, and http adds it to reads only. It never returns it and never
+// puts it in an error (H5).
+import type { Auth, AuthParts } from "./auth/types.js";
 import { FoxcacheError } from "./errors.js";
-import { type Body, type Prepared, type Query, type Site, checkSite, prepare } from "./reads.js";
+import { type Body, type Prepared, type Query, type Site, checkSite, prepare, readsPath } from "./reads.js";
 
 export { type Body, type BodyRule, type Query, type Read, type Site, defineReads, findRead, originsOf } from "./reads.js";
 
 export const MAX_RESPONSE_BYTES = 50 * 1024 * 1024;
-
-/**
- * How a site authenticates its own API calls:
- *   chatgpt-session  the bearer token from GET /api/auth/session (chatgpt.com does this)
- *   deepseek-local   the bearer token in localStorage "userToken" (chat.deepseek.com does this)
- * No auth: the session cookies alone.
- */
-export type AuthKind = "chatgpt-session" | "deepseek-local";
 
 export interface Http {
   /** GET a path of the origin that is one of the site's reads, and parse the JSON answer. */
@@ -31,16 +25,15 @@ export interface Http {
 }
 /** A site with the way it authenticates. */
 export interface HttpSite extends Site {
-  auth?: AuthKind;
+  auth: Auth;
 }
 /** What http uses from the page it runs in. */
 export interface Page {
   fetch: (url: string, init: RequestInit) => Promise<Response>;
-  /** The page's localStorage, for deepseek-local. */
+  /** The page's localStorage. */
   storage: { getItem(key: string): string | null };
 }
 
-const SESSION_PATH = "/api/auth/session";
 
 /** Seconds from a Retry-After header: a number or an HTTP date. */
 function retryAfter(value: string | null): number | undefined {
@@ -80,16 +73,27 @@ async function readCapped(res: Response, where: string): Promise<string> {
 export function createHttp(site: HttpSite, page: Page): Http {
   checkSite(site);
   const origin = site.origin;
-  let token: string | undefined;
+  for (const path of site.auth.tokenPaths) {
+    if (readsPath(site, path)) throw new Error(`The reads of ${origin} are wrong: a read names ${path}, which holds the ${site.auth.kind} token.`);
+  }
 
-  async function send({ url: u, body }: Prepared, auth?: string): Promise<unknown> {
-    const headers: Record<string, string> = { accept: "application/json" };
-    if (auth) headers.authorization = `Bearer ${auth}`;
+  async function send({ url, body }: Prepared, parts: AuthParts = {}): Promise<unknown> {
+    const u = new URL(url);
+    for (const [k, v] of Object.entries(parts.query ?? {})) u.searchParams.set(k, v);
+    let wire = body?.text;
+    if (parts.form) {
+      if (!body?.type.startsWith("application/x-www-form-urlencoded")) throw new Error(`The ${site.auth.kind} auth adds form fields, but ${u.pathname} has no form body.`);
+      const form = new URLSearchParams(body.text);
+      for (const [k, v] of Object.entries(parts.form)) form.set(k, v);
+      wire = form.toString();
+    }
+    const headers: Record<string, string> = { accept: "application/json", ...parts.headers };
     if (body) headers["content-type"] = body.type;
+    // Never the query: an auth kind may put a token there.
     const where = `${u.origin}${u.pathname}`;
     let res: Response;
     try {
-      res = await page.fetch(u.href, { method: body ? "POST" : "GET", credentials: "include", redirect: "manual", headers, ...(body ? { body: body.text } : {}) });
+      res = await page.fetch(u.href, { method: body ? "POST" : "GET", credentials: "include", redirect: "manual", headers, ...(wire !== undefined ? { body: wire } : {}) });
     } catch {
       // Firefox gives the same TypeError for a network error and a CORS refusal (H13).
       throw new FoxcacheError("provider-error", `Could not reach ${where}: the network failed, or the site does not let this page read it (CORS).`);
@@ -108,39 +112,27 @@ export function createHttp(site: HttpSite, page: Page): Http {
     }
   }
 
-  async function bearer(fresh: boolean): Promise<string | undefined> {
-    if (site.auth === "deepseek-local") {
-      const raw = page.storage.getItem("userToken");
-      let value: unknown;
-      try {
-        value = raw ? (JSON.parse(raw) as { value?: unknown }).value : undefined;
-      } catch {
-        value = undefined;
-      }
-      if (typeof value !== "string" || !value) throw new FoxcacheError("logged-out", `No session on ${origin}: sign in.`);
-      return value;
-    }
-    if (site.auth === "chatgpt-session") {
-      if (token && !fresh) return token;
-      const session = (await send({ url: new URL(SESSION_PATH, origin) })) as { accessToken?: unknown } | null;
-      if (typeof session?.accessToken !== "string" || !session.accessToken) throw new FoxcacheError("logged-out", `No session on ${origin}: sign in.`);
-      token = session.accessToken;
-      return token;
-    }
-    return undefined;
-  }
+  // The token stays in this closure. tokenPaths are read here with the cookies only, and no read names one (H7).
+  const sign = site.auth.open({
+    origin,
+    storage: page.storage,
+    getJson: async (path) => {
+      if (!site.auth.tokenPaths.includes(path)) throw new FoxcacheError("not-allowed", `${path} is not a token path of the ${site.auth.kind} auth.`);
+      return send({ url: new URL(path, origin) });
+    },
+  });
 
   async function read(request: Prepared): Promise<unknown> {
+    const signed = { method: request.body ? ("POST" as const) : ("GET" as const), url: request.url.href, ...(request.body ? { body: request.body.text } : {}) };
     try {
-      return await send(request, await bearer(false));
+      return await send(request, await sign(signed, false));
     } catch (error) {
       // A token can expire during a long capture: get a new one once.
-      if (site.auth !== "chatgpt-session" || !(error instanceof FoxcacheError) || error.code !== "logged-out" || error.status !== 401) throw error;
-      return send(request, await bearer(true));
+      if (!site.auth.renews || !(error instanceof FoxcacheError) || error.code !== "logged-out" || error.status !== 401) throw error;
+      return send(request, await sign(signed, true));
     }
   }
 
-  // No read names SESSION_PATH, so no spelling of it reads the token out (H7).
   return {
     get: async (path, query) => read(prepare(site, "GET", path, query)),
     post: async (path, body, query) => read(prepare(site, "POST", path, query, body)),

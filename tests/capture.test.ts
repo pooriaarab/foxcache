@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type Adapter, type Checkpoint, type Conversation, FoxcacheError, type Http, type Kind, type Stub, recordKey, runCapture } from "../src/index.js";
+import { type Adapter, type Checkpoint, type Conversation, FoxcacheError, type Http, type Kind, type Stub, cookie, recordKey, runCapture } from "../src/index.js";
 
 const T = (n: number) => new Date(Date.UTC(2026, 0, 1, 0, 0, n)).toISOString();
 const conv = (s: Stub): Conversation => ({ provider: "chatgpt", id: s.id, title: s.title, createdAt: T(0), updatedAt: s.updatedAt, messages: [{ role: "user", text: `text of ${s.id}`, attachments: [] }] });
@@ -27,6 +27,7 @@ function provider(opts: { stubs?: Stub[]; pageSize?: number; reply?: (path: stri
     label: "ChatGPT",
     origin: "https://chatgpt.com",
     reads: [],
+    auth: cookie,
     newestFirst: true,
     async detect(h) {
       await h.get("/me");
