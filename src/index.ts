@@ -24,4 +24,5 @@ export { kimi } from "./adapters/kimi.js";
 export { meta } from "./adapters/meta.js";
 export { mistral } from "./adapters/mistral.js";
 export { poe } from "./adapters/poe.js";
+export { gemini } from "./adapters/gemini.js";
 export { ADAPTERS, adapterAt, adapterFor } from "./adapters/index.js";
