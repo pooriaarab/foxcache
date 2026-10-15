@@ -79,7 +79,8 @@ export const claude: Adapter = {
     const path = `/api/organizations/${await org(http)}/chat_conversations_v2`;
     const page = r.obj(await http.get(path, { limit: PAGE, offset, consistency: "strong" }), "chat_conversations_v2");
     const items = r.arr(page.data, "chat_conversations_v2.data").map((s, i) => stub(s, `chat_conversations_v2.data[${i}]`));
-    return { items, next: page.has_more === true && items.length > 0 ? String(offset + items.length) : undefined };
+    const more = r.bool(page.has_more, "chat_conversations_v2.has_more");
+    return { items, next: more && items.length > 0 ? String(offset + items.length) : undefined };
   },
 
   async getConversation(http, s) {

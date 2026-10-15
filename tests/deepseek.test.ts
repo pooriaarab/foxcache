@@ -45,6 +45,10 @@ describe("deepseek list", () => {
     const third = await deepseek.listConversations(f.http, second.next);
     expect([third.items.map((s) => s.id), third.next]).toEqual([[S3], undefined]);
   });
+  it("throws provider-schema when has_more is missing", async () => {
+    const routes = { ...fixture("deepseek"), "/api/v0/chat_session/fetch_page?lte_cursor.pinned=true": { code: 0, data: { biz_code: 0, biz_data: { chat_sessions: [] } } } };
+    expect(await code(deepseek.listConversations(open(routes).http))).toMatch(/^provider-schema: deepseek: .*has_more/);
+  });
   it("throws provider-schema when the list shape changes", async () => {
     const routes = { ...fixture("deepseek"), "/api/v0/chat_session/fetch_page?lte_cursor.pinned=true": { code: 0, data: { biz_code: 0, biz_data: { sessions: [] } } } };
     expect(await code(deepseek.listConversations(open(routes).http))).toMatch(/^provider-schema: deepseek: .*chat_sessions/);
