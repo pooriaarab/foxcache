@@ -163,8 +163,9 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       io.err(`foxcache: ${error.code}: ${oneLine(error.message)}\n`);
       return 1;
     }
+    // Any file system error (ENOENT, EACCES, ENOTDIR, ENOSPC ...) is the user's to fix: one line, exit 1 (CL4).
     const e = error as NodeJS.ErrnoException;
-    if (e.code === "ENOENT" || e.code === "EACCES" || e.code === "EISDIR") {
+    if (typeof e.code === "string" && typeof e.syscall === "string") {
       io.err(`foxcache: ${oneLine(e.message)}\n`);
       return 1;
     }
