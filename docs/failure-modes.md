@@ -88,6 +88,7 @@ All errors are `FoxcacheError` with a `code`. The codes are in the rows.
 | P7 | A message in the thread names a parent that is not in the conversation. | The adapter throws `provider-schema` and names the message and the parent. It does not store the part below the gap. Each adapter names its own root: `parent: null` (ChatGPT), `parent_id: null` (DeepSeek), the all-zero uuid (Claude). | `tests/chatgpt.test.ts`, `tests/deepseek.test.ts`, `tests/claude.test.ts` |
 | P8 | The ChatGPT project sidebar gives a cursor it gave before. | The adapter throws `pagination-loop`. It does not return the projects read so far, which would drop the rest and their chats with no error (C4). | `tests/chatgpt.test.ts` |
 | P9 | A list inside one call never ends: the ChatGPT project sidebar or the Le Chat `message.all` pages give a new cursor each time. | The adapter throws `pagination-loop` after 1 000 pages. Le Chat throws `too-large` once a chat passes 20 000 messages, while it reads them, not after (S4). | `tests/chatgpt.test.ts`, `tests/mistral.test.ts` |
+| P10 | Claude's `detect` gets an answer that is not JSON (a "Just a moment..." challenge page) or a changed shape. | `detect` throws that error, so the capture ends with `provider-schema` and does not tell the user to sign in. Only a 401, a 403 or an account with no chat organization means signed out. | `tests/claude.test.ts` |
 
 ## SCENT
 
