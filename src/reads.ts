@@ -35,6 +35,12 @@ export interface Read {
    * Left out: JSON.parse.
    */
   decode?: (text: string) => unknown;
+  /**
+   * Fixed headers the site's own page sends with this read, such as
+   * Doubao's `agw-js-conv: str` (H16). A content-type here replaces the
+   * body rule's. Never a token or a cookie: the auth kind adds those.
+   */
+  headers?: Readonly<Record<string, string>>;
   /** Where the endpoint is documented: an https URL. */
   source: string;
 }
@@ -55,6 +61,9 @@ export const originsOf = (site: Site): string[] => [site.origin, ...(site.apiOri
 const LITERAL = /^[A-Za-z0-9\-_.~:@,]+$/;
 const PLACEHOLDER = /^\{[a-z][A-Za-z0-9]*\}$/;
 const VALUE = /^[A-Za-z0-9\-_.~:@]+$/;
+const HEADER = /^[a-z0-9-]+$/;
+/** Headers a read may not fix: the auth kind's, the browser's, or ones that would move the request. */
+const NOT_FIXED = new Set(["authorization", "cookie", "host", "origin", "referer", "content-length"]);
 
 function deepFreeze<T>(x: T): T {
   if (typeof x === "object" && x !== null && !Object.isFrozen(x)) {
@@ -90,6 +99,7 @@ export function checkSite(site: Site): void {
     if (segments[0] !== "" || segments.length < 2 || !segments.slice(1).every((s) => PLACEHOLDER.test(s) || (LITERAL.test(s) && s !== "." && s !== ".."))) throw bad(`${at} is not an exact path`);
     if (!/^https:\/\/\S+$/.test(read.source)) throw bad(`${at} has no https source`);
     if (read.decode !== undefined && typeof read.decode !== "function") throw bad(`${at} has a decode that is not a function`);
+    for (const [name, value] of Object.entries(read.headers ?? {})) if (!HEADER.test(name) || NOT_FIXED.has(name) || typeof value !== "string" || !/^[\x20-\x7e]*$/.test(value)) throw bad(`${at} has a fixed header foxcache does not send: ${JSON.stringify(name)}`);
     if (read.method === "GET" && seen.has(at)) throw bad(`${at} is listed twice`);
     seen.add(at);
   }
@@ -147,10 +157,11 @@ function encode(rule: BodyRule, body: Body, query: Query): { type: string; text:
   return ids?.every((id) => rule.rpcids.includes(id)) && query.rpcids === [...new Set(ids)].join(",") ? form : undefined;
 }
 
-/** A request that is a read: its URL, its body on the wire for a POST, and the read's decoder. */
+/** A request that is a read: its URL, its body on the wire for a POST, the read's fixed headers and its decoder. */
 export interface Prepared {
   url: URL;
   body?: { type: string; text: string };
+  headers?: Readonly<Record<string, string>>;
   decode?: (text: string) => unknown;
 }
 
@@ -174,7 +185,7 @@ export function prepare(site: Site, method: "GET" | "POST", target: string, quer
     const wire = read.body && encode(read.body, body ?? {}, query);
     if (read.body && !wire) continue;
     for (const k of keys) u.searchParams.set(k, String(query[k]));
-    return { url: u, ...(wire ? { body: wire } : {}), ...(read.decode ? { decode: read.decode } : {}) };
+    return { url: u, ...(wire ? { body: wire } : {}), ...(read.headers ? { headers: read.headers } : {}), ...(read.decode ? { decode: read.decode } : {}) };
   }
   throw refuse();
 }
