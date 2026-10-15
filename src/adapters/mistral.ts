@@ -92,7 +92,8 @@ export const mistral: Adapter = {
         const where = `message ${String(m.id)}`;
         const role = ROLES[r.str(m.role, `${where}.role`)];
         if (!role) throw r.fail(`${where}.role`, `is ${JSON.stringify(m.role)}`);
-        const turn = typeof m.turn === "number" ? m.turn : 0;
+        // A missing turn must not reorder the thread (P6).
+        const turn = r.num(m.turn, `${where}.turn`);
         return { m, role, turn, at: r.time(m.createdAt, `${where}.createdAt`), where };
       })
       .toSorted((a, b) => a.turn - b.turn || (a.role === "user" ? 0 : 1) - (b.role === "user" ? 0 : 1) || (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
