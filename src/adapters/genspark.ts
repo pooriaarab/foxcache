@@ -22,7 +22,8 @@ const SCRAPER = "https://github.com/DSciAILab/genspark_test/blob/19ef366b3641d7e
 /** GET a read and unwrap {status: 0, data}. */
 async function read(http: Http, path: string, query?: Query): Promise<Obj> {
   const env = r.obj(await http.get(path, query), path);
-  if (env.status !== 0) throw new FoxcacheError("provider-error", `genspark: ${path} answered status ${String(env.status)}: ${String(env.message ?? "")}`);
+  // Not the message: it is the site's, and may hold anything (GENSPARK40).
+  if (env.status !== 0) throw new FoxcacheError("provider-error", `genspark: ${path} answered status ${typeof env.status === "number" ? env.status : "that is not a number"}.`);
   return r.obj(env.data, `${path} data`);
 }
 
