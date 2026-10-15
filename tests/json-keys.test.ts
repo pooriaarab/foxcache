@@ -2,8 +2,7 @@
 // other top-level key, so a body that names a read operation cannot
 // also carry a GraphQL query text.
 import { describe, expect, it } from "vitest";
-import { perplexity } from "../src/adapters/perplexity.js";
-import { type Read, cookie, createHttp, defineReads, meta, poe } from "../src/index.js";
+import { type Read, cookie, createHttp, defineReads, meta, perplexity, poe } from "../src/index.js";
 import { prepare } from "../src/reads.js";
 
 const LIST = poe.reads[0]!.body as { match: Record<string, string> };
