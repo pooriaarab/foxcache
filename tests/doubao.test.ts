@@ -64,6 +64,10 @@ describe("doubao detect (D1, D2)", () => {
     expect(await doubao.detect(open().http)).toBe(true);
     expect(await doubao.detect(open(routes({ "POST /im/chain/recent_conv": { $status: 401 } })).http)).toBe(false);
   });
+  it("D40 is signed out when the probe answers a status_code that is not 0 and not a known other error", async () => {
+    expect(await doubao.detect(open(routes({ "POST /im/chain/recent_conv": { status_code: 710012001, status_desc: "login expired" } })).http)).toBe(false);
+    expect(await code(doubao.detect(open(routes({ "POST /im/chain/recent_conv": { status_code: 712012002, status_desc: "unsupported encoding" } })).http))).toMatch(/^provider-error: doubao: .* 712012002\.$/);
+  });
   it("throws provider-error with the code when status_code is not 0", async () => {
     expect(await code(doubao.detect(open(routes({ "POST /im/chain/recent_conv": { status_code: 710022004, status_desc: "<b>verify</b>" } })).http))).toBe("provider-error: doubao: /im/chain/recent_conv answered status 710022004.");
   });
