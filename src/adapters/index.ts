@@ -14,6 +14,7 @@ import { mistral } from "./mistral.js";
 import { notion } from "./notion.js";
 import { perplexity } from "./perplexity.js";
 import { poe } from "./poe.js";
+import { qwen } from "./qwen.js";
 import type { Adapter } from "./types.js";
 
 // One adapter per line: docs/providers/ADDING.md.
@@ -31,6 +32,7 @@ export const ADAPTERS: readonly Adapter[] = Object.freeze([
   kagi,
   poe,
   meta,
+  qwen,
 ]);
 
 /** The adapter for a provider id. Throws for a provider with no adapter. */

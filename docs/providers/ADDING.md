@@ -78,6 +78,7 @@ table and your manifest lines with no edit.
 | `localStorage-bearer` | a token in localStorage | `localStorageBearer({ key, field?, scheme? })` |
 | `cookie-bearer` | a token in a cookie the page's script can read | `cookieBearer({ name, field? })` |
 | `page-formkey` | a key a page function computes (its name changes per build), plus an md5 tag of each POST body | `pageFormkey({ fn, length, header, tag })` |
+| `with-headers` | fixed headers the page adds, on top of a token kind | `withHeaders(kind, { name: value })` |
 
 `field` is a dotted path into a JSON value. `scheme` is the word the page
 puts before the token in `Authorization` when it is not `Bearer`. A site that needs another kind
