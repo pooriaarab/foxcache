@@ -7,7 +7,7 @@ const ask = async (type, data = {}) => {
   return reply.value;
 };
 const $ = (id) => document.getElementById(id);
-const LABELS = { chatgpt: "ChatGPT", claude: "Claude", mistral: "Le Chat", gemini: "Gemini", perplexity: "Perplexity", grok: "Grok", deepseek: "DeepSeek", "github-copilot": "GitHub Copilot", kimi: "Kimi", doubao: "Doubao", notion: "Notion AI" };
+const LABELS = { chatgpt: "ChatGPT", claude: "Claude", mistral: "Le Chat", gemini: "Gemini", perplexity: "Perplexity", grok: "Grok", deepseek: "DeepSeek", "github-copilot": "GitHub Copilot", kimi: "Kimi", doubao: "Doubao", notion: "Notion AI", kagi: "Kagi Assistant" };
 function make(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
