@@ -35,6 +35,14 @@ jobs:
           registry-url: https://registry.npmjs.org
       - run: pnpm install --frozen-lockfile
       - run: pnpm ci:local
+      # The E2E runs here too: a push to release does not wait for CI.
+      - uses: browser-actions/setup-firefox@0bc507ddf224827e3b1af68e014d5e42ab93e795 # v1.7.2
+        id: firefox
+        with:
+          firefox-version: latest
+      - run: pnpm e2e
+        env:
+          FIREFOX: ${{ steps.firefox.outputs.firefox-path }}
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
