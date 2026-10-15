@@ -137,3 +137,4 @@ All errors are `FoxcacheError` with a `code`. The codes are in the rows.
 | # | Failure mode | Wanted behavior | Test |
 |---|---|---|---|
 | R1 | A push to `release` publishes a version whose Firefox E2E failed or never ran, because `release.yml` ran only `ci:local` and does not wait for CI. | `release.yml` runs `pnpm e2e` before `npm publish` and `web-ext sign`, and a failed E2E stops the release. | `tests/release.test.ts` |
+| R2 | The release job holds `contents: write` and `id-token: write` while it installs packages (with their build scripts), builds, runs vitest, web-ext and third-party actions, so any of them could push or mint an OIDC token. | Those run in a `check` job with `contents: read`, which hands `dist/` and `dist-ext/` over as an artifact. Only the `publish` job holds the write scopes, and it installs with `--ignore-scripts`, builds nothing and tests nothing. | `tests/release.test.ts` |
