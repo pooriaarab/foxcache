@@ -58,6 +58,7 @@ All errors are `FoxcacheError` with a `code`. The codes are in the rows.
 | H4 | The answer is not JSON (an HTML challenge page), or is over 50 MB, with or without a Content-Length. | `http` throws `provider-schema` or `too-large`. It reads the body as a stream and stops once the bytes pass the limit. | `tests/http.test.ts` |
 | H5 | A bearer token that the site uses (ChatGPT) leaks into a record, an error message or a log. | The token stays inside `http`. No result and no error text holds it. | `tests/http.test.ts` |
 | H6 | The answer is 5xx. | `http` throws `provider-error` with the status. | `tests/http.test.ts` |
+| H7 | An adapter asks for the ChatGPT session answer, which holds the token, under another spelling: `/api/auth/session/`, `/api/AUTH/session`, `/api/auth/%73ession`, `/api/auth/session;x`, or an encoded `..`, `/` or `\` after an allowed prefix. | With `chatgpt-session`, `http` sends the token only to paths under `/backend-api/` with no encoded dot, slash or backslash. Any other path throws `not-allowed` before any request. | `tests/http.test.ts` |
 
 ## Capture runner
 

@@ -134,6 +134,13 @@ describe("H5 the bearer token stays inside http", () => {
     const http = createHttp({ origin: ORIGIN, fetch: fakeFetch(routes).fetch, auth: "chatgpt-session" });
     expect((await err(http.get("/api/auth/session"))).code).toBe("not-allowed");
   });
+  it("H7 sends the token only under /backend-api/, whatever the spelling", async () => {
+    const f = fakeFetch(routes);
+    const http = createHttp({ origin: ORIGIN, fetch: f.fetch, auth: "chatgpt-session" });
+    const paths = ["/api/auth/session/", "/api/auth/%73ession", "/api/auth/session;x", "/api/AUTH/session", "/backend-api/..%2Fapi%2Fauth%2Fsession", "/backend-api/%2e%2e/api/auth/session", "/backend-api/x%5C..%5Capi", "/backend-api"];
+    for (const path of paths) expect((await err(http.get(path))).code, path).toBe("not-allowed");
+    expect(f.calls).toHaveLength(0);
+  });
   it("throws logged-out when the session has no token", async () => {
     const http = createHttp({ origin: ORIGIN, fetch: fakeFetch({ "/api/auth/session": { body: "{}" } }).fetch, auth: "chatgpt-session" });
     expect((await err(http.get("/backend-api/me"))).code).toBe("logged-out");
