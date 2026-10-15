@@ -8,6 +8,7 @@ import { pageSession } from "../auth/page-session.js";
 import { defineReads } from "../reads.js";
 import type { Attachment, Message, Preference, PreferenceKind, Project } from "../schema.js";
 import type { Adapter, ListPage, Stub } from "./types.js";
+import { CODEX_READS, codexPage, codexTask, isCodexTask } from "./codex.js";
 import { MAX_SUBPAGES, type Obj, pathToRoot, reader } from "./read.js";
 
 const r = reader("chatgpt");
@@ -24,8 +25,8 @@ const PREFERENCES: Array<[string, PreferenceKind]> = [
   ["role_user_message", "occupation"],
 ];
 
-/** Where the list is: the main list, the archived list, then each project's list. */
-type Cursor = { src: "main" | "archived"; offset: number } | { src: "projects"; ids?: string[]; i: number; at: string };
+/** Where the list is: the main list, the archived list, each project's list, then the Codex tasks. */
+type Cursor = { src: "main" | "archived"; offset: number } | { src: "projects"; ids?: string[]; i: number; at: string } | { src: "codex"; at?: string };
 
 function stub(x: unknown, where: string): Stub {
   const o = r.obj(x, where);
@@ -84,6 +85,7 @@ export const chatgpt: Adapter = {
     { method: "GET", path: "/backend-api/gizmos/{gizmo}", source: `${GJ}/gizmo.shape.json` },
     { method: "GET", path: "/backend-api/memories", query: ["include_memory_entries"], source: `${GJ}/memories.shape.json` },
     { method: "GET", path: "/backend-api/user_system_messages", source: `${GJ}/user_system_messages.shape.json` },
+    ...CODEX_READS,
   ]),
   // Three lists in a row, so a page with no change does not end the capture.
   newestFirst: false,
@@ -100,6 +102,10 @@ export const chatgpt: Adapter = {
 
   async listConversations(http, cursor): Promise<ListPage> {
     const c: Cursor = cursor ? (JSON.parse(cursor) as Cursor) : { src: "main", offset: 0 };
+    if (c.src === "codex") {
+      const page = await codexPage(http, c.at);
+      return { items: page.items, next: page.next && JSON.stringify({ src: "codex", at: page.next } satisfies Cursor) };
+    }
     if (c.src !== "projects") {
       const query = { offset: c.offset, limit: LIMIT, order: "updated", is_archived: c.src === "archived", hide_snorlax: true };
       const page = r.obj(await http.get("/backend-api/conversations", query), "conversations");
@@ -112,15 +118,16 @@ export const chatgpt: Adapter = {
     }
     const ids = c.ids ?? (await projectIds(http));
     const id = ids[c.i];
-    if (id === undefined) return { items: [] };
+    if (id === undefined) return { items: [], next: JSON.stringify({ src: "codex" } satisfies Cursor) };
     const page = r.obj(await http.get(`/backend-api/gizmos/${encodeURIComponent(id)}/conversations`, { cursor: c.at, limit: PROJECT_LIMIT }), `project ${id} conversations`);
     const items = r.arr(page.items, `project ${id} conversations.items`).map((s, i) => stub(s, `project ${id} conversations.items[${i}]`));
     const at = r.optStr(page.cursor, `project ${id} conversations.cursor`);
-    const next: Cursor | undefined = at && items.length > 0 ? { src: "projects", ids, i: c.i, at } : c.i + 1 < ids.length ? { src: "projects", ids, i: c.i + 1, at: "0" } : undefined;
-    return { items, next: next && JSON.stringify(next) };
+    const next: Cursor = at && items.length > 0 ? { src: "projects", ids, i: c.i, at } : c.i + 1 < ids.length ? { src: "projects", ids, i: c.i + 1, at: "0" } : { src: "codex" };
+    return { items, next: JSON.stringify(next) };
   },
 
   async getConversation(http, s) {
+    if (isCodexTask(s.id)) return codexTask(http, s);
     const c = r.obj(await http.get(`/backend-api/conversation/${encodeURIComponent(s.id)}`), "conversation");
     const mapping = r.obj(c.mapping, "mapping");
     const node = (id: string) => r.obj(mapping[id], `mapping.${id}`);

@@ -4,7 +4,7 @@
 // and same-origin fetches run. It installs dist-e2e/ (origins granted at
 // install) and two stand-in extensions from e2e/scent-ext/: one with the id
 // foxscope@pooriaarab, one with another id. Then it:
-//   captures ChatGPT and Claude from the popup, with a 429 on the way;
+//   captures ChatGPT (with its Codex tasks) and Claude from the popup, with a 429 on the way;
 //   stops and resumes a capture, and resumes one after its tab closed;
 //   checks that every request to a provider was a GET and one of its reads;
 //   reads API origins from a tab with foxcache's http in a stand-in MV3
@@ -209,7 +209,9 @@ try {
   await click("chatgpt", "Capture");
   await running("chatgpt");
   let cp = await ended("chatgpt");
-  check("ChatGPT capture is done", { status: "done", conversations: 3, projects: 1, memories: 2, preferences: 4, errors: 0 }, { status: cp.status, conversations: cp.counts.conversations, projects: cp.counts.projects, memories: cp.counts.memories, preferences: cp.counts.preferences, errors: cp.counts.errors });
+  check("ChatGPT capture is done", { status: "done", conversations: 5, projects: 1, memories: 2, preferences: 4, errors: 0 }, { status: cp.status, conversations: cp.counts.conversations, projects: cp.counts.projects, memories: cp.counts.memories, preferences: cp.counts.preferences, errors: cp.counts.errors });
+  const task = await ask("archive:get", { kind: "conversations", key: "chatgpt:task_e_0000000000000000000000000000c0d1" });
+  check("a Codex task is stored with its prompt and reply", ["user", "assistant"], task.messages.map((m) => m.role));
   check("the 429 was waited out and retried", [429, 200], net.log.filter((l) => l.url.endsWith(`/conversation/${A}`)).map((l) => l.status));
   await click("claude", "Capture");
   await running("claude");
@@ -244,7 +246,7 @@ try {
   cp = await ended("chatgpt");
   const memoryIds = (await ask("archive:list", { kind: "memories", provider: "chatgpt" })).map((m) => m.id).toSorted();
   check("a memory deleted on the site is gone from the store", { has: [memoryPage.memories[0].id, memoryPage.memories[1].id].toSorted(), gone: false }, { has: memoryIds, gone: memoryIds.includes(gone) });
-  check("Resume finishes it and fetches the changed conversation", { status: "done", conversations: 1, skipped: 2 }, { status: cp.status, conversations: cp.counts.conversations, skipped: cp.counts.skipped });
+  check("Resume finishes it and fetches the changed conversation", { status: "done", conversations: 1, skipped: 4 }, { status: cp.status, conversations: cp.counts.conversations, skipped: cp.counts.skipped });
 
   // 4. A closed tab interrupts the capture, and Resume goes on in a new tab (X4).
   bumpList("2026-10-21T00:00:00.000Z");
@@ -269,14 +271,14 @@ try {
   // 6. The archive page lists, searches and shows hostile text as text (X6).
   const archive = await fox.openExtensionPage("archive.html");
   const titles = () => archive.evaluate(() => [...document.querySelectorAll("#list .item .title")].map((t) => t.textContent));
-  check("the archive lists five conversations", ["<b>Hostile</b> title", "Old archived chat", "Project chat", "Trip plan", "Trip planning"], (await until("five items", async () => ((await titles()).length === 5 ? titles() : null))).toSorted());
+  check("the archive lists seven conversations", ["<b>Hostile</b> title", "Add retry to uploader", "Fix flaky upload test", "Old archived chat", "Project chat", "Trip plan", "Trip planning"], (await until("seven items", async () => ((await titles()).length === 7 ? titles() : null))).toSorted());
   await archive.type("#query", "Alfama");
   check("search finds both Alfama chats", ["Trip plan", "Trip planning"], (await until("two hits", async () => ((await titles()).length === 2 ? titles() : null))).toSorted());
   await archive.evaluate(() => {
     document.getElementById("query").value = "";
     document.getElementById("query").dispatchEvent(new Event("input"));
   });
-  await until("the list again", async () => (await titles()).length === 5);
+  await until("the list again", async () => (await titles()).length === 7);
   await archive.evaluate(() => [...document.querySelectorAll("#list .item")].find((b) => b.textContent.includes("Hostile")).click());
   const hostile = await until("the hostile chat", () => archive.evaluate(() => {
     const d = document.getElementById("detail");
@@ -286,20 +288,20 @@ try {
 
   // 7. Exports, and the CLI reads the archive file.
   const json = JSON.parse(await ask("export:json"));
-  check("the JSON export is a foxcache/v1 archive with every record", { schema: "foxcache/v1", conversations: 5, projects: 2, memories: 5, preferences: 5 }, { schema: json.schema, conversations: json.conversations.length, projects: json.projects.length, memories: json.memories.length, preferences: json.preferences.length });
-  check("the JSON export has no raw provider fields and no token", false, /"mapping"|"chat_messages"|"extracted_content"|accessToken|synthetic-access-token-not-real/.test(JSON.stringify(json)));
+  check("the JSON export is a foxcache/v1 archive with every record", { schema: "foxcache/v1", conversations: 7, projects: 2, memories: 5, preferences: 5 }, { schema: json.schema, conversations: json.conversations.length, projects: json.projects.length, memories: json.memories.length, preferences: json.preferences.length });
+  check("the JSON export has no raw provider fields and no token", false, /"mapping"|"chat_messages"|"extracted_content"|"input_items"|accessToken|synthetic-access-token-not-real/.test(JSON.stringify(json)));
   const memories = await ask("export:memories");
   check("the memory list has one line per memory", 5, memories.split("\n").filter((l) => /^- \[(chatgpt|claude)\] /.test(l)).length);
   const zipInfo = await popup.evaluate(async () => {
     const z = (await browser.runtime.sendMessage({ type: "export:markdown" })).value;
     return { pk: String.fromCharCode(z[0], z[1]), names: [...new TextDecoder().decode(z).matchAll(/(chatgpt|claude)\/[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+\.md/g)].map((m) => m[0]) };
   });
-  check("the Markdown zip has one file per conversation", { pk: "PK", files: 5 }, { pk: zipInfo.pk, files: new Set(zipInfo.names).size });
+  check("the Markdown zip has one file per conversation", { pk: "PK", files: 7 }, { pk: zipInfo.pk, files: new Set(zipInfo.names).size });
   const home = mkdtempSync(join(tmpdir(), "fca-e2e-home-"));
   const file = join(home, "foxcache-archive.json");
   writeFileSync(file, JSON.stringify(json));
   const env = { ...process.env, FOXCACHE_HOME: join(home, "store") };
-  check("foxcache import reads the exported file", "Imported 17 new, 0 updated, 0 unchanged records.\n", execFileSync("node", ["dist/bin.js", "import", file], { env, encoding: "utf8" }));
+  check("foxcache import reads the exported file", "Imported 19 new, 0 updated, 0 unchanged records.\n", execFileSync("node", ["dist/bin.js", "import", file], { env, encoding: "utf8" }));
   check("foxcache search finds a captured message", true, execFileSync("node", ["dist/bin.js", "search", "Belem"], { env, encoding: "utf8" }).includes("Day 2: Belem."));
 
   // 8. SCENT: foxscope gets the ask fields and never conversations; any other extension gets nothing (SC1-SC3, X1).
