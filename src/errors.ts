@@ -18,9 +18,15 @@ export type ErrorCode =
 
 export class FoxcacheError extends Error {
   readonly code: ErrorCode;
-  constructor(code: ErrorCode, message: string) {
+  /** The HTTP status, for an error from a provider request. */
+  readonly status?: number;
+  /** Seconds to wait, from a 429's Retry-After header. */
+  readonly retryAfter?: number;
+  constructor(code: ErrorCode, message: string, extra: { status?: number; retryAfter?: number } = {}) {
     super(message);
     this.name = "FoxcacheError";
     this.code = code;
+    if (extra.status !== undefined) this.status = extra.status;
+    if (extra.retryAfter !== undefined) this.retryAfter = extra.retryAfter;
   }
 }
