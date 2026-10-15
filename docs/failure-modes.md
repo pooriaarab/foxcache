@@ -131,3 +131,9 @@ All errors are `FoxcacheError` with a `code`. The codes are in the rows.
 | X8 | A capture fails again and again at the same place on Resume, for example a project that no longer exists. | The popup offers Start over next to Resume. Start over leaves the old checkpoint behind. | E2E |
 | X9 | Delete all runs while the agent saves a checkpoint, or while the event page marks a capture interrupted: the write read the capture before the delete and lands after it. | The checkpoint is removed again and the agent is told to stop. Its next record is refused and not stored. Delete all leaves nothing. | `tests/background.test.ts` |
 | X10 | The extension exports a JSON archive that `foxcache import` refuses: over 256 MiB, or made larger by indentation. | The JSON export is compact. One over 256 MiB is refused with `too-large`, and the archive page says so and points to the Markdown export. | `tests/background-export.test.ts` |
+
+## Release
+
+| # | Failure mode | Wanted behavior | Test |
+|---|---|---|---|
+| R1 | A push to `release` publishes a version whose Firefox E2E failed or never ran, because `release.yml` ran only `ci:local` and does not wait for CI. | `release.yml` runs `pnpm e2e` before `npm publish` and `web-ext sign`, and a failed E2E stops the release. | `tests/release.test.ts` |
