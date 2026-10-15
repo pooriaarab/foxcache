@@ -3,9 +3,9 @@
 // Endpoints and sources: docs/providers/mistral.md.
 import { FoxcacheError } from "../errors.js";
 import type { Http } from "../http.js";
-import type { Message, Role } from "../schema.js";
+import { MAX_MESSAGES, type Message, type Role } from "../schema.js";
 import type { Adapter } from "./types.js";
-import { type Obj, reader } from "./read.js";
+import { MAX_SUBPAGES, type Obj, reader } from "./read.js";
 
 const r = reader("mistral");
 const ROLES: Record<string, Role> = { user: "user", assistant: "assistant", system: "system" };
@@ -76,10 +76,12 @@ export const mistral: Adapter = {
     const c = r.obj(chat, "chat.byId");
     const rows: Obj[] = [];
     const seen = new Set<string>();
-    for (let page = r.obj(first, "message.all"); ; ) {
+    for (let page = r.obj(first, "message.all"), pages = 1; ; pages++) {
       rows.push(...r.arr(page.items, "message.all.items").map((m, i) => r.obj(m, `message.all.items[${i}]`)));
+      if (rows.length > MAX_MESSAGES) throw new FoxcacheError("too-large", `mistral: the chat has more than ${MAX_MESSAGES} messages; foxcache keeps at most ${MAX_MESSAGES}.`);
       const next = r.optStr(page.nextCursor, "message.all.nextCursor");
       if (!next) break;
+      if (pages >= MAX_SUBPAGES) throw new FoxcacheError("pagination-loop", `mistral: message.all did not end after ${MAX_SUBPAGES} pages.`);
       if (seen.has(next)) throw r.fail("message.all.nextCursor", "came again (a loop)");
       seen.add(next);
       const [more] = await trpc(http, ["message.all"], [{ chatId: stub.id, cursor: next }]);
