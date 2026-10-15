@@ -7,7 +7,7 @@ Adapter: `src/adapters/deepseek.ts`. Fixture: `tests/fixtures/deepseek.json`
 Auth: the page keeps a bearer token in `localStorage` under `userToken`
 (`{"value": "..."}`), and its own script sends it as `Authorization: Bearer`.
 foxcache's `http` reads it in the tab, keeps it, and never passes it on
-(auth `deepseek-local`). Confirmed by
+(auth `localStorage-bearer`). Confirmed by
 [multi-ai extractor](https://github.com/mrlnlms/multi-ai-session-data-extractor/blob/01450c0dafcf4d1af62056392fd387124febe4b2/src/platforms/deepseek/extractor/api_client.py#L33-L64),
 [ctxport](https://github.com/nicepkg/ctxport/blob/c4e3db1be3191d4167d2218c90dd9cfbea0dc924/packages/core-plugins/src/plugins/deepseek/plugin.ts#L85-L129)
 and [deepseek-exporter](https://github.com/agoramachina/deepseek-exporter/blob/791847f92402739fa4692597f569e5ee6509688d/firefox/content.js#L20-L35).

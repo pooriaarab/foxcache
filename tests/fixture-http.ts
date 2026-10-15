@@ -4,7 +4,7 @@
 // provider origins. The Http is the adapter's own, with its reads, so a
 // test fails when an adapter sends a request its reads do not list.
 import { readFileSync } from "node:fs";
-import { type Site, createHttp } from "../src/index.js";
+import { type HttpSite, createHttp } from "../src/index.js";
 
 export type Routes = Record<string, unknown>;
 export const fixture = (name: string): Routes => JSON.parse(readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url), "utf8")).routes;
@@ -12,7 +12,7 @@ export const fixture = (name: string): Routes => JSON.parse(readFileSync(new URL
 /** A status reply in a fixture: { "$status": 401 }. */
 const statusOf = (body: unknown) => (typeof body === "object" && body !== null && "$status" in body ? Number((body as { $status: unknown }).$status) : 200);
 
-export function fixtureHttp(site: Site, routes: Routes, storage: { getItem(k: string): string | null } = { getItem: () => null }) {
+export function fixtureHttp(site: HttpSite, routes: Routes, storage: { getItem(k: string): string | null } = { getItem: () => null }) {
   const calls: string[] = [];
   const fetch = async (url: string) => {
     const u = new URL(url);

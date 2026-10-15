@@ -1,8 +1,9 @@
 // chat.deepseek.com. The page keeps a bearer token in localStorage
-// "userToken"; http reads it there and keeps it (auth "deepseek-local").
+// "userToken"; http reads it there (auth localStorage-bearer).
 // Endpoints and sources: docs/providers/deepseek.md.
 import { FoxcacheError } from "../errors.js";
 import type { Http, Query } from "../http.js";
+import { localStorageBearer } from "../auth/localStorage-bearer.js";
 import { defineReads } from "../reads.js";
 import type { Message } from "../schema.js";
 import type { Adapter } from "./types.js";
@@ -43,7 +44,7 @@ export const deepseek: Adapter = {
   id: "deepseek",
   label: "DeepSeek",
   origin: "https://chat.deepseek.com",
-  auth: "deepseek-local",
+  auth: localStorageBearer({ key: "userToken", field: "value" }),
   reads: defineReads([
     { method: "GET", path: "/api/v0/users/current", source: "https://github.com/NIyueeE/ds-free-api/blob/99f77302cebc0b32f10066f96b863f2f27752708/ds_core/raw-api-reference.md#L126-L131" },
     { method: "GET", path: "/api/v0/chat_session/fetch_page", query: ["lte_cursor.pinned", "lte_cursor.updated_at", "lte_cursor.id"], source: "https://github.com/agoramachina/deepseek-exporter/blob/791847f92402739fa4692597f569e5ee6509688d/firefox/content.js#L67-L97" },

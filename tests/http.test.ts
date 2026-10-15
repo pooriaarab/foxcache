@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { type AuthKind, FoxcacheError, MAX_RESPONSE_BYTES, type Read, createHttp, defineReads } from "../src/index.js";
+import { FoxcacheError, MAX_RESPONSE_BYTES, type Read, cookie, createHttp, defineReads } from "../src/index.js";
 
 const ORIGIN = "https://chatgpt.com";
-const TOKEN = "eyJ-synthetic-secret-token";
 const SOURCE = "https://example.test/docs";
 const get = (path: string, query?: string[]): Read => ({ method: "GET", path, ...(query ? { query } : {}), source: SOURCE });
 /** The reads these tests send. */
@@ -10,7 +9,6 @@ const READS = defineReads([
   ...["/a", "/b", "/big", "/missing", "/api/me", "/backend-api/me", "/backend-api/fail"].map((p) => get(p)),
   get("/backend-api/conversations", ["offset", "limit", "skip"]),
   get("/backend-api/conversation/{id}"),
-  get("/api/v0/users/current"),
   { method: "POST", path: "/graphql", body: { type: "json", match: { queryName: "ThreadList", "extensions.persistedQuery.sha256Hash": "abc" } }, source: SOURCE },
   { method: "POST", path: "/im/chain", body: { type: "form", match: { cmd: "list" } }, source: SOURCE },
   { method: "POST", path: "/_/BardChatUi/data/batchexecute", query: ["rpcids", "rt"], body: { type: "batchexecute", rpcids: ["MaZiqc", "hNvQHb"] }, source: SOURCE },
@@ -20,8 +18,8 @@ const BATCH = "/_/BardChatUi/data/batchexecute";
 /** A batchexecute f.req that calls these rpc ids. */
 const fReq = (...ids: string[]) => JSON.stringify([ids.map((id) => [id, "[]", null, "generic"])]);
 const NO_STORAGE = { getItem: () => null };
-/** An Http on ORIGIN with READS. */
-const open = (fetch: (url: string, init: RequestInit) => Promise<Response>, auth?: AuthKind, storage: { getItem(k: string): string | null } = NO_STORAGE, origin = ORIGIN) => createHttp({ origin, reads: READS, ...(auth ? { auth } : {}) }, { fetch, storage });
+/** An Http on ORIGIN with READS and cookie auth. */
+const open = (fetch: (url: string, init: RequestInit) => Promise<Response>) => createHttp({ origin: ORIGIN, reads: READS, auth: cookie }, { fetch, storage: NO_STORAGE });
 
 interface Call {
   url: string;
@@ -169,7 +167,7 @@ describe("H10 a placeholder holds one plain segment", () => {
 describe("H12 a read on an API origin", () => {
   const API = "https://api.copilot.example";
   const NEO = "https://neo.chatgpt.com";
-  const site = { origin: ORIGIN, apiOrigins: [API, NEO], reads: defineReads([{ method: "GET", origin: API, path: "/github/chat/threads", query: ["limit"], source: SOURCE }, { method: "GET", origin: NEO, path: "/chats/{id}", source: SOURCE }, get("/a")]) };
+  const site = { origin: ORIGIN, apiOrigins: [API, NEO], auth: cookie, reads: defineReads([{ method: "GET", origin: API, path: "/github/chat/threads", query: ["limit"], source: SOURCE }, { method: "GET", origin: NEO, path: "/chats/{id}", source: SOURCE }, get("/a")]) };
   const answer = async (url: string, init: RequestInit) => (calls.push({ url, init }), new Response('{"ok":true}'));
   let calls: Call[] = [];
   it("sends it from the tab with the page cookies", async () => {
@@ -256,62 +254,6 @@ describe("H4 a big answer with no Content-Length", () => {
     const big = "é".repeat(26 * 1024 * 1024);
     const fetch = async () => new Response(`"${big}"`, { status: 200 });
     expect((await err(open(fetch).get("/big"))).code).toBe("too-large");
-  });
-});
-
-describe("H5 the bearer token stays inside http", () => {
-  const routes = {
-    "/api/auth/session": { body: JSON.stringify({ user: { id: "u" }, accessToken: TOKEN }) },
-    "/backend-api/me": { body: '{"id":"user-1"}' },
-    "/backend-api/fail": { status: 500, body: `oops ${TOKEN}` },
-  };
-  it("adds the token to its own requests and never returns it", async () => {
-    const f = fakeFetch(routes);
-    const http = open(f.fetch, "chatgpt-session");
-    const me = await http.get("/backend-api/me");
-    expect(JSON.stringify(me)).not.toContain(TOKEN);
-    expect(new Headers(f.calls[1]!.init.headers).get("authorization")).toBe(`Bearer ${TOKEN}`);
-    const e = await err(http.get("/backend-api/fail"));
-    expect(`${e.message} ${e.stack} ${JSON.stringify(e)}`).not.toContain(TOKEN);
-    expect(JSON.stringify(http)).not.toContain(TOKEN);
-    expect(f.calls.filter((c) => c.url.endsWith("/api/auth/session"))).toHaveLength(1);
-  });
-  it("refuses to return the session answer itself", async () => {
-    const http = open(fakeFetch(routes).fetch, "chatgpt-session");
-    expect((await err(http.get("/api/auth/session"))).code).toBe("not-allowed");
-  });
-  it("H7 sends the token only under /backend-api/, whatever the spelling", async () => {
-    const f = fakeFetch(routes);
-    const http = open(f.fetch, "chatgpt-session");
-    const paths = ["/api/auth/session/", "/api/auth/%73ession", "/api/auth/session;x", "/api/AUTH/session", "/backend-api/..%2Fapi%2Fauth%2Fsession", "/backend-api/%2e%2e/api/auth/session", "/backend-api/x%5C..%5Capi", "/backend-api"];
-    for (const path of paths) expect((await err(http.get(path))).code, path).toBe("not-allowed");
-    expect(f.calls).toHaveLength(0);
-  });
-  it("throws logged-out when the session has no token", async () => {
-    const http = open(fakeFetch({ "/api/auth/session": { body: "{}" } }).fetch, "chatgpt-session");
-    expect((await err(http.get("/backend-api/me"))).code).toBe("logged-out");
-  });
-  it("gets a new token once after a 401", async () => {
-    let session = 0;
-    const f = fakeFetch({
-      "/api/auth/session": () => ({ body: JSON.stringify({ accessToken: `${TOKEN}-${++session}` }) }),
-      "/backend-api/me": (n) => (n === 1 ? { status: 401 } : { body: '{"ok":true}' }),
-    });
-    const http = open(f.fetch, "chatgpt-session");
-    expect(await http.get("/backend-api/me")).toEqual({ ok: true });
-    expect(session).toBe(2);
-  });
-});
-
-describe("H5 a token in localStorage (DeepSeek)", () => {
-  it("sends it as a bearer and throws logged-out without it", async () => {
-    const f = fakeFetch({ "/api/v0/users/current": { body: '{"code":0}' } });
-    const storage = { getItem: (k: string) => (k === "userToken" ? JSON.stringify({ value: TOKEN }) : null) };
-    const http = open(f.fetch, "deepseek-local", storage, "https://chat.deepseek.com");
-    expect(await http.get("/api/v0/users/current")).toEqual({ code: 0 });
-    expect(new Headers(f.calls[0]!.init.headers).get("authorization")).toBe(`Bearer ${TOKEN}`);
-    const none = open(f.fetch, "deepseek-local", NO_STORAGE, "https://chat.deepseek.com");
-    expect((await err(none.get("/api/v0/users/current"))).code).toBe("logged-out");
   });
 });
 
