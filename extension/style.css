@@ -133,3 +133,11 @@ body.wide { max-width: 860px; }
 .message.user .role { color: var(--accent); }
 .text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .exports { margin-top: 4px; }
+
+/* Settings */
+fieldset { margin: 14px 0 0; padding: 4px 16px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; min-width: 0; }
+legend { float: left; width: 100%; padding: 12px 0 0; font-size: 13.5px; font-weight: 600; }
+legend + * { clear: both; }
+fieldset .note { margin-top: 6px; }
+fieldset .row { margin-top: 12px; }
+#sites { margin-top: 6px; }
