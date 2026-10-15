@@ -19,6 +19,7 @@ export const PROVIDERS = [
   "notion",
   "kagi",
   "poe",
+  "meta",
 ] as const;
 export type ProviderId = (typeof PROVIDERS)[number];
 export const ROLES = ["user", "assistant", "system", "tool"] as const;
