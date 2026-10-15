@@ -6,7 +6,7 @@ import { FoxcacheError } from "../errors.js";
 import type { Http } from "../http.js";
 import type { Attachment, Message, Preference, PreferenceKind, Project } from "../schema.js";
 import type { Adapter, ListPage, Stub } from "./types.js";
-import { type Obj, pathToRoot, reader } from "./read.js";
+import { MAX_SUBPAGES, type Obj, pathToRoot, reader } from "./read.js";
 
 const r = reader("chatgpt");
 const LIMIT = 100;
@@ -32,7 +32,8 @@ function stub(x: unknown, where: string): Stub {
 async function projectIds(http: Http): Promise<string[]> {
   const ids: string[] = [];
   const seen = new Set<string>();
-  for (let cursor: string | undefined; ; ) {
+  for (let cursor: string | undefined, pages = 1; ; pages++) {
+    if (pages > MAX_SUBPAGES) throw new FoxcacheError("pagination-loop", `chatgpt: snorlax/sidebar did not end after ${MAX_SUBPAGES} pages.`);
     const page = r.obj(await http.get("/backend-api/gizmos/snorlax/sidebar", { owned_only: true, conversations_per_gizmo: 0, limit: PROJECT_LIMIT, cursor }), "snorlax/sidebar");
     for (const [i, item] of r.arr(page.items, "snorlax/sidebar.items").entries()) {
       // Sources disagree on the nesting: items[].gizmo or items[].gizmo.gizmo.
