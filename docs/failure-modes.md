@@ -69,7 +69,8 @@ All errors are `FoxcacheError` with a `code`. The codes are in the rows.
 | C5 | The provider changed its schema: a list page or a conversation has a shape the adapter does not know. | A list page throws `provider-schema` and ends the capture. One bad conversation is skipped and counted in `errors`. Three in a row end the capture with `provider-schema`. | `tests/capture.test.ts` |
 | C6 | The user clicks Stop. | The runner ends after the request in flight, with status `stopped`. | `tests/capture.test.ts` |
 | C7 | A capture stopped halfway is started again. | It resumes from the checkpoint and does not fetch done conversations again. | `tests/capture.test.ts` |
-| C8 | A second capture runs after the first finished. | It fetches only conversations whose `updatedAt` is newer than the stored copy. | `tests/capture.test.ts` |
+| C8 | A second capture runs after the first finished. | It fetches only conversations whose `updatedAt` is newer than the stored copy. On a newest-first list, and only when the caller allows it, it stops at the first page with no change. | `tests/capture.test.ts` |
+| C10 | A capture stops early at a page with no change, but older conversations were never stored: the run is a resume, or the last capture had errors. | The early stop is off unless the caller allows it, and a resumed run never stops early, so the rest of the list is read. | `tests/capture.test.ts` |
 | C9 | An optional kind (memories, projects ...) fails. | Its error is counted, and the conversations are still captured. A `logged-out` there ends the capture. | `tests/capture.test.ts` |
 
 ## Adapters
