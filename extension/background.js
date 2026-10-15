@@ -10,6 +10,7 @@ export const store = createStore(idbBackend());
 const resolver = cacheResolver(store);
 const pattern = (adapter) => `${adapter.origin}/*`;
 const RESUMABLE = new Set(["stopped", "failed", "interrupted"]);
+const KEEP_KINDS = new Set(["projects", "memories", "preferences", "library"]);
 
 // The capture of one provider: { tabId, startingUntil, checkpoint }, in the checkpoints area.
 const captureOf = async (id) => (await store.checkpoint(id)) ?? null;
@@ -150,6 +151,13 @@ const agentHandlers = {
       await store.backend.delete(kind, recordKey(kind, check(kind, record)));
       return { stop: true };
     }
+    return { stop: await stopAsked(from.adapter.id) };
+  },
+  // A kind read in full: the records the site no longer has go (C11). Conversations are never deleted this way.
+  "capture:keep": async ({ kind, keys }, from) => {
+    if (!KEEP_KINDS.has(kind)) return { error: `keep does not apply to ${kind}.` };
+    if (!Array.isArray(keys) || !keys.every((k) => typeof k === "string")) return { error: "keep needs a list of keys." };
+    await store.keep(kind, from.adapter.id, keys);
     return { stop: await stopAsked(from.adapter.id) };
   },
   "capture:checkpoint": async ({ checkpoint }, from) => {

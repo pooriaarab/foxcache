@@ -27,6 +27,7 @@ All errors are `FoxcacheError` with a `code`. The codes are in the rows.
 | ST4 | Delete all is called. | Every kind and the checkpoints are empty after it. | `tests/store.test.ts` |
 | ST5 | A search has an empty or very long query. | An empty query throws `bad-query`. A query over 200 characters throws `bad-query`. | `tests/store.test.ts` |
 | ST6 | A search term appears in thousands of messages. | The search returns at most `limit` hits (default 50), each with one short snippet. | `tests/store.test.ts` |
+| ST7 | A memory, a preference or a project is edited or deleted on the site. A memory with no id gets a new key when its text changes. | `keep` deletes the stored records of one provider and kind whose key is not in the list it gets. Other providers, other kinds and records that fail their check stay. | `tests/store.test.ts` |
 
 ## Archive file
 
@@ -72,6 +73,7 @@ All errors are `FoxcacheError` with a `code`. The codes are in the rows.
 | C8 | A second capture runs after the first finished. | It fetches only conversations whose `updatedAt` is newer than the stored copy. On a newest-first list, and only when the caller allows it, it stops at the first page with no change. | `tests/capture.test.ts` |
 | C10 | A capture stops early at a page with no change, but older conversations were never stored: the run is a resume, or the last capture had errors. | The early stop is off unless the caller allows it, and a resumed run never stops early, so the rest of the list is read. | `tests/capture.test.ts` |
 | C9 | An optional kind (memories, projects ...) fails. | Its error is counted, and the conversations are still captured. A `logged-out` there ends the capture. | `tests/capture.test.ts` |
+| C11 | An optional kind that was read in full no longer has a record the store holds: an edited Claude memory, a deleted ChatGPT memory, a cleared preference. | After it stores every record of the kind, the runner sends `keep` with their keys, and the event page deletes the rest of that provider and kind (ST7). A kind that failed or was stopped sends no `keep`, so nothing is deleted on a partial read. | `tests/capture.test.ts`, E2E |
 
 ## Adapters
 

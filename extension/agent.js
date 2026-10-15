@@ -24,6 +24,7 @@ if (!globalThis.foxcacheAgent) {
   const sink = {
     put: (kind, record) => send({ type: "capture:put", kind, record }),
     checkpoint: (checkpoint) => send({ type: "capture:checkpoint", checkpoint }),
+    keep: (kind, keys) => send({ type: "capture:keep", kind, keys }),
   };
 
   browser.runtime.onMessage.addListener((message, sender) => {

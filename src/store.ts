@@ -174,6 +174,19 @@ export function createStore(backend: Backend) {
       return hits;
     },
 
+    /** Delete the valid records of one provider and kind whose key is not in keys, and return how many (ST7). */
+    async keep(kind: Kind, provider: ProviderId, keys: string[]): Promise<number> {
+      const wanted = new Set(keys);
+      let deleted = 0;
+      for (const r of await all(kind, { provider })) {
+        const key = recordKey(kind, r);
+        if (wanted.has(key)) continue;
+        await backend.delete(kind, key);
+        deleted += 1;
+      }
+      return deleted;
+    },
+
     checkpoint: (provider: ProviderId): Promise<unknown> => backend.get("checkpoints", provider),
     setCheckpoint: (provider: ProviderId, value: unknown): Promise<void> => backend.put("checkpoints", provider, value),
     clearCheckpoint: (provider: ProviderId): Promise<void> => backend.delete("checkpoints", provider),

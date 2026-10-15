@@ -6,7 +6,7 @@
 import type { Adapter, Stub } from "./adapters/types.js";
 import { FoxcacheError } from "./errors.js";
 import type { Http, Query } from "./http.js";
-import { type Kind, type ProviderId, check } from "./schema.js";
+import { type Kind, type ProviderId, check, recordKey } from "./schema.js";
 
 export type CaptureStatus = "running" | "done" | "stopped" | "failed" | "interrupted";
 export interface CaptureCounts {
@@ -37,6 +37,8 @@ export interface Sink {
   /** Store one record. The answer says whether the user asked to stop. */
   put(kind: Kind, record: unknown): Promise<{ stop: boolean }>;
   checkpoint(checkpoint: Checkpoint): Promise<{ stop: boolean }>;
+  /** The kind was read in full: delete the stored records of this provider and kind whose key is not in keys (C11). */
+  keep(kind: Kind, keys: string[]): Promise<{ stop: boolean }>;
 }
 export interface CaptureOptions {
   adapter: Adapter;
@@ -131,9 +133,12 @@ export async function runCapture(o: CaptureOptions): Promise<Checkpoint> {
     cp.counts.errors += 1;
     cp.lastErrors = [...cp.lastErrors, `${what}: ${describe(error)}`].slice(-KEEP_ERRORS);
   };
-  async function put(kind: Kind, record: unknown) {
-    const answer = await o.sink.put(kind, check(kind, record));
+  /** Send one checked record to the sink and return its store key. */
+  async function put(kind: Kind, record: unknown): Promise<string> {
+    const checked = check(kind, record);
+    const answer = await o.sink.put(kind, checked);
     if (answer.stop) stop = true;
+    return recordKey(kind, checked);
   }
   async function save() {
     cp.updatedAt = now();
@@ -150,10 +155,14 @@ export async function runCapture(o: CaptureOptions): Promise<Checkpoint> {
         if (!o.adapter[kind]) continue;
         try {
           const records: unknown[] = await o.adapter[kind]!(polite);
+          const keys: string[] = [];
           for (const record of records) {
-            await put(kind, record);
+            keys.push(await put(kind, record));
             cp.counts[kind] += 1;
           }
+          // A stopped kind may be partial, so it deletes nothing.
+          halt();
+          if ((await o.sink.keep(kind, keys)).stop) stop = true;
         } catch (error) {
           if (error instanceof Stopped || codeOf(error) === "logged-out" || codeOf(error) === "rate-limited") throw error;
           noteError(kind, error);
