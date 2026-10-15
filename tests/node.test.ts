@@ -4,7 +4,7 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { FoxcacheError } from "../src/index.js";
-import { cachePath, openNodeStore } from "../src/node.js";
+import { cachePath, openNodeStore, updateNodeStore } from "../src/node.js";
 
 const temp = () => mkdtempSync(join(tmpdir(), "foxcache-test-"));
 const memory = { provider: "chatgpt", id: "m1", text: "Prefers metric units." } as const;
@@ -17,18 +17,17 @@ describe("foxcache/node", () => {
 
   it("keeps records across opens, as a foxcache/v1 archive", async () => {
     const env = { FOXCACHE_HOME: join(temp(), "home") };
-    const a = await openNodeStore(env);
-    await a.store.put("memories", memory);
-    await a.save();
+    await updateNodeStore((store) => store.put("memories", memory), env);
     const b = await openNodeStore(env);
     expect(await b.store.all("memories")).toEqual([memory]);
     expect(JSON.parse(readFileSync(cachePath(env), "utf8"))).toMatchObject({ schema: "foxcache/v1", memories: [memory] });
   });
 
-  it("a missing file opens empty and writes nothing until save", async () => {
+  it("a missing file opens empty, and a change through openNodeStore writes nothing", async () => {
     const dir = temp();
     const s = await openNodeStore({ FOXCACHE_HOME: dir });
     expect(await s.store.counts()).toEqual({});
+    await s.store.put("memories", memory);
     expect(readdirSync(dir)).toEqual([]);
   });
 
@@ -46,23 +45,25 @@ describe("foxcache/node", () => {
 
   it("N2 a failed write keeps the old file and leaves no temp file", async () => {
     const dir = temp();
-    const s = await openNodeStore({ FOXCACHE_HOME: dir });
-    await s.store.put("memories", memory);
-    mkdirSync(join(dir, "archive.json"));
-    writeFileSync(join(dir, "archive.json", "x"), "x");
-    await expect(s.save()).rejects.toThrow();
+    const failing = updateNodeStore(async (store) => {
+      await store.put("memories", memory);
+      // The rename over a folder that has a file fails.
+      mkdirSync(join(dir, "archive.json"));
+      writeFileSync(join(dir, "archive.json", "x"), "x");
+    }, { FOXCACHE_HOME: dir });
+    await expect(failing).rejects.toThrow();
     expect(readdirSync(dir)).toEqual(["archive.json"]);
+    expect(readdirSync(join(dir, "archive.json"))).toEqual(["x"]);
   });
 
   it("N4 a directory it makes is 0700 and the file 0600; an existing directory keeps its mode", async () => {
     const made = join(temp(), "home");
-    const a = await openNodeStore({ FOXCACHE_HOME: made });
-    await a.save();
+    await updateNodeStore(async () => undefined, { FOXCACHE_HOME: made });
     expect(statSync(made).mode & 0o777).toBe(0o700);
     expect(statSync(join(made, "archive.json")).mode & 0o777).toBe(0o600);
     const existing = temp();
     chmodSync(existing, 0o755);
-    await (await openNodeStore({ FOXCACHE_HOME: existing })).save();
+    await updateNodeStore(async () => undefined, { FOXCACHE_HOME: existing });
     expect(statSync(existing).mode & 0o777).toBe(0o755);
   });
 });
