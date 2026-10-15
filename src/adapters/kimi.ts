@@ -72,7 +72,8 @@ export const kimi: Adapter = {
       return { id: r.str(c.id, `chats[${i}].id`), title: r.optStr(c.name, `chats[${i}].name`) ?? "", updatedAt: r.time(c.updateTime, `chats[${i}].updateTime`) };
     });
     const next = r.optStr(page.nextPageToken, "ListChats.nextPageToken");
-    return { items, next: items.length > 0 ? next : undefined };
+    // An empty page with a token is not the end (K40).
+    return { items, next };
   },
 
   async getConversation(http, stub) {

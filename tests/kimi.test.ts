@@ -48,6 +48,12 @@ describe("kimi list", () => {
     const second = await kimi.listConversations(f.http, first.next);
     expect(second).toEqual({ items: [{ id: K2, title: "Notes", updatedAt: "2026-08-20T10:01:00.000Z" }], next: undefined });
   });
+  it("K40 pages past an empty page that still has a token", async () => {
+    const f = open(routes({ [`${LIST} {"page_size":100,"query":""}`]: { nextPageToken: "page-2" } }));
+    const first = await kimi.listConversations(f.http);
+    expect(first).toEqual({ items: [], next: "page-2" });
+    expect((await kimi.listConversations(f.http, first.next)).items.map((s) => s.id)).toEqual([K2]);
+  });
   it("reads an empty account, whose answer has no chats field (K3)", async () => {
     expect(await kimi.listConversations(open(routes({ [`${LIST} {"page_size":100,"query":""}`]: { nextPageToken: "" } })).http)).toEqual({ items: [], next: undefined });
   });
