@@ -6,7 +6,7 @@ import { parseArgs } from "node:util";
 import { MAX_ARCHIVE_BYTES, importArchive, toArchive } from "./archive.js";
 import { FoxcacheError } from "./errors.js";
 import { serveMcp } from "./mcp.js";
-import { openNodeStore } from "./node.js";
+import { openNodeStore, updateNodeStore } from "./node.js";
 import { markdownFiles, toMarkdown, toMemoryList } from "./outputs.js";
 import { KINDS, type Kind, PROVIDERS, type ProviderId, type RecordOf, recordKey } from "./schema.js";
 
@@ -96,9 +96,8 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         const path = resolve(args[0]!);
         // A2: refuse before reading.
         if ((await stat(path)).size > MAX_ARCHIVE_BYTES) throw new FoxcacheError("too-large", `${path} is larger than ${MAX_ARCHIVE_BYTES / 1024 / 1024} MiB.`);
-        const node = await openNodeStore(io.env);
-        const counts = await importArchive(node.store, await readFile(path, "utf8"));
-        await node.save();
+        const text = await readFile(path, "utf8");
+        const counts = await updateNodeStore((store) => importArchive(store, text), io.env);
         io.out(`Imported ${counts.added} new, ${counts.updated} updated, ${counts.same} unchanged records.\n`);
         return 0;
       }

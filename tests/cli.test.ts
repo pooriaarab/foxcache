@@ -1,5 +1,5 @@
 // CL1-CL3 and A2 in docs/failure-modes.md, and each command once.
-import { existsSync, mkdtempSync, readFileSync, readdirSync, truncateSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, truncateSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -107,6 +107,31 @@ describe("foxcache CLI", () => {
     // oxlint-disable-next-line no-control-regex -- the control characters are what it checks for
     expect(out).not.toMatch(/[\u007f-\u009f]/);
     expect(JSON.parse(out).conversations[1].messages[0].text).toContain("\u009b");
+  });
+
+  it("N6 two imports at once keep the records of both", async () => {
+    const { run, env } = cli();
+    const files = ["c", "d"].map((prefix) => {
+      const file = join(dir(), `${prefix}.json`);
+      const memories = Array.from({ length: 200 }, (_, i) => ({ provider: "chatgpt", id: `${prefix}${i}`, text: `${prefix} ${i}` }));
+      writeFileSync(file, JSON.stringify({ ...ARCHIVE, conversations: [], projects: [], preferences: [], memories }));
+      return file;
+    });
+    const results = await Promise.all(files.map((file) => run("import", file)));
+    expect(results.map((r) => r.out)).toEqual(Array(2).fill("Imported 200 new, 0 updated, 0 unchanged records.\n"));
+    expect((await run("list")).out.split("\n").filter(Boolean)).toHaveLength(400);
+    expect(readdirSync(env.FOXCACHE_HOME)).toEqual(["archive.json"]);
+  });
+
+  it("N6 a lock left by an import that died stops the next import, which says how to clear it", async () => {
+    const { run, env, file } = cli();
+    mkdirSync(env.FOXCACHE_HOME);
+    // A pid above the Linux maximum (2^22) runs no process.
+    writeFileSync(join(env.FOXCACHE_HOME, "archive.json.lock"), "4194305");
+    const r = await run("import", file);
+    expect(r.code).toBe(1);
+    expect(r.err).toMatch(/^foxcache: locked: .*archive\.json\.lock.*4194305.*Delete/);
+    expect(readdirSync(env.FOXCACHE_HOME)).toEqual(["archive.json.lock"]);
   });
 
   it("A2 import refuses a file over the limit before it reads it", async () => {
