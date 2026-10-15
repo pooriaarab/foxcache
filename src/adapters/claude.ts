@@ -1,4 +1,5 @@
 // claude.ai. Cookies only. Endpoints and sources: docs/providers/claude.md.
+import { FoxcacheError } from "../errors.js";
 import type { Http } from "../http.js";
 import type { Attachment, Message, Project } from "../schema.js";
 import type { Adapter, Stub } from "./types.js";
@@ -17,7 +18,8 @@ function org(http: Http): Promise<string> {
   if (!p) {
     p = http.get("/api/organizations").then((list) => {
       const chat = r.arr(list, "/api/organizations").map((o, i) => r.obj(o, `/api/organizations[${i}]`)).find((o) => Array.isArray(o.capabilities) && o.capabilities.includes("chat"));
-      if (!chat) throw r.fail("/api/organizations", "has no organization that can chat");
+      // Signed in to an account that cannot chat (an API console only) is signed out for claude.ai.
+      if (!chat) throw new FoxcacheError("logged-out", "claude: this account has no organization that can chat. Sign in to claude.ai with a chat account.");
       return r.str(chat.uuid, "organization uuid");
     });
     p.catch(() => orgs.delete(http));
@@ -71,7 +73,8 @@ export const claude: Adapter = {
       await org(http);
       return true;
     } catch (error) {
-      if (error instanceof Error && "code" in error && (error.code === "logged-out" || error.code === "provider-schema")) return false;
+      // A challenge page or a changed shape is not signed out: it surfaces (P10).
+      if (error instanceof FoxcacheError && error.code === "logged-out") return false;
       throw error;
     }
   },
