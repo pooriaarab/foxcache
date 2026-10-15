@@ -5,6 +5,7 @@ export * from "./store.js";
 export * from "./archive.js";
 export * from "./outputs.js";
 export * from "./http.js";
+export { batchRead, callBatch, decodeBatch } from "./batchexecute.js";
 export type * from "./auth/types.js";
 export { cookie } from "./auth/cookie.js";
 export { cookieBearer } from "./auth/cookie-bearer.js";
