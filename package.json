@@ -1,5 +1,5 @@
 {
-  "name": "foxcache",
+  "name": "@pooriaarab/foxcache",
   "version": "0.1.0",
   "description": "Capture your own AI chats, projects, memories and preferences into your browser.",
   "type": "module",
