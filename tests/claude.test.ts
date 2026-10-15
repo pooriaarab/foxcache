@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FoxcacheError, check, claude } from "../src/index.js";
+import { FoxcacheError, check, claude, createHttp } from "../src/index.js";
 import { fixture, fixtureHttp } from "./fixture-http.js";
 
 const ORIGIN = "https://claude.ai";
@@ -26,6 +26,11 @@ describe("claude detect and list", () => {
   it("is signed out on a 401, and when no organization can chat", async () => {
     expect(await claude.detect(fixtureHttp(ORIGIN, { "/api/organizations": { $status: 401 } }).http)).toBe(false);
     expect(await claude.detect(fixtureHttp(ORIGIN, { "/api/organizations": [{ uuid: "o", capabilities: ["api"] }] }).http)).toBe(false);
+  });
+  it("throws provider-schema on a challenge page or a changed shape, not signed out (P10)", async () => {
+    const challenge = createHttp({ origin: ORIGIN, fetch: async () => new Response("<!doctype html><title>Just a moment...</title>", { status: 200, headers: { "content-type": "text/html" } }) });
+    expect(await code(claude.detect(challenge))).toMatch(/^provider-schema: .*did not answer JSON/);
+    expect(await code(claude.detect(fixtureHttp(ORIGIN, { "/api/organizations": { orgs: [] } }).http))).toMatch(/^provider-schema: claude: \/api\/organizations is not a list/);
   });
   it("lists the stubs of a page, newest first, and pages by offset", async () => {
     const page = await claude.listConversations(fixtureHttp(ORIGIN, fixture("claude")).http);
