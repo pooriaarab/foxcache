@@ -3,6 +3,7 @@
 // sources: docs/providers/zai.md.
 import { localStorageBearer } from "../auth/localStorage-bearer.js";
 import { FoxcacheError } from "../errors.js";
+import type { Http } from "../http.js";
 import { defineReads } from "../reads.js";
 import type { Adapter } from "./types.js";
 import { epoch, fill, thread } from "./openwebui.js";
@@ -18,6 +19,18 @@ function messageText(m: Obj, where: string): string {
   // Z.ai can send a message as a stub that only a POST (/messages/batch) fills in; foxcache reads by GET only.
   if (m.content === undefined) throw r.fail(`${where}.content`, "is missing (a stub that only a POST would fill in)");
   return r.str(m.content, `${where}.content`).replace(REASONING, "");
+}
+
+async function signedIn(http: Http): Promise<boolean> {
+  try {
+    const user = r.obj(await http.get("/api/v1/auths/"), "auths");
+    r.str(user.id, "auths.id");
+    // The site gives a visitor a guest token; a guest has no saved chats of its own.
+    return user.role !== "guest";
+  } catch (error) {
+    if (error instanceof FoxcacheError && error.code === "logged-out") return false;
+    throw error;
+  }
 }
 
 export const zai: Adapter = {
@@ -37,15 +50,7 @@ export const zai: Adapter = {
   newestFirst: false,
 
   async detect(http) {
-    try {
-      const user = r.obj(await http.get("/api/v1/auths/"), "auths");
-      r.str(user.id, "auths.id");
-      // The site gives a visitor a guest token; a guest has no saved chats of its own.
-      return user.role !== "guest";
-    } catch (error) {
-      if (error instanceof FoxcacheError && error.code === "logged-out") return false;
-      throw error;
-    }
+    return signedIn(http);
   },
 
   // The cursor is "<page>" in the main list, then "archived:<page>": upstream leaves archived chats out of the main list (ZAI40).
@@ -60,7 +65,15 @@ export const zai: Adapter = {
   },
 
   async getConversation(http, stub) {
-    const data = r.obj(await http.get(fill("/api/v1/chats/{id}", stub.id)), "chat");
+    let answer: unknown;
+    try {
+      answer = await http.get(fill("/api/v1/chats/{id}", stub.id));
+    } catch (error) {
+      // Upstream answers a chat it cannot find with 401: a chat deleted since the list, if the session still holds (ZAI41).
+      if (!(error instanceof FoxcacheError) || error.code !== "logged-out" || error.status !== 401 || !(await signedIn(http))) throw error;
+      throw new FoxcacheError("not-found", `zai: chat ${stub.id} answered 401 while the session holds; it was deleted.`);
+    }
+    const data = r.obj(answer, "chat");
     const history = r.obj(r.obj(data.chat, "chat.chat").history, "chat.chat.history");
     return {
       provider: "zai",
