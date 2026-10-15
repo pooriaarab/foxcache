@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FoxcacheError, type Http, check, chatgpt } from "../src/index.js";
+import { MAX_SUBPAGES } from "../src/adapters/read.js";
 import { fixture, fixtureHttp } from "./fixture-http.js";
 
 const ORIGIN = "https://chatgpt.com";
@@ -151,5 +152,10 @@ describe("chatgpt project sidebar", () => {
     const s = sidebar((n) => (n < 2 ? "A" : null));
     expect(await code(chatgpt.projects!(s.http))).toMatch(/^pagination-loop: chatgpt: snorlax\/sidebar.cursor/);
     expect(s.asked).toEqual([undefined, "A"]);
+  });
+  it("throws pagination-loop when the sidebar never ends (P9)", async () => {
+    const s = sidebar((n) => `c${n}`);
+    expect(await code(chatgpt.projects!(s.http))).toMatch(/^pagination-loop: chatgpt: snorlax\/sidebar did not end after 1000 pages/);
+    expect(s.asked).toHaveLength(MAX_SUBPAGES);
   });
 });

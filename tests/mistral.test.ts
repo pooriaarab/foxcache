@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { FoxcacheError, check, mistral } from "../src/index.js";
+import { FoxcacheError, type Http, MAX_MESSAGES, check, mistral } from "../src/index.js";
+import { MAX_SUBPAGES } from "../src/adapters/read.js";
 import { fixture, fixtureHttp } from "./fixture-http.js";
 
 const ORIGIN = "https://chat.mistral.ai";
@@ -77,5 +78,33 @@ describe("mistral conversations", () => {
     const bad = structuredClone(routes[key]) as Array<{ result: { data: { json: { items: Array<Record<string, unknown>> } } } }>;
     bad[1]!.result.data.json.items = ["user", "assistant", "user", "assistant"].map((role, i) => ({ id: `t${i}`, role, content: `${role} ${i}`, createdAt: `2026-08-01T10:0${i}:00Z`, nextVersion: null }));
     expect(await code(mistral.getConversation(open({ ...routes, [key]: bad }).http, stub(C2)))).toMatch(/^provider-schema: mistral: message t0.turn is not a number/);
+  });
+});
+
+const ok = (json: unknown) => ({ result: { data: { json } } });
+/** Le Chat for one chat: each message.all page has size rows and a new cursor. */
+function endless(size: number) {
+  let calls = 0;
+  const page = () => ok({ items: Array.from({ length: size }, (_, i) => ({ id: `m${calls}-${i}`, role: "user", content: "hi", createdAt: "2026-08-01T10:00:00Z", turn: i })), nextCursor: `c${calls}` });
+  const http: Http = {
+    async get(path) {
+      calls += 1;
+      if (path === "/api/trpc/chat.byId,message.all") return [ok({ id: C1, createdAt: "2026-08-01T10:00:00Z", updatedAt: "2026-08-01T10:00:00Z" }), page()];
+      return [page()];
+    },
+  };
+  return { http, calls: () => calls };
+}
+
+describe("mistral message pages (P9)", () => {
+  it("throws pagination-loop when message.all never ends", async () => {
+    const f = endless(0);
+    expect(await code(mistral.getConversation(f.http, stub(C1)))).toMatch(/^pagination-loop: mistral: message.all did not end after 1000 pages/);
+    expect(f.calls()).toBe(MAX_SUBPAGES);
+  });
+  it("throws too-large while it reads, once the chat passes the message limit", async () => {
+    const f = endless(1000);
+    expect(await code(mistral.getConversation(f.http, stub(C1)))).toMatch(/^too-large: /);
+    expect(f.calls()).toBe(MAX_MESSAGES / 1000 + 1);
   });
 });
