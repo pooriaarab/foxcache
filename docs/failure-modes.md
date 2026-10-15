@@ -54,7 +54,7 @@ All errors are `FoxcacheError` with a `code`. The codes are in the rows.
 | H1 | An adapter asks for a method other than GET, an absolute URL, `//host/...` or another origin. | `http` throws `not-allowed` before any request. | `tests/http.test.ts` |
 | H2 | The user is signed out: 401 or 403, or a redirect to a login page. | `http` throws `logged-out`. | `tests/http.test.ts` |
 | H3 | The provider answers 429. | `http` throws `rate-limited` with the `Retry-After` seconds. The runner handles it (C3). | `tests/http.test.ts` |
-| H4 | The answer is not JSON (an HTML challenge page) or is over 50 MB. | `http` throws `provider-schema` or `too-large`. | `tests/http.test.ts` |
+| H4 | The answer is not JSON (an HTML challenge page), or is over 50 MB, with or without a Content-Length. | `http` throws `provider-schema` or `too-large`. It reads the body as a stream and stops once the bytes pass the limit. | `tests/http.test.ts` |
 | H5 | A bearer token that the site uses (ChatGPT) leaks into a record, an error message or a log. | The token stays inside `http`. No result and no error text holds it. | `tests/http.test.ts` |
 | H6 | The answer is 5xx. | `http` throws `provider-error` with the status. | `tests/http.test.ts` |
 

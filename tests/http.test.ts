@@ -89,6 +89,30 @@ describe("H4 not JSON or too big", () => {
   });
 });
 
+describe("H4 a big answer with no Content-Length", () => {
+  it("stops reading once the bytes pass the limit", async () => {
+    const chunk = new Uint8Array(1024 * 1024).fill(0x61);
+    let pulled = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled += 1;
+        if (pulled > 80) controller.close();
+        else controller.enqueue(chunk);
+      },
+    });
+    const fetch = async () => new Response(body, { status: 200, headers: { "content-type": "application/json" } });
+    const http = createHttp({ origin: ORIGIN, fetch });
+    expect((await err(http.get("/big"))).code).toBe("too-large");
+    expect(pulled).toBeLessThanOrEqual(MAX_RESPONSE_BYTES / chunk.length + 2);
+  });
+  it("counts bytes, not characters", async () => {
+    // 26 Mi characters of two bytes each: 52 MiB, over the limit, though the character count is under it.
+    const big = "é".repeat(26 * 1024 * 1024);
+    const fetch = async () => new Response(`"${big}"`, { status: 200 });
+    expect((await err(createHttp({ origin: ORIGIN, fetch }).get("/big"))).code).toBe("too-large");
+  });
+});
+
 describe("H5 the bearer token stays inside http", () => {
   const routes = {
     "/api/auth/session": { body: JSON.stringify({ user: { id: "u" }, accessToken: TOKEN }) },
