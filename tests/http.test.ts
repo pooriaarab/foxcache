@@ -46,6 +46,11 @@ function fakeFetch(routes: Record<string, Reply | ((n: number) => Reply)>) {
   return { fetch, calls };
 }
 
+/** What Firefox's fetch does on a network error or a CORS refusal. */
+const refused = async (): Promise<Response> => {
+  throw new TypeError("NetworkError when attempting to fetch resource.");
+};
+
 async function err(p: Promise<unknown>): Promise<FoxcacheError> {
   try {
     await p;
@@ -158,6 +163,44 @@ describe("H10 a placeholder holds one plain segment", () => {
   it("sends an id of letters, digits and - _ . ~ : @", async () => {
     const f = fakeFetch({ "/backend-api/conversation/g-p-0a_b.c~d:e@f": { body: "{}" } });
     expect(await open(f.fetch).get("/backend-api/conversation/g-p-0a_b.c~d:e@f")).toEqual({});
+  });
+});
+
+describe("H12 a read on an API origin", () => {
+  const API = "https://api.copilot.example";
+  const NEO = "https://neo.chatgpt.com";
+  const site = { origin: ORIGIN, apiOrigins: [API, NEO], reads: defineReads([{ method: "GET", origin: API, path: "/github/chat/threads", query: ["limit"], source: SOURCE }, { method: "GET", origin: NEO, path: "/chats/{id}", source: SOURCE }, get("/a")]) };
+  const answer = async (url: string, init: RequestInit) => (calls.push({ url, init }), new Response('{"ok":true}'));
+  let calls: Call[] = [];
+  it("sends it from the tab with the page cookies", async () => {
+    calls = [];
+    const http = createHttp(site, { fetch: answer, storage: NO_STORAGE });
+    expect(await http.get(`${API}/github/chat/threads`, { limit: 5 })).toEqual({ ok: true });
+    expect(await http.get(`${NEO}/chats/c1`)).toEqual({ ok: true });
+    expect(calls.map((c) => c.url)).toEqual([`${API}/github/chat/threads?limit=5`, `${NEO}/chats/c1`]);
+    expect(calls[0]!.init).toMatchObject({ method: "GET", credentials: "include" });
+  });
+  it.each([
+    ["an origin it does not list", "https://api.other.example/github/chat/threads"],
+    ["a read of another origin", `${API}/a`],
+    ["the API path on the page origin", "/github/chat/threads"],
+    ["http", "http://api.copilot.example/github/chat/threads"],
+    ["another port", "https://api.copilot.example:8443/github/chat/threads"],
+    ["a user name", "https://me@api.copilot.example/github/chat/threads"],
+    ["a query in the path", `${API}/github/chat/threads?limit=5`],
+    ["a double slash", `${API}//github/chat/threads`],
+    ["a dot segment", `${NEO}/chats/../chats/c1`],
+  ])("refuses %s before any request", async (_, target) => {
+    calls = [];
+    expect((await err(createHttp(site, { fetch: answer, storage: NO_STORAGE }).get(target))).code).toBe("not-allowed");
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe("H13 fetch itself fails", () => {
+  it("throws provider-error with the origin and path, for a network error or a CORS refusal", async () => {
+    const e = await err(open(refused).get("/a"));
+    expect([e.code, e.message]).toEqual(["provider-error", "Could not reach https://chatgpt.com/a: the network failed, or the site does not let this page read it (CORS)."]);
   });
 });
 

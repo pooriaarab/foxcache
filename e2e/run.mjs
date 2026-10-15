@@ -7,6 +7,8 @@
 //   captures ChatGPT and Claude from the popup, with a 429 on the way;
 //   stops and resumes a capture, and resumes one after its tab closed;
 //   checks that every request to a provider was a GET and one of its reads;
+//   reads API origins from a tab with foxcache's http in a stand-in MV3
+//   content script: same-site, cross-site, a CORS refusal, an unlisted host;
 //   browses and searches the archive page, and opens a hostile message;
 //   checks the exports, and imports the archive with the CLI;
 //   asks for SCENT values as foxscope and as another extension;
@@ -20,7 +22,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { crc32 } from "node:zlib";
 import { browserMode, launch, writeArtifact } from "create-foxkit/e2e";
-import { ADAPTERS, findRead } from "../dist/index.js";
+import { build } from "esbuild";
+import { ADAPTERS, findRead, originsOf } from "../dist/index.js";
 import { serveFixtures } from "./intercept.mjs";
 
 const record = { startedAt: new Date().toISOString(), mode: browserMode(), path: "fixtures at the real provider origins through WebDriver BiDi network interception", checks: [] };
@@ -32,12 +35,30 @@ const A = "6710aa00-1111-4222-8333-444455556666";
 const CHATGPT = "https://chatgpt.com";
 const MAIN_LIST = "/backend-api/conversations?offset=0&limit=100&order=updated&is_archived=false&hide_snorlax=true";
 
+/** The adapter that reads from this request's origin, page or API host. */
+const adapterOf = (l) => ADAPTERS.find((a) => originsOf(a).includes(new URL(l.url).origin));
 /** True when a logged request is one of its adapter's reads, the ChatGPT session that http reads for the token, or the tab's own page load or favicon. */
 function isRead(l) {
   const u = new URL(l.url);
-  const adapter = ADAPTERS.find((a) => a.origin === u.origin);
   if (u.pathname === "/" || u.pathname === "/favicon.ico" || (u.origin === CHATGPT && u.pathname === "/api/auth/session" && !u.search)) return true;
-  return Boolean(adapter && findRead(adapter, l.method, u.pathname, [...u.searchParams.keys()]));
+  return Boolean(findRead(adapterOf(l), l.method, l.url));
+}
+
+// The API hosts of the stand-in in e2e/api-ext/. Each answers CORS for the ChatGPT page as a real API does for its own site, except /no-cors.
+const API_JSON = (u) => ({ status: 200, body: '{"threads":[]}', headers: u.pathname === "/no-cors" ? {} : { "access-control-allow-origin": CHATGPT, "access-control-allow-credentials": "true" } });
+const API_HOSTS = { "api.chatgpt.com": API_JSON, "api.copilot-fixture.test": API_JSON, "api.not-listed.test": API_JSON };
+/** The stand-in MV3 add-on with foxcache's http in a content script on chatgpt.com. */
+async function apiStandIn() {
+  const dir = mkdtempSync(join(tmpdir(), "fca-api-"));
+  await build({ entryPoints: ["e2e/api-ext/content.js"], outfile: join(dir, "content.js"), bundle: true, format: "iife", target: "firefox153", logLevel: "warning" });
+  const manifest = {
+    manifest_version: 3, name: "api origins", version: "1.0",
+    browser_specific_settings: { gecko: { id: "api-origins@foxcache.test" } },
+    host_permissions: ["https://chatgpt.com/*"],
+    content_scripts: [{ matches: ["https://chatgpt.com/*"], js: ["content.js"] }],
+  };
+  writeFileSync(join(dir, "manifest.json"), JSON.stringify(manifest));
+  return dir;
 }
 
 /** A stand-in extension directory for one role. MV2, so its content script needs no host grant. */
@@ -131,7 +152,8 @@ try {
   fox = await launch({ extension: "dist-e2e", headless: !process.argv.includes("--headed") });
   record.firefox = await fox.browser.version();
   for (const role of Object.keys(STUBS)) await install(fox, stub(role));
-  const net = await serveFixtures(fox.browser.connection, ["chatgpt", "claude"]);
+  await install(fox, await apiStandIn());
+  const net = await serveFixtures(fox.browser.connection, ["chatgpt", "claude"], API_HOSTS);
   // The first read of conversation A answers 429 with Retry-After: 2 (C3).
   net.override(CHATGPT, `/backend-api/conversation/${A}`, (n) => (n === 1 ? { status: 429, body: "{}", headers: { "retry-after": "2" } } : undefined));
 
@@ -167,6 +189,14 @@ try {
     const s = await states();
     return Object.keys(s).length === 4 && !Object.values(s).includes(undefined) ? s : null;
   }));
+
+  // 1b. API origins: foxcache's http in a content script reads other hosts as the page does (H12, H13, docs/cors.md).
+  const api = JSON.parse(await until("the API origin reads", () => chat.evaluate(() => document.documentElement.dataset.apiOrigins)));
+  const sent = (host) => net.log.filter((l) => new URL(l.url).host === host).map((l) => ({ origin: l.origin, siteCookie: l.cookies.includes("fca_site") }));
+  check("a same-site API host answers the tab, with the page's Origin and the site cookie", { value: { threads: [] }, sent: [{ origin: CHATGPT, siteCookie: true }] }, { value: api.same.value, sent: sent("api.chatgpt.com") });
+  check("a cross-site API host answers the tab when its CORS allows the page", { value: { threads: [] }, origin: CHATGPT }, { value: api.cross.value, origin: sent("api.copilot-fixture.test")[0]?.origin });
+  check("an API host whose CORS does not allow the page gives provider-error", "provider-error", api.noCors.error);
+  check("a host that is not one of the API origins is refused before any request", { error: "not-allowed", sent: [] }, { error: api.notListed.error, sent: sent("api.not-listed.test") });
 
   // 2. Capture ChatGPT, with one 429 on the way, and Claude.
   await click("chatgpt", "Capture");
@@ -303,7 +333,7 @@ try {
   check("at most the request in flight goes to ChatGPT after it is turned off", true, net.log.slice(sentBefore).filter((l) => l.url.startsWith(CHATGPT)).length <= 1);
 
   // 11. Every request the adapters sent was one of their reads (X5).
-  check("every request to a provider matched one of its reads", [], net.log.filter((l) => !isRead(l)).map((l) => `${l.method} ${l.url}`));
+  check("every request to a provider matched one of its reads", [], net.log.filter((l) => adapterOf(l) && !isRead(l)).map((l) => `${l.method} ${l.url}`));
 } catch (error) {
   record.error = error instanceof Error ? error.message : String(error);
 } finally {
