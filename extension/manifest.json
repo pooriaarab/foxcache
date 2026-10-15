@@ -39,7 +39,8 @@
     "https://poe.com/*",
     "https://www.meta.ai/*",
     "https://chat.qwen.ai/*",
-    "https://chat.z.ai/*"
+    "https://chat.z.ai/*",
+    "https://huggingface.co/*"
   ],
   "background": {
     "scripts": [

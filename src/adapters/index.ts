@@ -7,6 +7,7 @@ import { deepseek } from "./deepseek.js";
 import { doubao } from "./doubao.js";
 import { githubCopilot } from "./github-copilot.js";
 import { grok } from "./grok.js";
+import { huggingchat } from "./huggingchat.js";
 import { kagi } from "./kagi.js";
 import { kimi } from "./kimi.js";
 import { meta } from "./meta.js";
@@ -35,6 +36,7 @@ export const ADAPTERS: readonly Adapter[] = Object.freeze([
   meta,
   qwen,
   zai,
+  huggingchat,
 ]);
 
 /** The adapter for a provider id. Throws for a provider with no adapter. */
