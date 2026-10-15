@@ -1,6 +1,6 @@
 {
   "name": "foxcache",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Capture your own AI chats, projects, memories and preferences into your browser.",
   "type": "module",
   "license": "MIT",
@@ -54,5 +54,20 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
     "zod": "^4.6.7"
-  }
+  },
+  "keywords": [
+    "firefox",
+    "webextension",
+    "ai-chat",
+    "chat-export",
+    "chatgpt-export",
+    "claude-export",
+    "backup",
+    "memories",
+    "custom-instructions",
+    "mcp",
+    "scent",
+    "local-first",
+    "privacy"
+  ]
 }
