@@ -13,6 +13,7 @@ import { kagi } from "./kagi.js";
 import { kimi } from "./kimi.js";
 import { meta } from "./meta.js";
 import { mistral } from "./mistral.js";
+import { notebooklm } from "./notebooklm.js";
 import { notion } from "./notion.js";
 import { perplexity } from "./perplexity.js";
 import { poe } from "./poe.js";
@@ -40,6 +41,7 @@ export const ADAPTERS: readonly Adapter[] = Object.freeze([
   huggingchat,
   genspark,
   gemini,
+  notebooklm,
 ]);
 
 /** The adapter for a provider id. Throws for a provider with no adapter. */
