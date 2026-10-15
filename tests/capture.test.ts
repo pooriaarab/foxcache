@@ -185,6 +185,42 @@ describe("C6 Stop", () => {
   });
 });
 
+describe("C6 Stop through the signal, before the next request", () => {
+  it("sends nothing more after an abort during the pause between requests", async () => {
+    const ctl = new AbortController();
+    const p = provider();
+    // The abort comes while the runner waits before its third request.
+    let pauses = 0;
+    const cp = await runCapture({ adapter: p.adapter, http: p.http, sink: sink(), stamps: {}, signal: ctl.signal, sleep: async () => void (++pauses === 2 && ctl.abort()) });
+    expect(cp.status).toBe("stopped");
+    expect(p.log).toEqual(["/me", "/list?0"]);
+  });
+  it("stops inside an optional kind that makes many requests", async () => {
+    const ctl = new AbortController();
+    const p = provider({
+      extras: {
+        projects: async (h) => {
+          await h.get("/projects");
+          ctl.abort();
+          await h.get("/projects/1");
+          return [];
+        },
+      },
+    });
+    const cp = await runCapture({ adapter: p.adapter, http: p.http, sink: sink(), stamps: {}, signal: ctl.signal, sleep });
+    expect(cp.status).toBe("stopped");
+    expect(p.log).toEqual(["/me", "/projects"]);
+  });
+  it("ends a long backoff wait at once", async () => {
+    const ctl = new AbortController();
+    const p = provider({ reply: (path) => (path === "/list?0" ? err("rate-limited", { status: 429, retryAfter: 500 }) : undefined) });
+    setTimeout(() => ctl.abort(), 50);
+    const started = Date.now();
+    const cp = await runCapture({ adapter: p.adapter, http: p.http, sink: sink(), stamps: {}, signal: ctl.signal, delayMs: 0 });
+    expect([cp.status, Date.now() - started < 5000]).toEqual(["stopped", true]);
+  });
+});
+
 describe("C7 resume", () => {
   it("starts at the saved cursor and skips stored conversations", async () => {
     const first = provider();
