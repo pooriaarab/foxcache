@@ -39,6 +39,9 @@ class UsageError extends Error {}
 // oxlint-disable-next-line no-control-regex -- the control characters are what it removes
 const printable = (text: string) => text.replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g, "");
 const oneLine = (text: string) => printable(text).replace(/\s+/g, " ").trim();
+/** JSON with DEL and C1 control characters escaped: JSON.stringify leaves them raw (CL3). */
+// oxlint-disable-next-line no-control-regex -- the control characters are what it escapes
+const json = (value: unknown) => JSON.stringify(value, null, 2).replace(/[\u007f-\u009f]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`);
 
 function line(kind: Kind, r: RecordOf[Kind]): string {
   const key = recordKey(kind, r);
@@ -48,7 +51,7 @@ function line(kind: Kind, r: RecordOf[Kind]): string {
       : kind === "memories" || kind === "preferences"
         ? (r as RecordOf["memories"]).text
         : (r as RecordOf["projects"]).name;
-  return `${kind.padEnd(14)} ${key.padEnd(17)} ${oneLine(what).slice(0, 120)}\n`;
+  return `${kind.padEnd(14)} ${oneLine(key).padEnd(17)} ${oneLine(what).slice(0, 120)}\n`;
 }
 
 export async function runCli(argv: string[], io: CliIo): Promise<number> {
@@ -110,7 +113,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         const limit = f.limit === undefined ? undefined : Number(f.limit);
         if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) throw new UsageError("--limit must be a whole number above 0");
         const { store } = await openNodeStore(io.env);
-        for (const hit of await store.search(args.join(" "), { provider, kind, limit })) io.out(`${hit.key}  ${oneLine(hit.title)}\n    ${oneLine(hit.snippet)}\n`);
+        for (const hit of await store.search(args.join(" "), { provider, kind, limit })) io.out(`${oneLine(hit.key)}  ${oneLine(hit.title)}\n    ${oneLine(hit.snippet)}\n`);
         return 0;
       }
       case "show": {
@@ -119,7 +122,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         for (const k of KINDS) {
           const r = await store.get(k, args[0]!);
           if (!r) continue;
-          io.out(printable(k === "conversations" ? toMarkdown(r as RecordOf["conversations"]) : `${JSON.stringify(r, null, 2)}\n`));
+          io.out(k === "conversations" ? printable(toMarkdown(r as RecordOf["conversations"])) : `${json(r)}\n`);
           return 0;
         }
         throw new FoxcacheError("not-found", `No record has the id ${oneLine(args[0]!)}.`);
@@ -128,7 +131,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         need(0);
         if ([f.json, f.memories, f.md !== undefined].filter(Boolean).length !== 1) throw new UsageError("export takes exactly one of --json, --memories, --md <dir>");
         const archive = await toArchive((await openNodeStore(io.env)).store);
-        if (f.json) io.out(`${JSON.stringify(archive, null, 2)}\n`);
+        if (f.json) io.out(`${json(archive)}\n`);
         else if (f.memories) io.out(printable(toMemoryList(archive)));
         else {
           const dir = resolve(f.md!);

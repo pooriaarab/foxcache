@@ -88,7 +88,7 @@ describe("S5 broken characters", () => {
 });
 
 describe("S6 ids", () => {
-  it.each([[""], ["a/b"], [".."], ["x".repeat(201)], ["a\nb"]])("rejects id %j", (id) => {
+  it.each([[""], ["a/b"], [".."], ["x".repeat(201)], ["a\nb"], ["a\u009bb"]])("rejects id %j", (id) => {
     expect(codeOf(() => checkConversation(conv({ id })))).toMatch(/^invalid-record: .*id/);
   });
   it("builds keys from provider and id, and hashes a memory with no id", () => {

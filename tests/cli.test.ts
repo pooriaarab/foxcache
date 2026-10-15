@@ -18,7 +18,7 @@ const conv = (id: string, title: string, text: string) => ({
 const ARCHIVE = {
   schema: "foxcache/v1",
   exportedAt: "2026-10-15T00:00:00.000Z",
-  conversations: [conv("c1", "Lisbon trip", "Plan three days in Lisbon"), conv("c2", "Tea \u001b[31mred\u001b[0m", "Green tea notes \u001b]0;pwned\u0007")],
+  conversations: [conv("c1", "Lisbon trip", "Plan three days in Lisbon"), conv("c2", "Tea \u001b[31mred\u001b[0m", "Green tea notes \u001b]0;pwned\u0007 \u009b2J")],
   projects: [{ provider: "claude", id: "p1", name: "Thesis", files: [] }],
   memories: [{ provider: "chatgpt", id: "m1", text: "Prefers metric units." }],
   preferences: [{ provider: "chatgpt", kind: "about-me", text: "Lives in Berlin." }],
@@ -98,6 +98,15 @@ describe("foxcache CLI", () => {
       expect(r.out).not.toMatch(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/);
     }
     expect((await run("search", "tea")).out).toContain("Tea [31mred[0m");
+  });
+
+  it("CL3 escapes C1 control characters in JSON output", async () => {
+    const { run, file } = cli();
+    await run("import", file);
+    const out = (await run("export", "--json")).out;
+    // oxlint-disable-next-line no-control-regex -- the control characters are what it checks for
+    expect(out).not.toMatch(/[\u007f-\u009f]/);
+    expect(JSON.parse(out).conversations[1].messages[0].text).toContain("\u009b");
   });
 
   it("A2 import refuses a file over the limit before it reads it", async () => {
