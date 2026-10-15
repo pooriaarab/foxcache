@@ -10,3 +10,4 @@ export * from "./capture.js";
 export { claude } from "./adapters/claude.js";
 export { deepseek } from "./adapters/deepseek.js";
 export { mistral } from "./adapters/mistral.js";
+export { chatgpt } from "./adapters/chatgpt.js";
