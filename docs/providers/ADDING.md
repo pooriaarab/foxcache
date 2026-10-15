@@ -36,6 +36,7 @@ so a rebase conflict is one line:
 | File | Line |
 |---|---|
 | `src/schema.ts` | the id in `PROVIDERS`, if it is not there |
+| `extension/archive.js` | the label in `LABELS`, if the id is new |
 | `src/adapters/index.ts` | the import, and the adapter in `ADAPTERS` |
 | `extension/manifest.json` | `"https://<host>/*"` in `optional_host_permissions`, and one per API origin |
 | `docs/providers/README.md` | the table row |
@@ -166,7 +167,11 @@ sends it, or `<path>` for any query. A POST is `POST <path>?<query>` or
 `POST <path>`. Unit tests also match `POST <path>?<query> <exact body>`
 first, so one endpoint can answer each operation. The E2E sees no POST
 body, so it serves the `POST <path>` answer. `{"$status": 401}` answers
-that status.
+that status. A site with API origins names them in the fixture's
+`apiOrigins` list: the E2E serves the same routes there, with the CORS
+answer (`Access-Control-Allow-Origin: <origin>` and credentials) a real
+API gives its site's page. Firefox sends the interceptor no preflight, so
+a bearer header's preflight is proven only by the live smoke check.
 
 ```json
 {
