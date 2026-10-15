@@ -5,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { MAX_ARCHIVE_BYTES, importArchive, toArchive } from "./archive.js";
 import { FoxcacheError } from "./errors.js";
+import { serveMcp } from "./mcp.js";
 import { openNodeStore } from "./node.js";
 import { markdownFiles, toMarkdown, toMemoryList } from "./outputs.js";
 import { KINDS, type Kind, PROVIDERS, type ProviderId, type RecordOf, recordKey } from "./schema.js";
@@ -18,6 +19,9 @@ export const USAGE = `Usage: foxcache <command>
   export --json | --memories | --md <dir>
                                         Print the archive or the memory list, or write
                                         one Markdown file per conversation to an empty folder
+  mcp [--allow conversations]           Serve the read-only MCP server on stdio. Without
+                                        --allow conversations it serves memories and
+                                        preferences only
 
 Providers: ${PROVIDERS.join(", ")}. Kinds: ${KINDS.join(", ")}.
 The store is $FOXCACHE_HOME/archive.json (default ~/.foxcache/archive.json).
@@ -61,6 +65,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         json: { type: "boolean" },
         memories: { type: "boolean" },
         md: { type: "string" },
+        allow: { type: "string" },
         help: { type: "boolean", short: "h" },
       },
     });
@@ -139,6 +144,11 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         }
         return 0;
       }
+      case "mcp":
+        need(0);
+        if (f.allow !== undefined && f.allow !== "conversations") throw new UsageError("--allow takes only: conversations");
+        await serveMcp({ env: io.env, allowConversations: f.allow === "conversations" });
+        return 0;
       default:
         throw new UsageError(`unknown command ${command}`);
     }
