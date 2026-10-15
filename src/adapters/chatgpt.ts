@@ -87,7 +87,8 @@ export const chatgpt: Adapter = {
       const query = { offset: c.offset, limit: LIMIT, order: "updated", is_archived: c.src === "archived", hide_snorlax: true };
       const page = r.obj(await http.get("/backend-api/conversations", query), "conversations");
       const items = r.arr(page.items, "conversations.items").map((s, i) => stub(s, `conversations.items[${i}]`));
-      const total = typeof page.total === "number" ? page.total : 0;
+      // A missing total must not end the list after one page (P1).
+      const total = r.num(page.total, "conversations.total");
       const more = items.length > 0 && c.offset + LIMIT < total;
       const next: Cursor = more ? { src: c.src, offset: c.offset + LIMIT } : c.src === "main" ? { src: "archived", offset: 0 } : { src: "projects", i: 0, at: "0" };
       return { items, next: JSON.stringify(next) };
