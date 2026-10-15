@@ -53,3 +53,4 @@ answers GraphQL `errors`, and foxcache fails with `provider-schema`.
 | PX5 | A thread has more entries than foxcache keeps. | `too-large` while it reads, not after (S4). | `tests/perplexity.test.ts` |
 | PX6 | The memory query hash is stale: the answer has GraphQL `errors`, or a category is not `OK`. | `provider-schema`. No memory is dropped as if it were deleted (C11). | `tests/perplexity.test.ts` |
 | PX7 | A question or an answer holds HTML or a script. | It is kept as text (S3). | `tests/perplexity.test.ts` |
+| PX40 | The memory answer has an empty `memoryCategories` list. The cited multi-ai `account_memory.py` raises on it: it is a changed or partial answer, not "no memories". | `provider-schema`, so the runner deletes no stored memory (C11). | `tests/perplexity.test.ts` |
