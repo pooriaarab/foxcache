@@ -29,7 +29,9 @@
     "https://chat.mistral.ai/*",
     "https://chat.deepseek.com/*",
     "https://grok.com/*",
-    "https://www.perplexity.ai/*"
+    "https://www.perplexity.ai/*",
+    "https://github.com/*",
+    "https://api.individual.githubcopilot.com/*"
   ],
   "background": {
     "scripts": [

@@ -1,0 +1,11 @@
+{
+ "provider": "github-copilot",
+ "origin": "https://github.com",
+ "apiOrigins": ["https://api.individual.githubcopilot.com"],
+ "note": "Synthetic data in the documented api.individual.githubcopilot.com shapes (docs/providers/github-copilot.md). No real thread, no real token.",
+ "routes": {
+  "/github/chat/threads": {"threads": [{"id": "5c0d0000-0000-4000-8000-000000000001", "name": "Fix the flaky test", "manuallyNamed": false, "repoID": 0, "repoOwnerID": 0, "createdAt": "2026-10-01T09:00:00.123456Z", "updatedAt": "2026-10-01T09:05:00Z", "sharedAt": null, "associatedRepoIDs": []}, {"id": "5c0d0000-0000-4000-8000-000000000002", "name": "<img src=x onerror=alert(1)>", "manuallyNamed": true, "repoID": 7, "repoOwnerID": 9, "createdAt": "2026-09-20T12:00:00Z", "updatedAt": "2026-09-20T12:01:00Z", "sharedAt": null, "associatedRepoIDs": []}]},
+  "/github/chat/threads/5c0d0000-0000-4000-8000-000000000001/messages": {"thread": {"id": "5c0d0000-0000-4000-8000-000000000001", "name": "Fix the flaky test", "createdAt": "2026-10-01T09:00:00.123456Z", "updatedAt": "2026-10-01T09:05:00Z"}, "messages": [{"id": "m1", "threadID": "5c0d0000-0000-4000-8000-000000000001", "role": "user", "content": "Why does this test fail on CI only?", "createdAt": "2026-10-01T09:00:01Z", "references": [], "intent": "conversation"}, {"id": "m2", "threadID": "5c0d0000-0000-4000-8000-000000000001", "role": "assistant", "content": "It depends on the time zone. Set TZ=UTC.", "createdAt": "2026-10-01T09:00:09.5Z", "references": [], "model": "gpt-5"}]},
+  "/github/chat/threads/5c0d0000-0000-4000-8000-000000000002/messages": {"thread": {"id": "5c0d0000-0000-4000-8000-000000000002", "name": "<img src=x onerror=alert(1)>", "createdAt": "2026-09-20T12:00:00Z", "updatedAt": "2026-09-20T12:01:00Z"}, "messages": [{"id": "m3", "role": "user", "content": "<script>alert(1)</script>", "createdAt": "2026-09-20T12:00:01Z"}, {"id": "m4", "role": "assistant", "content": null, "createdAt": "2026-09-20T12:00:02Z"}]}
+ }
+}

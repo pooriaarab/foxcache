@@ -64,12 +64,12 @@ flowchart LR
 
 1. You allow one site at a time. Each site origin is an optional host permission.
 2. When you click Capture, foxcache injects `agent.js` into an open tab of that site. The
-   agent calls the JSON endpoints that the site's own web app calls, from the same origin,
+   agent calls the JSON endpoints that the site's own web app calls, from the site's own tab,
    so the request carries the session that your tab already has. foxcache never reads a
    password or a cookie.
 3. Every request is one of the reads the adapter lists (`src/reads.ts`): GETs, and POSTs
    that only read, such as Grok's message text by id. So foxcache cannot send, edit or
-   delete anything on the site. ChatGPT and DeepSeek send a bearer token that their own
+   delete anything on the site. ChatGPT, DeepSeek and GitHub Copilot send a bearer token that their own
    page script reads; foxcache's agent reads it the same way, keeps it in the tab, and
    never stores or passes it on.
 4. Requests go one at a time, 1.5 s apart. A 429 waits for `Retry-After` or backs off
@@ -113,6 +113,7 @@ Checked on 2026-10-15 against the linked pages.
 | Le Chat, DeepSeek adapters | Implemented, conversations only | vitest on synthetic fixtures |
 | Grok adapter | Implemented, conversations only | vitest on synthetic fixtures, and E2E at grok.com |
 | Perplexity adapter | Implemented, conversations and memories | vitest on synthetic fixtures, and E2E at www.perplexity.ai |
+| GitHub Copilot adapter | Implemented, conversations only, individual plan | vitest on synthetic fixtures, and E2E at github.com and its API host |
 | Gemini | No adapter: its reads need POST | [docs/providers/](docs/providers/README.md) |
 | File store, CLI, MCP server | Implemented | vitest, the MCP server with the SDK in-memory client |
 | Firefox extension | Implemented | E2E on Ichabod (remote Firefox 158) and local Firefox, 32 checks |
