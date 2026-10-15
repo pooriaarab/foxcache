@@ -109,6 +109,18 @@ describe("foxcache CLI", () => {
     expect(JSON.parse(out).conversations[1].messages[0].text).toContain("\u009b");
   });
 
+  it("CL4 a file system error exits 1 with one foxcache line, not a stack trace", async () => {
+    const { run, file } = cli();
+    await run("import", file);
+    const afile = join(dir(), "afile");
+    writeFileSync(afile, "");
+    for (const target of [afile, join(afile, "sub")]) {
+      const r = await run("export", "--md", target);
+      expect(r.code).toBe(1);
+      expect(r.err).toMatch(/^foxcache: ENOTDIR: [^\n]*\n$/);
+    }
+  });
+
   it("N6 two imports at once keep the records of both", async () => {
     const { run, env } = cli();
     const files = ["c", "d"].map((prefix) => {
