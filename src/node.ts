@@ -18,7 +18,7 @@ export const cachePath = (env: NodeJS.ProcessEnv = process.env) => join(cacheHom
 export interface NodeStore {
   store: Store;
   path: string;
-  /** Write the store to the file: a temp file first, then a rename, so a crash never leaves half a file (N2). */
+  /** Write the store to the file: a temp file first, then a rename, so a crash never leaves half a file (N2). A store larger than an archive can be is refused, so the file always opens again (N5). */
   save(): Promise<void>;
 }
 
@@ -52,10 +52,12 @@ export async function openNodeStore(env: NodeJS.ProcessEnv = process.env): Promi
     path,
     async save() {
       // mkdir gives the first directory it made, or undefined when all exist (N4).
+      const text = `${JSON.stringify(await toArchive(store))}\n`;
+      if (Buffer.byteLength(text) > MAX_ARCHIVE_BYTES) throw new FoxcacheError("too-large", `The store would be larger than the ${MAX_ARCHIVE_BYTES / 1024 / 1024} MiB an archive can be. foxcache did not change ${path}.`);
       if (await mkdir(dirname(path), { recursive: true, mode: 0o700 })) await chmod(dirname(path), 0o700);
       const temp = `${path}.${process.pid}.${Date.now()}.tmp`;
       try {
-        await writeFile(temp, `${JSON.stringify(await toArchive(store))}\n`, { mode: 0o600 });
+        await writeFile(temp, text, { mode: 0o600 });
         await rename(temp, path);
       } catch (error) {
         await rm(temp, { force: true });
