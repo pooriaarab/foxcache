@@ -27,6 +27,9 @@ importers:
       oxlint:
         specifier: ^1.87.0
         version: 1.88.0
+      puppeteer-core:
+        specifier: ^25.14.0
+        version: 25.14.0(yauzl@3.4.0)
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
