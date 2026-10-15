@@ -2,9 +2,11 @@
 // api.individual.githubcopilot.com, which answers CORS for the github.com
 // page. The page caches its chat token in localStorage COPILOT_AUTH_TOKEN
 // ({value, expiration}) and sends "Authorization: GitHub-Bearer <value>"
-// (auth localStorage-bearer). Endpoints and sources:
-// docs/providers/github-copilot.md.
+// (auth localStorage-bearer, sent only before its expiration). Endpoints
+// and sources: docs/providers/github-copilot.md.
 import { localStorageBearer } from "../auth/localStorage-bearer.js";
+import { field } from "../auth/token.js";
+import type { Auth } from "../auth/types.js";
 import { FoxcacheError } from "../errors.js";
 import { defineReads } from "../reads.js";
 import { MAX_MESSAGES, type Message, type Role } from "../schema.js";
@@ -15,13 +17,32 @@ const r = reader("github-copilot");
 const API = "https://api.individual.githubcopilot.com";
 const ZIUCHEN = "https://github.com/ZiuChen/userscript/blob/b94faaae83704e8bb928c291af97a487d2b85007/src/userscript/github-copilot-enhanced/index.user.js#L26";
 const ROLES: Record<string, Role> = { user: "user", assistant: "assistant" };
+const KEY = "COPILOT_AUTH_TOKEN";
+
+/** The page's cached token, sent only while its expiration is in the future, as the ZiuChen script checks (GC40). */
+function cachedToken(): Auth {
+  const inner = localStorageBearer({ key: KEY, field: "value", scheme: "GitHub-Bearer" });
+  return {
+    ...inner,
+    open: (page) => {
+      const sign = inner.open(page);
+      return async (request, fresh) => {
+        const raw = page.storage.getItem(KEY);
+        const expiration = raw === null ? undefined : field(raw, "expiration");
+        // No time, or not a time, is past: Date.parse gives NaN, and NaN > now is false.
+        if (raw !== null && !(typeof expiration === "string" && Date.parse(expiration) > Date.now())) throw new FoxcacheError("logged-out", "The GitHub Copilot token in this tab expired: open github.com/copilot to renew it.");
+        return sign(request, fresh);
+      };
+    },
+  };
+}
 
 export const githubCopilot: Adapter = {
   id: "github-copilot",
   label: "GitHub Copilot",
   origin: "https://github.com",
   apiOrigins: [API],
-  auth: localStorageBearer({ key: "COPILOT_AUTH_TOKEN", field: "value", scheme: "GitHub-Bearer" }),
+  auth: cachedToken(),
   reads: defineReads([
     { method: "GET", origin: API, path: "/github/chat/threads", source: ZIUCHEN },
     { method: "GET", origin: API, path: "/github/chat/threads/{id}/messages", source: ZIUCHEN },
@@ -35,6 +56,8 @@ export const githubCopilot: Adapter = {
       return true;
     } catch (error) {
       if (error instanceof FoxcacheError && error.code === "logged-out") return false;
+      // A bad token answered 400 in a live call; this GET has no parameters to be wrong (GC40).
+      if (error instanceof FoxcacheError && error.status === 400) return false;
       throw error;
     }
   },
