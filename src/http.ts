@@ -40,6 +40,33 @@ function retryAfter(value: string | null): number | undefined {
   return Number.isNaN(at) ? undefined : Math.max(0, Math.ceil((at - Date.now()) / 1000));
 }
 
+/** The body as text, read as a stream: reading stops once the bytes pass the limit (H4). */
+async function readCapped(res: Response, where: string): Promise<string> {
+  const tooLarge = () => new FoxcacheError("too-large", `${where} sent more than ${MAX_RESPONSE_BYTES / 1024 / 1024} MB.`);
+  if (Number(res.headers.get("content-length") ?? 0) > MAX_RESPONSE_BYTES) throw tooLarge();
+  if (!res.body) return res.text();
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_RESPONSE_BYTES) {
+      await reader.cancel();
+      throw tooLarge();
+    }
+    chunks.push(value);
+  }
+  const all = new Uint8Array(size);
+  let at = 0;
+  for (const chunk of chunks) {
+    all.set(chunk, at);
+    at += chunk.byteLength;
+  }
+  return new TextDecoder().decode(all);
+}
+
 export function createHttp(options: HttpOptions): Http {
   const origin = new URL(options.origin).origin;
   let token: string | undefined;
@@ -63,10 +90,7 @@ export function createHttp(options: HttpOptions): Http {
     if (res.status === 429) throw new FoxcacheError("rate-limited", `${where} answered 429.`, { status: 429, retryAfter: retryAfter(res.headers.get("retry-after")) });
     if (res.status === 404) throw new FoxcacheError("not-found", `${where} answered 404.`, { status: 404 });
     if (res.status < 200 || res.status >= 300) throw new FoxcacheError("provider-error", `${where} answered ${res.status}.`, { status: res.status });
-    const length = Number(res.headers.get("content-length") ?? 0);
-    if (length > MAX_RESPONSE_BYTES) throw new FoxcacheError("too-large", `${where} sent more than ${MAX_RESPONSE_BYTES / 1024 / 1024} MB.`);
-    const text = await res.text();
-    if (text.length > MAX_RESPONSE_BYTES) throw new FoxcacheError("too-large", `${where} sent more than ${MAX_RESPONSE_BYTES / 1024 / 1024} MB.`);
+    const text = await readCapped(res, where);
     try {
       return JSON.parse(text);
     } catch {
