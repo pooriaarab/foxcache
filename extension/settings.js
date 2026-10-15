@@ -24,7 +24,9 @@ async function site(p) {
   return label;
 }
 
-ask("providers:status").then(async (providers) => $("sites").replaceChildren(...(await Promise.all(providers.map(site)))));
+ask("providers:status")
+  .then(async (providers) => $("sites").replaceChildren(...(await Promise.all(providers.map(site)))))
+  .catch((error) => ($("status").textContent = error.message));
 
 let armed;
 $("delete").addEventListener("click", async () => {
