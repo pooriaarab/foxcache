@@ -6,6 +6,7 @@ import { type Routes, fixture, fixtureHttp } from "./fixture-http.js";
 
 const Z1 = "2a1e0000-0000-4000-8000-000000000001";
 const Z2 = "2a1e0000-0000-4000-8000-000000000002";
+const Z3 = "2a1e0000-0000-4000-8000-000000000003";
 const LIST = "/api/v1/chats/?page=1&type=default&include_pinned=true&include_folders=true";
 const storage = { getItem: (k: string) => (k === "token" ? "synthetic-token" : null) };
 const open = (routes: Routes = fixture("zai")) => fixtureHttp(zai, routes, storage);
@@ -33,7 +34,20 @@ describe("zai list", () => {
     const first = await zai.listConversations(f.http);
     expect(first.items).toEqual([{ id: Z1, title: "Lisbon tram", updatedAt: "2026-08-06T07:11:40.000Z" }, { id: Z2, title: "<b>Hostile</b> title", updatedAt: "2026-07-25T17:23:20.000Z" }]);
     const second = await zai.listConversations(f.http, first.next);
-    expect([second.items, second.next]).toEqual([[], undefined]);
+    expect(second.items).toEqual([]);
+  });
+  it("ZAI40 reads the archived chats after the main list, to an empty page", async () => {
+    const f = open();
+    const ids: string[][] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await zai.listConversations(f.http, cursor);
+      ids.push(page.items.map((s) => s.id));
+      cursor = page.next;
+    } while (cursor);
+    expect(ids).toEqual([[Z1, Z2], [], [Z3], []]);
+    expect(f.calls.slice(2)).toEqual(["/api/v1/chats/archived?page=1", "/api/v1/chats/archived?page=2"]);
+    expect(zai.newestFirst).toBe(false);
   });
   it("throws provider-schema on schema drift and rate-limited on a 429", async () => {
     expect(await code(zai.listConversations(open(swap(LIST, { items: [] })).http))).toMatch(/^provider-schema: zai: chats is not a list/);
