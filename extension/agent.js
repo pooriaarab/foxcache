@@ -1,0 +1,47 @@
+// The capture agent. When the user clicks Capture, the event page injects
+// this file into an open tab of the provider with scripting.executeScript.
+// It runs the provider's adapter here, so each fetch is same-origin and
+// carries the session the page already has. It sends each record to the
+// event page, one at a time, and stops when the answer says so.
+// Read-only: http (src/http.ts) has GET on this origin and nothing else.
+import { adapterAt, createHttp, runCapture } from "../src/index.ts";
+
+/** The event page stores each record and answers { stop }. No answer means stop. */
+async function send(message) {
+  const answer = await browser.runtime.sendMessage(message);
+  if (answer?.error) throw new Error(answer.error);
+  return { stop: answer?.stop !== false };
+}
+
+// executeScript can inject the file again into the same tab.
+if (!globalThis.foxcacheAgent) {
+  globalThis.foxcacheAgent = true;
+  const adapter = adapterAt(location.origin);
+  const http = () => createHttp({ origin: location.origin, fetch: (url, init) => fetch(url, init), auth: adapter.auth, storage: window.localStorage });
+  let running = false;
+
+  const sink = {
+    put: (kind, record) => send({ type: "capture:put", kind, record }),
+    checkpoint: (checkpoint) => send({ type: "capture:checkpoint", checkpoint }),
+  };
+
+  browser.runtime.onMessage.addListener((message, sender) => {
+    if (sender.id !== browser.runtime.id || !adapter) return undefined;
+    switch (message?.type) {
+      case "agent:ping":
+        return Promise.resolve({ running });
+      case "agent:detect":
+        return adapter.detect(http()).then(
+          (signedIn) => ({ signedIn }),
+          (error) => ({ error: error.message }),
+        );
+      case "agent:capture":
+        if (running) return Promise.resolve({ started: false, error: "A capture already runs in this tab." });
+        running = true;
+        runCapture({ adapter, http: http(), sink, stamps: message.stamps, resume: message.resume }).finally(() => (running = false));
+        return Promise.resolve({ started: true });
+      default:
+        return undefined;
+    }
+  });
+}

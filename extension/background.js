@@ -1,6 +1,169 @@
-// The demo's background script (an event page in Firefox MV3). The E2E test
-// reads this value back through popup.html. Replace it with code that runs
-// foxcache.
-browser.runtime.onInstalled.addListener(() => {
-  browser.storage.local.set({ fixture: "installed" });
+// The event page. It owns the store (IndexedDB), starts and stops captures,
+// takes the records that the agent in a provider tab sends, answers the
+// extension's own pages, and answers foxscope over onMessageExternal.
+// Firefox unloads it when idle. Every capture state is in the store, so a
+// wake loses nothing.
+import { ADAPTERS, FoxcacheError, adapterAt, adapterFor, answerScent, cacheResolver, createStore, markdownFiles, toArchive, toMemoryList, zip } from "../src/index.ts";
+import { idbBackend } from "./idb.js";
+
+export const store = createStore(idbBackend());
+const resolver = cacheResolver(store);
+const pattern = (adapter) => `${adapter.origin}/*`;
+const RESUMABLE = new Set(["stopped", "failed", "interrupted"]);
+
+// The capture of one provider: { tabId, stop, startingUntil, checkpoint }, in the checkpoints area.
+const captureOf = async (id) => (await store.checkpoint(id)) ?? null;
+const saveCapture = (id, capture) => store.setCheckpoint(id, capture);
+
+async function interrupt(id, capture) {
+  const checkpoint = { ...capture.checkpoint, status: "interrupted", updatedAt: new Date().toISOString() };
+  await saveCapture(id, { ...capture, checkpoint });
+  return checkpoint;
+}
+
+/** A "running" capture whose agent is gone (the tab closed or reloaded) is interrupted (X4). */
+async function refresh(adapter) {
+  const capture = await captureOf(adapter.id);
+  if (capture?.checkpoint.status !== "running") return capture;
+  // An agent that answers but runs nothing is dead, unless the capture just started.
+  const starting = Date.now() < (capture.startingUntil ?? 0);
+  const alive = await browser.tabs.sendMessage(capture.tabId, { type: "agent:ping" }).then((r) => r?.running === true || starting, () => false);
+  return alive ? capture : { ...capture, checkpoint: await interrupt(adapter.id, capture) };
+}
+
+const providerTab = async (adapter) => {
+  const tabs = await browser.tabs.query({ url: pattern(adapter) });
+  return tabs.find((t) => t.active) ?? tabs[0];
+};
+const inject = (tabId) => browser.scripting.executeScript({ target: { tabId }, files: ["agent.js"] });
+
+/** What the popup shows for one provider (X2, X3). */
+async function status(adapter) {
+  const capture = await refresh(adapter);
+  const base = { id: adapter.id, label: adapter.label, origin: adapter.origin, checkpoint: capture?.checkpoint ?? null };
+  if (!(await browser.permissions.contains({ origins: [pattern(adapter)] }))) return { ...base, state: "no-permission" };
+  if (capture?.checkpoint.status === "running") return { ...base, state: "running" };
+  const tab = await providerTab(adapter);
+  if (!tab) return { ...base, state: "no-tab" };
+  try {
+    await inject(tab.id);
+    const answer = await browser.tabs.sendMessage(tab.id, { type: "agent:detect" });
+    if (answer?.error) return { ...base, state: "error", error: answer.error };
+    return { ...base, state: answer?.signedIn ? "ready" : "signed-out" };
+  } catch (error) {
+    return { ...base, state: "error", error: error.message };
+  }
+}
+
+const fail = (code, message) => {
+  throw new FoxcacheError(code, message);
+};
+
+/** The messages that the extension's own pages send. */
+export const handlers = {
+  "providers:status": () => Promise.all(ADAPTERS.map(status)),
+
+  "capture:start": async ({ provider }) => {
+    const adapter = adapterFor(provider);
+    if (!(await browser.permissions.contains({ origins: [pattern(adapter)] }))) fail("not-allowed", `Allow ${adapter.origin} in the settings first.`);
+    const previous = await refresh(adapter);
+    if (previous?.checkpoint.status === "running") fail("bad-request", `A ${adapter.label} capture is running.`);
+    const tab = (await providerTab(adapter)) ?? fail("not-found", `Open ${adapter.origin} in a tab and sign in.`);
+    const resume = previous && RESUMABLE.has(previous.checkpoint.status) ? previous.checkpoint : undefined;
+    const now = new Date().toISOString();
+    const counts = { conversations: 0, skipped: 0, errors: 0, projects: 0, memories: 0, preferences: 0, library: 0 };
+    const checkpoint = resume ? { ...resume, status: "running" } : { provider: adapter.id, status: "running", startedAt: now, updatedAt: now, extrasDone: false, pages: 0, counts, lastErrors: [] };
+    await inject(tab.id);
+    await saveCapture(adapter.id, { tabId: tab.id, stop: false, startingUntil: Date.now() + 10_000, checkpoint });
+    const answer = await browser.tabs.sendMessage(tab.id, { type: "agent:capture", resume, stamps: await store.stamps(adapter.id) });
+    if (!answer?.started) {
+      await interrupt(adapter.id, { tabId: tab.id, stop: false, checkpoint });
+      fail("provider-error", answer?.error ?? "The capture did not start.");
+    }
+    return checkpoint;
+  },
+
+  "capture:stop": async ({ provider }) => {
+    const adapter = adapterFor(provider);
+    const capture = await captureOf(adapter.id);
+    if (capture?.checkpoint.status === "running") await saveCapture(adapter.id, { ...capture, stop: true });
+    return true;
+  },
+
+  "archive:counts": () => store.counts(),
+  "archive:search": ({ query, provider, kind }) => store.search(query, { provider: provider || undefined, kind: kind || undefined }),
+  "archive:list": async ({ kind, provider }) => {
+    const records = await store.all(kind, { provider: provider || undefined });
+    // Conversations as summaries: the page asks for one at a time.
+    if (kind === "conversations") return records.map((c) => ({ provider: c.provider, id: c.id, title: c.title, updatedAt: c.updatedAt, messages: c.messages.length })).toSorted((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+    return records;
+  },
+  "archive:get": ({ kind, key }) => store.get(kind, key),
+
+  "export:json": async () => JSON.stringify(await toArchive(store), null, 2),
+  "export:markdown": async () => zip(markdownFiles(await toArchive(store))),
+  "export:memories": async () => toMemoryList(await toArchive(store)),
+
+  "data:delete-all": async () => {
+    await store.deleteAll();
+    return true;
+  },
+};
+
+/** Only this extension's own pages, not a content script or a web page, may read, export or delete (X1). */
+export const fromOwnPage = (sender) => sender?.id === browser.runtime.id && typeof sender.url === "string" && sender.url.startsWith(browser.runtime.getURL(""));
+
+/** The agent of a running capture: in the capture's tab, on the provider's own origin (X1). */
+async function fromAgent(sender) {
+  if (sender?.id !== browser.runtime.id || !sender.tab || typeof sender.url !== "string") return null;
+  const adapter = adapterAt(new URL(sender.url).origin);
+  if (!adapter) return null;
+  const capture = await captureOf(adapter.id);
+  if (!capture || capture.tabId !== sender.tab.id || capture.checkpoint.status !== "running") return null;
+  return { adapter, capture };
+}
+
+/** The messages that the agent sends. A sender that is not the agent of a running capture is told to stop and stores nothing. */
+const agentHandlers = {
+  "capture:put": async ({ kind, record }, from) => {
+    if (record?.provider !== from.adapter.id) return { error: `A ${from.adapter.label} tab cannot add a record of ${record?.provider}.` };
+    await store.put(kind, record);
+    return { stop: from.capture.stop };
+  },
+  "capture:checkpoint": async ({ checkpoint }, from) => {
+    if (checkpoint?.provider !== from.adapter.id) return { error: "The checkpoint is for another provider." };
+    await saveCapture(from.adapter.id, { ...from.capture, checkpoint });
+    return { stop: from.capture.stop };
+  },
+};
+
+browser.runtime.onMessage.addListener((message, sender) => {
+  const type = message?.type;
+  if (Object.hasOwn(agentHandlers, type)) {
+    return fromAgent(sender)
+      .then((from) => (from ? agentHandlers[type](message, from) : { stop: true }))
+      .catch((error) => ({ error: error instanceof FoxcacheError ? `${error.code}: ${error.message}` : String(error) }));
+  }
+  if (!Object.hasOwn(handlers, type) || !fromOwnPage(sender)) return undefined;
+  return Promise.resolve()
+    .then(() => handlers[type](message))
+    .then(
+      (value) => ({ ok: true, value }),
+      (error) => ({ ok: false, code: error instanceof FoxcacheError ? error.code : "error", error: error instanceof Error ? error.message : String(error) }),
+    );
 });
+
+// A closed tab ends its capture (X4).
+browser.tabs.onRemoved.addListener(async (tabId) => {
+  for (const adapter of ADAPTERS) {
+    const capture = await captureOf(adapter.id);
+    if (capture?.tabId === tabId && capture.checkpoint.status === "running") await interrupt(adapter.id, capture);
+  }
+});
+
+// answerScent gives undefined for any sender but foxscope. Firefox would then
+// resolve the sender's call with undefined, which tells it foxcache is
+// installed. So reject with the error Firefox gives when no extension has
+// that id: to another extension, foxcache looks absent (SC1).
+const ABSENT = "Could not establish connection. Receiving end does not exist.";
+browser.runtime.onMessageExternal.addListener((message, sender) => answerScent(resolver, sender, message) ?? Promise.reject(new Error(ABSENT)));
