@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { FoxcacheError, MAX_MESSAGES, check } from "../src/index.js";
 import { MAX_SUBPAGES } from "../src/adapters/read.js";
 import { perplexity } from "../src/adapters/perplexity.js";
+import { captureAll } from "./adapter-kit.js";
 import { fixture, fixtureHttp } from "./fixture-http.js";
 
 const T1 = "9e7a0000-0000-4000-8000-000000000001";
@@ -45,12 +46,23 @@ describe("perplexity detect", () => {
 });
 
 describe("perplexity list", () => {
-  it("reads the pinned threads, then the list by offset until a short page", async () => {
+  it("reads the pinned threads with list offset 0, and ends at a short page", async () => {
     const f = open();
-    const first = await perplexity.listConversations(f.http);
-    expect(first).toEqual({ items: [{ id: T1, title: "Lisbon trams", updatedAt: "2026-09-03T10:00:00.250Z" }], next: "0" });
-    const second = await perplexity.listConversations(f.http, first.next);
-    expect(second).toEqual({ items: [{ id: T2, title: "<img src=x onerror=alert(1)>", updatedAt: "2026-08-01T09:00:03.000Z" }], next: undefined });
+    expect(await perplexity.listConversations(f.http)).toEqual({
+      items: [
+        { id: T1, title: "Lisbon trams", updatedAt: "2026-09-03T10:00:00.250Z" },
+        { id: T2, title: "<img src=x onerror=alert(1)>", updatedAt: "2026-08-01T09:00:03.000Z" },
+      ],
+      next: undefined,
+    });
+    expect(f.calls).toEqual([PINNED, LIST]);
+  });
+  it("PX41 reads a pinned list that equals main page 0 once, with no pagination-loop", async () => {
+    const base = fixture("perplexity");
+    const routes = { ...base, [LIST]: base[PINNED], [`${LIST} ${listBody(0)}`]: base[PINNED] };
+    const { checkpoint, records } = await captureAll(perplexity, open(routes).http);
+    expect([checkpoint.status, checkpoint.error?.code]).toEqual(["done", undefined]);
+    expect(records.filter(([kind]) => kind === "conversations").map(([, c]) => (c as { id: string }).id)).toEqual([T1]);
   });
   it("asks for the next offset after a full page", async () => {
     const routes = { [`${LIST} ${listBody(0)}`]: Array.from({ length: 50 }, (_, i) => row(i)), [`${LIST} ${listBody(50)}`]: [row(50)] };

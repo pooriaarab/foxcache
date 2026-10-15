@@ -60,12 +60,14 @@ export const perplexity: Adapter = {
     }
   },
 
-  // The first page is the pinned threads; then the cursor is the list offset.
+  // The first page is the pinned threads and list offset 0 in one; then the cursor is the list offset.
   async listConversations(http, cursor) {
-    if (cursor === undefined) return { items: stubs(await http.post("/rest/thread/list_pinned_ask_threads", {}, V), "list_pinned_ask_threads"), next: "0" };
-    const offset = Number(cursor);
-    const items = stubs(await http.post("/rest/thread/list_ask_threads", { limit: PAGE, ascending: false, offset, search_term: "", exclude_asi: false }, V), "list_ask_threads");
-    return { items, next: items.length === PAGE ? String(offset + items.length) : undefined };
+    const pinned = cursor === undefined ? stubs(await http.post("/rest/thread/list_pinned_ask_threads", {}, V), "list_pinned_ask_threads") : [];
+    const offset = cursor === undefined ? 0 : Number(cursor);
+    const rows = stubs(await http.post("/rest/thread/list_ask_threads", { limit: PAGE, ascending: false, offset, search_term: "", exclude_asi: false }, V), "list_ask_threads");
+    // A pinned thread is in the main list too: once, so the pinned list is never a page of its own that page 0 repeats (PX41).
+    const items = [...pinned, ...rows.filter((s) => !pinned.some((p) => p.id === s.id))];
+    return { items, next: rows.length === PAGE ? String(offset + rows.length) : undefined };
   },
 
   async getConversation(http, stub) {
