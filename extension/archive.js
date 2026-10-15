@@ -96,9 +96,11 @@ function save(name, data, type) {
   $("status").textContent = `Saved ${name}.`;
 }
 const stamp = () => new Date().toISOString().slice(0, 10);
-$("export-json").addEventListener("click", async () => save(`foxcache-archive-${stamp()}.json`, await ask("export:json"), "application/json"));
-$("export-markdown").addEventListener("click", async () => save(`foxcache-markdown-${stamp()}.zip`, await ask("export:markdown"), "application/zip"));
-$("export-memories").addEventListener("click", async () => save(`foxcache-memories-${stamp()}.md`, await ask("export:memories"), "text/markdown"));
+/** Export through the event page; a refused export says why in the status line. */
+const exporter = (type, name, mime) => () => ask(type).then((data) => save(name(), data, mime), (error) => ($("status").textContent = error.message));
+$("export-json").addEventListener("click", exporter("export:json", () => `foxcache-archive-${stamp()}.json`, "application/json"));
+$("export-markdown").addEventListener("click", exporter("export:markdown", () => `foxcache-markdown-${stamp()}.zip`, "application/zip"));
+$("export-memories").addEventListener("click", exporter("export:memories", () => `foxcache-memories-${stamp()}.md`, "text/markdown"));
 
 let typing;
 $("query").addEventListener("input", () => {
