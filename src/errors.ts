@@ -14,6 +14,7 @@ export type ErrorCode =
   | "corrupt-store"
   | "not-found"
   | "not-empty"
+  | "locked"
   | "usage";
 
 export class FoxcacheError extends Error {
