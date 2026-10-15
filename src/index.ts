@@ -5,3 +5,5 @@ export * from "./store.js";
 export * from "./archive.js";
 export * from "./outputs.js";
 export * from "./http.js";
+export type * from "./adapters/types.js";
+export * from "./capture.js";
