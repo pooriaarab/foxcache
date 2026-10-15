@@ -109,7 +109,8 @@ export const chatgpt: Adapter = {
     const node = (id: string) => r.obj(mapping[id], `mapping.${id}`);
     const leaf = r.str(c.current_node, "current_node");
     if (!(leaf in mapping)) throw r.fail("current_node", "is not a node of the mapping");
-    const ids = pathToRoot(leaf, (id) => node(id).parent as string | null, (id) => id in mapping, r.fail);
+    // The root node has parent null.
+    const ids = pathToRoot(leaf, (id) => (node(id).parent === null ? undefined : r.str(node(id).parent, `mapping.${id}.parent`)), (id) => id in mapping, r.fail);
     const messages: Message[] = [];
     for (const id of ids) {
       const m = node(id).message;

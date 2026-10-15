@@ -49,15 +49,20 @@ export function reader(provider: string) {
 
 /**
  * Walk parent links from a leaf to the root and return the ids root first.
- * A cycle or an unknown parent throws provider-schema (P2, P3).
+ * parentOf gives undefined at the root; each adapter knows its own root.
+ * A cycle or a parent that is not in the conversation throws
+ * provider-schema (P2, P3, P7). The caller checks that the leaf exists.
  */
-export function pathToRoot(leaf: string, parentOf: (id: string) => string | undefined | null, has: (id: string) => boolean, fail: (where: string, why: string) => Error): string[] {
+export function pathToRoot(leaf: string, parentOf: (id: string) => string | undefined, has: (id: string) => boolean, fail: (where: string, why: string) => Error): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
-  for (let at: string | undefined | null = leaf; at && has(at); at = parentOf(at)) {
+  for (let at: string | undefined = leaf; at !== undefined; ) {
     if (seen.has(at)) throw fail(`message ${at}`, "is in a parent cycle");
     seen.add(at);
     out.push(at);
+    const parent = parentOf(at);
+    if (parent !== undefined && !has(parent)) throw fail(`message ${at}`, `has the parent ${parent}, which is not in the conversation`);
+    at = parent;
   }
   return out.toReversed();
 }
