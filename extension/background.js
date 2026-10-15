@@ -153,6 +153,8 @@ async function fromAgent(sender) {
   if (sender?.id !== browser.runtime.id || !sender.tab || typeof sender.url !== "string") return null;
   const adapter = adapterAt(new URL(sender.url).origin);
   if (!adapter) return null;
+  // The agent's fetches are same-origin and need no grant, so a site the user turned off is checked here (X11).
+  if (!(await browser.permissions.contains({ origins: [pattern(adapter)] }))) return null;
   const capture = await captureOf(adapter.id);
   if (!capture || capture.tabId !== sender.tab.id || capture.checkpoint.status !== "running") return null;
   return { adapter, capture, since };
@@ -205,6 +207,17 @@ browser.tabs.onRemoved.addListener(async (tabId) => {
     const since = generation;
     const capture = await captureOf(adapter.id);
     if (capture?.tabId === tabId && capture.checkpoint.status === "running") await interrupt(adapter.id, capture, since);
+  }
+});
+
+// A site the user turns off ends its capture: the agent stops before its next request (X11).
+browser.permissions.onRemoved.addListener(async ({ origins = [] }) => {
+  for (const adapter of ADAPTERS.filter((a) => origins.includes(pattern(a)))) {
+    const capture = await captureOf(adapter.id);
+    if (capture?.checkpoint.status !== "running") continue;
+    await store.backend.put("checkpoints", stopKey(adapter.id), true);
+    await saveCapture(adapter.id, { ...capture, checkpoint: { ...capture.checkpoint, status: "stopped", updatedAt: new Date().toISOString() } });
+    await browser.tabs.sendMessage(capture.tabId, { type: "agent:stop" }).catch(() => undefined);
   }
 });
 

@@ -132,6 +132,7 @@ All errors are `FoxcacheError` with a `code`. The codes are in the rows.
 | X8 | A capture fails again and again at the same place on Resume, for example a project that no longer exists. | The popup offers Start over next to Resume. Start over leaves the old checkpoint behind. | E2E |
 | X9 | Delete all runs while the agent saves a checkpoint, or while the event page marks a capture interrupted: the write read the capture before the delete and lands after it. | The checkpoint is removed again and the agent is told to stop. Its next record is refused and not stored. Delete all leaves nothing. | `tests/background.test.ts` |
 | X10 | The extension exports a JSON archive that `foxcache import` refuses: over 256 MiB, or made larger by indentation. | The JSON export is compact. One over 256 MiB is refused with `too-large`, and the archive page says so and points to the Markdown export. | `tests/background-export.test.ts` |
+| X11 | The user turns a site off in the settings (or in about:addons) while its capture runs. The agent is in the tab already, and its same-origin fetches need no host grant. | The capture stops at once and is marked stopped. The event page stores no record and no checkpoint from an agent whose site is not allowed. | E2E |
 
 ## Release
 

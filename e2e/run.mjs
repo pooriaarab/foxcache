@@ -11,6 +11,7 @@
 //   checks the exports, and imports the archive with the CLI;
 //   asks for SCENT values as foxscope and as another extension;
 //   deletes everything from the settings page.
+//   turns ChatGPT off in the settings during a capture, which ends it.
 // Writes artifacts/e2e-<date>.json after the checks.
 // Usage: pnpm e2e [--headed]. Env: FIREFOX, or FOXKIT_BROWSER=ichabod with ICHABOD_API_KEY.
 import { execFileSync } from "node:child_process";
@@ -277,6 +278,20 @@ try {
   await settings.click("#delete");
   check("the settings page deletes everything", "Deleted. foxcache holds nothing now.", await until("the delete note", () => settings.evaluate(() => document.getElementById("status").textContent)));
   check("the store is empty after delete all", {}, await ask("archive:counts"));
+
+  // 10. Turning a site off in the settings ends its running capture (X11).
+  await ask("capture:start", { provider: "chatgpt", fresh: true });
+  await running("chatgpt");
+  const chatgptBox = '#sites label[data-provider="chatgpt"] input';
+  await settings.click(chatgptBox);
+  await until("ChatGPT is turned off", () => settings.evaluate((s) => !document.querySelector(s).checked, chatgptBox));
+  const sentBefore = net.log.length;
+  const keptBefore = await ask("archive:counts");
+  cp = await ended("chatgpt");
+  await sleep(5000);
+  check("turning ChatGPT off stops its capture", "stopped", cp.status);
+  check("no record is stored after ChatGPT is turned off", keptBefore, await ask("archive:counts"));
+  check("at most the request in flight goes to ChatGPT after it is turned off", true, net.log.slice(sentBefore).filter((l) => l.url.startsWith(CHATGPT)).length <= 1);
 } catch (error) {
   record.error = error instanceof Error ? error.message : String(error);
 } finally {
