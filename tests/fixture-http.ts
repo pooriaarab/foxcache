@@ -22,5 +22,5 @@ export function fixtureHttp(site: HttpSite, routes: Routes, storage: { getItem(k
     if (body === undefined) return new Response('{"error":"not in the fixture"}', { status: 404 });
     return new Response(JSON.stringify(body), { status: statusOf(body), headers: { "content-type": "application/json" } });
   };
-  return { http: createHttp(site, { fetch, storage }), calls };
+  return { http: createHttp(site, { fetch, storage, cookie: () => "" }), calls };
 }

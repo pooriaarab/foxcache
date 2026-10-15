@@ -17,7 +17,7 @@ async function send(message) {
 if (!globalThis.foxcacheAgent) {
   globalThis.foxcacheAgent = true;
   const adapter = adapterAt(location.origin);
-  const http = () => createHttp(adapter, { fetch: (url, init) => fetch(url, init), storage: window.localStorage });
+  const http = () => createHttp(adapter, { fetch: (url, init) => fetch(url, init), storage: window.localStorage, cookie: () => document.cookie });
   let running = false;
   let stopper;
 
