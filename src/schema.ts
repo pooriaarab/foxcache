@@ -82,9 +82,9 @@ type Obj = Record<string, unknown>;
 const bad = (path: string, why: string) => new FoxcacheError("invalid-record", `${path}: ${why}`);
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|[+-]\d{2}:\d{2})$/;
-// 1-200 printable characters, no slash, not "." or "..".
+// 1-200 printable characters, no slash, not "." or "..". C0, DEL and C1 control characters are refused.
 // oxlint-disable-next-line no-control-regex -- the control characters are what it refuses
-const ID = /^(?!\.{1,2}$)[^\u0000-\u001f\u007f/]{1,200}$/;
+const ID = /^(?!\.{1,2}$)[^\u0000-\u001f\u007f-\u009f/]{1,200}$/;
 
 /** Remove NUL and replace lone surrogates (S5). */
 export function cleanText(text: string): string {

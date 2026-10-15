@@ -43,7 +43,7 @@ All errors are `FoxcacheError` with a `code`. The codes are in the rows.
 | # | Failure mode | Wanted behavior | Test |
 |---|---|---|---|
 | O1 | A conversation title holds `../`, `/`, a drive letter, control characters or 300 characters. | The Markdown file name is a safe slug of at most 60 characters in `<provider>/`. Two titles that slug the same get `-2`, `-3`. | `tests/outputs.test.ts` |
-| O2 | A message holds HTML or Markdown that would run or render as markup. | The Markdown output escapes `<`, `>` and `&`, so a viewer shows the text and runs nothing. | `tests/outputs.test.ts` |
+| O2 | A message holds HTML or Markdown that would run or render as markup. | The Markdown output escapes `<`, `>` and `&`, and disarms `javascript:`, `vbscript:` and `data:` links, inline or as a reference definition, so a viewer shows the text and runs nothing. | `tests/outputs.test.ts` |
 | O3 | A memory text has line breaks, or starts with `- ` or `#`. | The memory list keeps one memory per line: line breaks become spaces. | `tests/outputs.test.ts` |
 | O4 | The zip holds a name with `..`, or the same name twice. | Names come from O1 only. The zip is valid: `unzip -t` passes in the test. | `tests/outputs.test.ts` |
 
@@ -102,7 +102,7 @@ All errors are `FoxcacheError` with a `code`. The codes are in the rows.
 | N4 | The store directory is created. | It has mode 0700 and the file 0600, set at creation only. | `tests/node.test.ts` |
 | CL1 | A command or a flag is unknown, or `show` gets an id that does not exist. | Bad usage exits 2 with the usage text. A foxcache error exits 1 with one line that says what is wrong. | `tests/cli.test.ts` |
 | CL2 | `export --md` targets a folder that has files. | It refuses with `not-empty` and writes nothing. | `tests/cli.test.ts` |
-| CL3 | A title or a message holds terminal escape codes (`\x1b[...`), which could rewrite the terminal. | The CLI removes control characters, except line breaks and tabs, from all it prints. | `tests/cli.test.ts` |
+| CL3 | A title, a message or an id holds terminal escape codes (`\x1b[...`, or the C1 code U+009B), which could rewrite the terminal. | Ids may not hold control characters. The CLI removes control characters, except line breaks and tabs, from all text it prints, and JSON output escapes DEL and C1 codes. | `tests/cli.test.ts`, `tests/schema.test.ts` |
 | M1 | The MCP server starts without `--allow conversations`. | It has no conversation tools. `tools/list` shows only `list_memories` and `list_preferences`. | `tests/mcp.test.ts` |
 | M2 | A tool call has bad arguments. | A tool error, not a crash. | `tests/mcp.test.ts` |
 | M3 | A client asks for a write. | There is no write tool. | `tests/mcp.test.ts` |
