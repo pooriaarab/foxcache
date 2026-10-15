@@ -3,6 +3,8 @@
 import { FoxcacheError } from "../errors.js";
 
 export type Obj = Record<string, unknown>;
+/** A list inside one call (project sidebar, message pages) that has not ended after this many pages throws pagination-loop (P9). */
+export const MAX_SUBPAGES = 1000;
 
 /** A size in bytes, or undefined for anything that is not one. */
 const optSize = (x: unknown): number | undefined => (typeof x === "number" && Number.isSafeInteger(x) && x >= 0 ? x : undefined);
