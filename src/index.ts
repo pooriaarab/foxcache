@@ -1,2 +1,3 @@
-// The public API of foxcache. Replace this export with the real one.
-export const name = "foxcache";
+// The public API of foxcache.
+export { type ErrorCode, FoxcacheError } from "./errors.js";
+export * from "./schema.js";
