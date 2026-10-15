@@ -71,4 +71,11 @@ describe("mistral conversations", () => {
     bad[1]!.result.data.json.items[0]!.role = "robot";
     expect(await code(mistral.getConversation(open({ ...routes, [key]: bad }).http, stub(C2)))).toMatch(/^provider-schema: mistral: .*role/);
   });
+  it("throws provider-schema when a message has no turn, and does not reorder the thread", async () => {
+    const routes = fixture("mistral");
+    const key = Object.keys(routes).find((k) => k.includes(`"id":"${C2}"`))!;
+    const bad = structuredClone(routes[key]) as Array<{ result: { data: { json: { items: Array<Record<string, unknown>> } } } }>;
+    bad[1]!.result.data.json.items = ["user", "assistant", "user", "assistant"].map((role, i) => ({ id: `t${i}`, role, content: `${role} ${i}`, createdAt: `2026-08-01T10:0${i}:00Z`, nextVersion: null }));
+    expect(await code(mistral.getConversation(open({ ...routes, [key]: bad }).http, stub(C2)))).toMatch(/^provider-schema: mistral: message t0.turn is not a number/);
+  });
 });
