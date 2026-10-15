@@ -93,6 +93,14 @@ describe("P2 the visible thread", () => {
     expect(await code(chatgpt.getConversation(open({ ...routes, [key]: cycle }).http, stub(C)))).toMatch(/^provider-schema: chatgpt: .*cycle/);
     expect(await code(chatgpt.getConversation(open({ ...routes, [key]: { ...base, current_node: "gone" } }).http, stub(C)))).toMatch(/^provider-schema: chatgpt: .*current_node/);
   });
+  it("throws provider-schema when a parent is not in the mapping (P7)", async () => {
+    const routes = fixture("chatgpt");
+    const key = `/backend-api/conversation/${A}`;
+    const gap = structuredClone(routes[key]) as { mapping: Record<string, unknown> };
+    delete gap.mapping.n2;
+    delete gap.mapping.n3a;
+    expect(await code(chatgpt.getConversation(open({ ...routes, [key]: gap }).http, stub(A)))).toMatch(/^provider-schema: chatgpt: message n3 has the parent n2, which is not in the conversation/);
+  });
   it("throws provider-schema on a visible message with content it cannot read", async () => {
     const routes = fixture("chatgpt");
     const key = `/backend-api/conversation/${C}`;
