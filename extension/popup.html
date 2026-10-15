@@ -1,20 +1,10 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>foxcache</title>
-    <link rel="stylesheet" href="popup.css" />
-  </head>
-  <body>
-    <header>
-      <img src="icons/icon-48.png" alt="" width="22" height="22" />
-      <h1>foxcache</h1>
-    </header>
-    <p class="hint">Capture your own AI chats, projects, memories and preferences into your browser.</p>
-    <!-- Show foxcache working here. The E2E test reads #value. -->
-    <section class="card">
-      <p>Status: <output id="value"></output></p>
-    </section>
-    <script src="popup.js"></script>
-  </body>
+<head><meta charset="utf-8"><title>foxcache</title><link rel="stylesheet" href="style.css"></head>
+<body>
+  <header><img class="mark" src="icons/icon-48.png" alt="" width="22" height="22"><h1>foxcache</h1></header>
+  <p class="note">Capture your own chats, projects, memories and preferences from the AI sites you are signed in to. Nothing leaves this browser.</p>
+  <div id="providers" aria-live="polite"><p class="empty">Looking for your AI sites…</p></div>
+  <script src="popup.js"></script>
+</body>
 </html>

@@ -16,7 +16,7 @@ try {
   const page = await fox.open(`${site.url}/index.html`);
   check("content script ran in the page", "content-script-ran", await poll(page, () => document.documentElement.dataset.fixture));
   const ext = await fox.openExtensionPage("popup.html");
-  check("the event page answers", "4 providers", await poll(ext, () => document.getElementById("value")?.textContent));
+  check("the popup shows the providers", 4, await poll(ext, () => document.querySelectorAll(".provider").length));
 } catch (error) {
   record.error = error instanceof Error ? error.message : String(error);
 } finally {
