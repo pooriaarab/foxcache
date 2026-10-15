@@ -67,6 +67,7 @@ describe("P1 changed shapes", () => {
     ["the list is not {data}", LIST, [], /chat_conversations_v2/],
     ["a stub has no uuid", LIST, { data: [{ name: "x", updated_at: "2026-01-01T00:00:00Z" }], has_more: false }, /uuid/],
     ["a time is not a time", LIST, { data: [{ uuid: "x", name: "x", updated_at: 17 }], has_more: false }, /updated_at/],
+    ["has_more is missing", LIST, { data: [] }, /has_more/],
   ])("throws provider-schema when %s", async (_n, key, body, want) => {
     const routes = { ...fixture("claude"), [key]: body };
     const e = await code(claude.listConversations(fixtureHttp(ORIGIN, routes).http));

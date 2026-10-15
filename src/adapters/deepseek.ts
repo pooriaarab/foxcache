@@ -64,7 +64,7 @@ export const deepseek: Adapter = {
     const items = rows.map((s, i) => ({ id: r.str(s.id, `chat_sessions[${i}].id`), title: r.optStr(s.title, `chat_sessions[${i}].title`) ?? "", updatedAt: r.seconds(s.updated_at, `chat_sessions[${i}].updated_at`) }));
     const last = rows.at(-1);
     let next: Cursor | undefined;
-    if (page.has_more === true && last) next = { pinned: c.pinned, updatedAt: last.updated_at as number, id: items.at(-1)!.id };
+    if (r.bool(page.has_more, "fetch_page has_more") && last) next = { pinned: c.pinned, updatedAt: last.updated_at as number, id: items.at(-1)!.id };
     else if (c.pinned) next = { pinned: false };
     return { items, next: next && JSON.stringify(next) };
   },

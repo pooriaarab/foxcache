@@ -21,6 +21,14 @@ export function reader(provider: string) {
     if (typeof x !== "string") throw fail(where, "is not text");
     return x;
   };
+  const bool = (x: unknown, where: string): boolean => {
+    if (typeof x !== "boolean") throw fail(where, "is not true or false");
+    return x;
+  };
+  const num = (x: unknown, where: string): number => {
+    if (typeof x !== "number" || !Number.isFinite(x)) throw fail(where, "is not a number");
+    return x;
+  };
   /** Text, or undefined for null, undefined and "". */
   const optStr = (x: unknown, where: string): string | undefined => (x === null || x === undefined || x === "" ? undefined : str(x, where));
   /** An ISO-8601 string, as ISO-8601 UTC (P4). A time with no zone is UTC. */
@@ -36,7 +44,7 @@ export function reader(provider: string) {
   };
   const optTime = (x: unknown, where: string): string | undefined => (x === null || x === undefined ? undefined : time(x, where));
   const optSeconds = (x: unknown, where: string): string | undefined => (x === null || x === undefined ? undefined : seconds(x, where));
-  return { fail, obj, arr, str, optStr, time, optTime, seconds, optSeconds, optSize };
+  return { fail, obj, arr, str, bool, num, optStr, time, optTime, seconds, optSeconds, optSize };
 }
 
 /**
