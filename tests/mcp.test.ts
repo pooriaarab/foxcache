@@ -7,15 +7,15 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { describe, expect, it } from "vitest";
 import { createMcpServer } from "../src/mcp.js";
-import { openNodeStore } from "../src/node.js";
+import { updateNodeStore } from "../src/node.js";
 
 async function connect(allowConversations: boolean) {
   const env = { FOXCACHE_HOME: mkdtempSync(join(tmpdir(), "foxcache-mcp-")) };
-  const node = await openNodeStore(env);
-  await node.store.put("memories", { provider: "chatgpt", id: "m1", text: "Prefers metric units." });
-  await node.store.put("preferences", { provider: "claude", kind: "response-style", text: "Keep answers short." });
-  await node.store.put("conversations", { provider: "claude", id: "c1", title: "Lisbon", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-02T00:00:00.000Z", messages: [{ role: "user", text: "Plan three days in Lisbon", attachments: [] }] });
-  await node.save();
+  await updateNodeStore(async (store) => {
+    await store.put("memories", { provider: "chatgpt", id: "m1", text: "Prefers metric units." });
+    await store.put("preferences", { provider: "claude", kind: "response-style", text: "Keep answers short." });
+    await store.put("conversations", { provider: "claude", id: "c1", title: "Lisbon", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-02T00:00:00.000Z", messages: [{ role: "user", text: "Plan three days in Lisbon", attachments: [] }] });
+  }, env);
   const [a, b] = InMemoryTransport.createLinkedPair();
   await createMcpServer({ env, allowConversations }).connect(a);
   const client = new Client({ name: "test", version: "1" });

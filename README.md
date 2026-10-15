@@ -151,7 +151,8 @@ same-origin fetches run. No real chat is in this repo.
 | `toMarkdown`, `markdownFiles`, `toMemoryList`, `zip` | The exports. Markdown escapes HTML. |
 | `createHttp`, `runCapture`, `ADAPTERS` | The GET-only request layer, the polite capture runner and the adapters. |
 | `cacheResolver(store)`, `answerScent(resolver, sender, message)` | SCENT v0.1 for the `cache` namespace. |
-| `openNodeStore(env)` from `foxcache/node` | The file store at `$FOXCACHE_HOME/archive.json`. |
+| `openNodeStore(env)` from `foxcache/node` | Read the file store at `$FOXCACHE_HOME/archive.json`. |
+| `updateNodeStore(change, env)` from `foxcache/node` | Change the file store and write it, one writer at a time (`archive.json.lock`). |
 | `FoxcacheError` | Has a `code`, such as `logged-out`, `rate-limited`, `provider-schema`, `bad-archive`, `too-large`. |
 
 ### CLI
