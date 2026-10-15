@@ -63,7 +63,8 @@ function texts(kind: Kind, r: RecordOf[Kind]): { title: string; parts: string[] 
   switch (kind) {
     case "conversations": {
       const c = r as Conversation;
-      return { title: c.title, parts: [c.title, ...c.messages.map((m) => m.text)] };
+      // Messages first: a snippet of the text says more than the title again.
+      return { title: c.title, parts: [...c.messages.map((m) => m.text), c.title] };
     }
     case "projects": {
       const p = r as RecordOf["projects"];

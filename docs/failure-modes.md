@@ -99,8 +99,9 @@ All errors are `FoxcacheError` with a `code`. The codes are in the rows.
 | N2 | A write fails halfway. | The old file is whole. No `.tmp` file is left. | `tests/node.test.ts` |
 | N3 | `FOXCACHE_HOME` is set. | The store is in that directory, not in `~/.foxcache/`. | `tests/node.test.ts` |
 | N4 | The store directory is created. | It has mode 0700 and the file 0600, set at creation only. | `tests/node.test.ts` |
-| CL1 | A command or a flag is unknown, or `show` gets an id that does not exist. | Exit code 1 and one line that says what is wrong. | `tests/cli.test.ts` |
+| CL1 | A command or a flag is unknown, or `show` gets an id that does not exist. | Bad usage exits 2 with the usage text. A foxcache error exits 1 with one line that says what is wrong. | `tests/cli.test.ts` |
 | CL2 | `export --md` targets a folder that has files. | It refuses with `not-empty` and writes nothing. | `tests/cli.test.ts` |
+| CL3 | A title or a message holds terminal escape codes (`\x1b[...`), which could rewrite the terminal. | The CLI removes control characters, except line breaks and tabs, from all it prints. | `tests/cli.test.ts` |
 | M1 | The MCP server starts without `--allow conversations`. | It has no conversation tools. `tools/list` shows only `list_memories` and `list_preferences`. | `tests/mcp.test.ts` |
 | M2 | A tool call has bad arguments. | A tool error, not a crash. | `tests/mcp.test.ts` |
 | M3 | A client asks for a write. | There is no write tool. | `tests/mcp.test.ts` |
