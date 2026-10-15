@@ -15,6 +15,7 @@ import { notion } from "./notion.js";
 import { perplexity } from "./perplexity.js";
 import { poe } from "./poe.js";
 import { qwen } from "./qwen.js";
+import { zai } from "./zai.js";
 import type { Adapter } from "./types.js";
 
 // One adapter per line: docs/providers/ADDING.md.
@@ -33,6 +34,7 @@ export const ADAPTERS: readonly Adapter[] = Object.freeze([
   poe,
   meta,
   qwen,
+  zai,
 ]);
 
 /** The adapter for a provider id. Throws for a provider with no adapter. */

@@ -38,7 +38,8 @@
     "https://assistant.kagi.com/*",
     "https://poe.com/*",
     "https://www.meta.ai/*",
-    "https://chat.qwen.ai/*"
+    "https://chat.qwen.ai/*",
+    "https://chat.z.ai/*"
   ],
   "background": {
     "scripts": [
