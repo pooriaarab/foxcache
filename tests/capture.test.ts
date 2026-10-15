@@ -205,15 +205,32 @@ describe("C8 incremental", () => {
   it("fetches only newer conversations, and stops at a page with no change", async () => {
     const p = provider();
     const stamps = { c0: T(99), c1: T(99), c2: T(98), c3: T(97) };
-    const cp = await run(p, sink(), { stamps });
+    const cp = await run(p, sink(), { stamps, earlyStop: true });
     expect(p.log).toEqual(["/me", "/list?0", "/c/c0", "/list?2"]);
     expect(cp.counts).toMatchObject({ conversations: 1, skipped: 3 });
   });
   it("reads the whole list when the order is not by update", async () => {
     const p = provider({ extras: { newestFirst: false } });
     const stamps = { c0: T(100), c1: T(99), c2: T(98), c3: T(97) };
+    await run(p, sink(), { stamps, earlyStop: true });
+    expect(p.log).toEqual(["/me", "/list?0", "/list?2", "/list?4", "/c/c4"]);
+  });
+});
+
+describe("C10 no early stop unless the last capture was whole", () => {
+  const stamps = { c0: T(100), c1: T(99), c2: T(98), c3: T(97) };
+  it("reads the whole list when the caller does not allow the early stop", async () => {
+    const p = provider();
     await run(p, sink(), { stamps });
     expect(p.log).toEqual(["/me", "/list?0", "/list?2", "/list?4", "/c/c4"]);
+  });
+  it("reads the rest of the list on a resume, even when a page has no change", async () => {
+    // Stopped at the second page; new chats then pushed stored ones onto it.
+    const resume = { provider: "chatgpt", status: "stopped", startedAt: T(0), updatedAt: T(0), extrasDone: true, cursor: "2", pages: 1, counts: { conversations: 2, skipped: 0, errors: 0, projects: 0, memories: 0, preferences: 0, library: 0 }, lastErrors: [] } as Checkpoint;
+    const p = provider();
+    const cp = await run(p, sink(), { stamps, resume, earlyStop: true });
+    expect(p.log).toEqual(["/me", "/list?2", "/list?4", "/c/c4"]);
+    expect(cp.status).toBe("done");
   });
 });
 
