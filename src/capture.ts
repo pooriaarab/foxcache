@@ -175,13 +175,17 @@ export async function runCapture(o: CaptureOptions): Promise<Checkpoint> {
 
     const seenCursors = new Set<string>([cp.cursor ?? ""]);
     const seenIds = new Set<string>();
+    let lastPage = "";
     let badInARow = 0;
     for (;;) {
       halt();
       if (cp.pages >= maxPages) throw new FoxcacheError("pagination-loop", `The list did not end after ${maxPages} pages.`);
       const page = await o.adapter.listConversations(polite, cp.cursor);
       cp.pages += 1;
-      if (page.items.length > 0 && page.items.every((s) => seenIds.has(s.id))) throw new FoxcacheError("pagination-loop", "The list gave the same page again.");
+      // A list in parts (DeepSeek: pinned chats, then the rest) can repeat ids across parts, so only the same page twice in a row is a loop.
+      const ids = page.items.map((s) => s.id).join("\n");
+      if (page.items.length > 0 && ids === lastPage) throw new FoxcacheError("pagination-loop", "The list gave the same page again.");
+      lastPage = ids;
       let changed = false;
       for (const stub of page.items as Stub[]) {
         seenIds.add(stub.id);
