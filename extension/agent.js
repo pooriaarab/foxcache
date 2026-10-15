@@ -19,6 +19,7 @@ if (!globalThis.foxcacheAgent) {
   const adapter = adapterAt(location.origin);
   const http = () => createHttp({ origin: location.origin, fetch: (url, init) => fetch(url, init), auth: adapter.auth, storage: window.localStorage });
   let running = false;
+  let stopper;
 
   const sink = {
     put: (kind, record) => send({ type: "capture:put", kind, record }),
@@ -38,8 +39,13 @@ if (!globalThis.foxcacheAgent) {
       case "agent:capture":
         if (running) return Promise.resolve({ started: false, error: "A capture already runs in this tab." });
         running = true;
-        runCapture({ adapter, http: http(), sink, stamps: message.stamps, resume: message.resume }).finally(() => (running = false));
+        stopper = new AbortController();
+        runCapture({ adapter, http: http(), sink, stamps: message.stamps, resume: message.resume, earlyStop: message.earlyStop, signal: stopper.signal }).finally(() => (running = false));
         return Promise.resolve({ started: true });
+      // Stop before the next request, also in a pause or a backoff wait.
+      case "agent:stop":
+        stopper?.abort();
+        return Promise.resolve({ stopped: running });
       default:
         return undefined;
     }
