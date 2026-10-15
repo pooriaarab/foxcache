@@ -3,7 +3,7 @@
 // extension's own pages, and answers foxscope over onMessageExternal.
 // Firefox unloads it when idle. Every capture state is in the store, so a
 // wake loses nothing.
-import { ADAPTERS, FoxcacheError, adapterAt, adapterFor, answerScent, cacheResolver, check, createStore, markdownFiles, recordKey, toArchive, toMemoryList, zip } from "../src/index.ts";
+import { ADAPTERS, FoxcacheError, MAX_ARCHIVE_BYTES, adapterAt, adapterFor, answerScent, cacheResolver, check, createStore, markdownFiles, recordKey, toArchive, toMemoryList, zip } from "../src/index.ts";
 import { idbBackend } from "./idb.js";
 
 export const store = createStore(idbBackend());
@@ -128,7 +128,12 @@ export const handlers = {
   },
   "archive:get": ({ kind, key }) => store.get(kind, key),
 
-  "export:json": async () => JSON.stringify(await toArchive(store), null, 2),
+  // Compact, and no larger than foxcache import takes (X10).
+  "export:json": async () => {
+    const text = JSON.stringify(await toArchive(store));
+    if (new Blob([text]).size > MAX_ARCHIVE_BYTES) fail("too-large", `The archive is larger than the ${MAX_ARCHIVE_BYTES / 1024 / 1024} MiB that foxcache import takes. Export Markdown instead.`);
+    return text;
+  },
   "export:markdown": async () => zip(markdownFiles(await toArchive(store))),
   "export:memories": async () => toMemoryList(await toArchive(store)),
 
