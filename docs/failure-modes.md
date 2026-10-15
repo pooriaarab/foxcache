@@ -117,3 +117,5 @@ All errors are `FoxcacheError` with a `code`. The codes are in the rows.
 | X4 | The provider tab is closed during a capture. | The capture is marked interrupted and can be resumed. | E2E |
 | X5 | Capture sends a request other than GET to the provider. | Never: the E2E checks every intercepted request. | E2E |
 | X6 | The archive page shows a message with HTML in it. | It shows the text. No element from the message is in the page. | E2E |
+| X7 | Delete all runs while a capture is writing a record. | The record that raced the delete is removed again, and the capture is told to stop. | E2E (delete all) |
+| X8 | A capture fails again and again at the same place on Resume, for example a project that no longer exists. | The popup offers Start over next to Resume. Start over leaves the old checkpoint behind. | E2E |

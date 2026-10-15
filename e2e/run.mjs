@@ -182,6 +182,10 @@ try {
   await click("chatgpt", "Stop");
   cp = await ended("chatgpt");
   check("Stop ends the capture", "stopped", cp.status);
+  check("a stopped capture offers Start over and Resume", ["Start over", "Resume"], await until("the stopped card", async () => {
+    const labels = await popup.evaluate(() => [...document.querySelectorAll('.provider[data-provider="chatgpt"] .actions button')].map((b) => b.textContent));
+    return labels.includes("Resume") ? labels : null;
+  }));
   await click("chatgpt", "Resume");
   await running("chatgpt");
   cp = await ended("chatgpt");
