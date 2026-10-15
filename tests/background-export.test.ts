@@ -14,6 +14,7 @@ async function eventPage() {
   vi.stubGlobal("browser", {
     runtime: { id: "fx", getURL: (p: string) => `moz-extension://fx/${p}`, onMessage: { addListener: (f: Listener) => (listener = f) }, onMessageExternal: on },
     tabs: { onRemoved: on },
+    permissions: { onRemoved: on },
   });
   vi.resetModules();
   const path = "../extension/background.js";
