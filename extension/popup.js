@@ -1,4 +1,4 @@
-// The popup: one card per provider with its state, the progress of a
+// The popup: one row per provider with its state, the progress of a
 // capture, and Capture, Stop or Resume. Text goes in with textContent only.
 const ask = async (type, data = {}) => {
   const reply = await browser.runtime.sendMessage({ type, ...data });
@@ -54,17 +54,17 @@ function summary(counts) {
 function detail(p) {
   const host = new URL(p.origin).host;
   const cp = p.checkpoint;
-  if (p.state === "no-permission") return [`foxcache may not read ${host} yet.`];
-  if (p.state === "no-tab") return [`Open ${host} in a tab and sign in.`];
-  if (p.state === "signed-out") return [`Sign in on ${host}, then open this again.`, "bad"];
+  if (p.state === "no-permission") return [`Allow foxcache to read ${host}.`];
+  if (p.state === "no-tab") return [`Open ${host} and sign in.`];
+  if (p.state === "signed-out") return [`Sign in on ${host}, then reopen this.`, "bad"];
   if (p.state === "error") return [p.error, "bad"];
   if (!cp) return ["Not captured yet."];
-  const when = new Date(cp.updatedAt).toLocaleString();
+  const when = new Date(cp.updatedAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" });
   if (cp.status === "running") return [`${summary(cp.counts)} so far`];
   if (cp.status === "done") return [`Captured ${when}: ${summary(cp.counts)}.`];
-  if (cp.status === "stopped") return [`Stopped ${when} after ${summary(cp.counts)}. Resume goes on from there.`];
-  if (cp.status === "interrupted") return [`The tab closed or reloaded during the capture (${summary(cp.counts)}). Resume goes on from there.`];
-  return [`The capture stopped: ${cp.error?.message ?? "unknown error"}`, "bad"];
+  if (cp.status === "stopped") return [`Stopped after ${summary(cp.counts)}.`];
+  if (cp.status === "interrupted") return [`The tab closed mid-capture: ${summary(cp.counts)}.`];
+  return [`Capture failed: ${cp.error?.message ?? "unknown error"}`, "bad"];
 }
 
 function card(p) {
@@ -84,7 +84,7 @@ function card(p) {
   const resumable = ["stopped", "failed", "interrupted"].includes(p.checkpoint?.status);
   if (p.state === "no-permission") actions.append(button("Allow", "primary", () => browser.permissions.request({ origins: [`${p.origin}/*`] })));
   if (p.state === "no-tab") {
-    const open = make("a", "", `Open ${new URL(p.origin).host}`);
+    const open = make("a", "", "Open site");
     open.href = p.origin;
     open.target = "_blank";
     actions.append(open);
