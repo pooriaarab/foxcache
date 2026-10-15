@@ -3,7 +3,7 @@
 // extension's own pages, and answers foxscope over onMessageExternal.
 // Firefox unloads it when idle. Every capture state is in the store, so a
 // wake loses nothing.
-import { ADAPTERS, FoxcacheError, adapterAt, adapterFor, answerScent, cacheResolver, createStore, markdownFiles, toArchive, toMemoryList, zip } from "../src/index.ts";
+import { ADAPTERS, FoxcacheError, adapterAt, adapterFor, answerScent, cacheResolver, check, createStore, markdownFiles, recordKey, toArchive, toMemoryList, zip } from "../src/index.ts";
 import { idbBackend } from "./idb.js";
 
 export const store = createStore(idbBackend());
@@ -66,20 +66,23 @@ const fail = (code, message) => {
 export const handlers = {
   "providers:status": () => Promise.all(ADAPTERS.map(status)),
 
-  "capture:start": async ({ provider }) => {
+  // fresh: start over and leave a stopped or failed capture behind, instead of resuming it.
+  "capture:start": async ({ provider, fresh }) => {
     const adapter = adapterFor(provider);
     if (!(await browser.permissions.contains({ origins: [pattern(adapter)] }))) fail("not-allowed", `Allow ${adapter.origin} in the settings first.`);
     const previous = await refresh(adapter);
     if (previous?.checkpoint.status === "running") fail("bad-request", `A ${adapter.label} capture is running.`);
     const tab = (await providerTab(adapter)) ?? fail("not-found", `Open ${adapter.origin} in a tab and sign in.`);
-    const resume = previous && RESUMABLE.has(previous.checkpoint.status) ? previous.checkpoint : undefined;
+    const resume = !fresh && previous && RESUMABLE.has(previous.checkpoint.status) ? previous.checkpoint : undefined;
+    // The early stop is safe only after a capture that read everything (C10).
+    const earlyStop = !resume && previous?.checkpoint.status === "done" && previous.checkpoint.counts.errors === 0;
     const now = new Date().toISOString();
     const counts = { conversations: 0, skipped: 0, errors: 0, projects: 0, memories: 0, preferences: 0, library: 0 };
     const checkpoint = resume ? { ...resume, status: "running" } : { provider: adapter.id, status: "running", startedAt: now, updatedAt: now, extrasDone: false, pages: 0, counts, lastErrors: [] };
     await inject(tab.id);
     await store.backend.delete("checkpoints", stopKey(adapter.id));
     await saveCapture(adapter.id, { tabId: tab.id, startingUntil: Date.now() + 10_000, checkpoint });
-    const answer = await browser.tabs.sendMessage(tab.id, { type: "agent:capture", resume, stamps: await store.stamps(adapter.id) });
+    const answer = await browser.tabs.sendMessage(tab.id, { type: "agent:capture", resume, earlyStop, stamps: await store.stamps(adapter.id) });
     if (!answer?.started) {
       await interrupt(adapter.id, { tabId: tab.id, checkpoint });
       fail("provider-error", answer?.error ?? "The capture did not start.");
@@ -115,10 +118,14 @@ export const handlers = {
   "export:memories": async () => toMemoryList(await toArchive(store)),
 
   "data:delete-all": async () => {
+    generation += 1;
     await store.deleteAll();
     return true;
   },
 };
+
+// Delete all counts up. A record whose write raced a delete all is removed again (X7).
+let generation = 0;
 
 /** Only this extension's own pages, not a content script or a web page, may read, export or delete (X1). */
 export const fromOwnPage = (sender) => sender?.id === browser.runtime.id && typeof sender.url === "string" && sender.url.startsWith(browser.runtime.getURL(""));
@@ -137,7 +144,12 @@ async function fromAgent(sender) {
 const agentHandlers = {
   "capture:put": async ({ kind, record }, from) => {
     if (record?.provider !== from.adapter.id) return { error: `A ${from.adapter.label} tab cannot add a record of ${record?.provider}.` };
+    const before = generation;
     await store.put(kind, record);
+    if (generation !== before) {
+      await store.backend.delete(kind, recordKey(kind, check(kind, record)));
+      return { stop: true };
+    }
     return { stop: await stopAsked(from.adapter.id) };
   },
   "capture:checkpoint": async ({ checkpoint }, from) => {

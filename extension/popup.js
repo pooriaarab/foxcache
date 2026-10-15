@@ -89,6 +89,7 @@ function card(p) {
     open.target = "_blank";
     actions.append(open);
   }
+  if (p.state === "ready" && resumable) actions.append(button("Start over", "ghost", () => ask("capture:start", { provider: p.id, fresh: true })));
   if (p.state === "ready") actions.append(button(resumable ? "Resume" : p.checkpoint ? "Capture again" : "Capture", "primary", () => ask("capture:start", { provider: p.id })));
   if (p.state === "running") actions.append(button("Stop", "danger", () => ask("capture:stop", { provider: p.id })));
   node.append(head, info);
