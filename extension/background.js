@@ -83,6 +83,9 @@ export const handlers = {
     return checkpoint;
   },
 
+  // The popup polls this while a capture runs: it reads the store and sends nothing to a provider.
+  "capture:progress": async () => Object.fromEntries(await Promise.all(ADAPTERS.map(async (a) => [a.id, (await refresh(a))?.checkpoint ?? null]))),
+
   "capture:stop": async ({ provider }) => {
     const adapter = adapterFor(provider);
     const capture = await captureOf(adapter.id);
