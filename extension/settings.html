@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>foxcache settings</title><link rel="stylesheet" href="style.css"></head>
+<body>
+  <header><img class="mark" src="icons/icon-48.png" alt="" width="22" height="22"><h1>Settings</h1></header>
+  <fieldset>
+    <legend>Sites foxcache may read</legend>
+    <p class="note">foxcache reads a site only after you allow it here, and only when you click Capture. It reads with the session your tab already has, and only sends GET requests: it never sends, edits or deletes anything there.</p>
+    <div id="sites"></div>
+  </fieldset>
+  <fieldset>
+    <legend>What foxcache keeps</legend>
+    <p class="note">Conversations, projects (name, instructions and file names), memories, and custom instructions. Never a password, a cookie or a token, and never a file's contents. Everything stays in this browser.</p>
+    <p class="note">foxscope may ask for your memories, preferences and project names, and you approve each request there. It can never get your conversations.</p>
+  </fieldset>
+  <fieldset>
+    <legend>Delete everything</legend>
+    <p class="note">Delete every captured record and every capture in progress from this browser. The sites themselves keep your data.</p>
+    <div class="row"><button id="delete" class="danger">Delete all captured data</button><span id="status" class="hint" role="status"></span></div>
+  </fieldset>
+  <script src="settings.js"></script>
+</body>
+</html>
