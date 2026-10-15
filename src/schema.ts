@@ -14,6 +14,7 @@ export const PROVIDERS = [
   "grok",
   "deepseek",
   "github-copilot",
+  "kimi",
 ] as const;
 export type ProviderId = (typeof PROVIDERS)[number];
 export const ROLES = ["user", "assistant", "system", "tool"] as const;
