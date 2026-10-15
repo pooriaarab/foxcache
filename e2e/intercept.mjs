@@ -7,6 +7,11 @@ import { readFileSync } from "node:fs";
 
 export const load = (provider) => JSON.parse(readFileSync(`tests/fixtures/${provider}.json`, "utf8"));
 const keyOf = (u) => (u.search ? `${u.pathname}?${[...u.searchParams].map(([k, v]) => `${k}=${v}`).join("&")}` : u.pathname);
+/** The fixture answer of a request: "<path>?<query>", then "<path>"; a POST looks for "POST <path>?<query>", then "POST <path>". BiDi does not show a POST body. */
+function answer(f, method, u, key) {
+  for (const k of method === "GET" ? [key, u.pathname] : [`${method} ${key}`, `${method} ${u.pathname}`]) if (f && k in f.routes) return f.routes[k];
+  return undefined;
+}
 const PAGE = (host) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${host} (fixture)</title></head><body><p>A fixture page for ${host}. The E2E serves it in place of the real site.</p></body></html>`;
 
 /**
@@ -30,7 +35,7 @@ export async function serveFixtures(connection, providers, hosts = {}) {
     counts.set(`${u.host}${key}`, n);
     let reply = overrides.get(`${u.host}${key}`)?.(n) ?? hosts[u.host]?.(u);
     if (!reply) {
-      const body = f && (key in f.routes ? f.routes[key] : f.routes[u.pathname]);
+      const body = answer(f, event.request.method, u, key);
       if (u.pathname === "/") reply = { status: 200, body: PAGE(u.host), type: "text/html" };
       else if (body === undefined) reply = { status: 404, body: '{"error":"not in the fixture"}' };
       else reply = { status: typeof body === "object" && body && "$status" in body ? body.$status : 200, body: JSON.stringify(body) };
