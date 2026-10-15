@@ -45,6 +45,12 @@ describe("grok list", () => {
     expect(second).toEqual({ items: [{ id: G2, title: "<img src=x onerror=alert(1)>", updatedAt: "2026-08-01T09:05:00.000Z" }], next: undefined });
     expect(f.calls).toEqual([LIST, `${LIST}&pageToken=tok-2`]);
   });
+  it("GR40 pages past an empty page that still has a token", async () => {
+    const f = open({ ...fixture("grok"), [LIST]: { conversations: [], nextPageToken: "tok-2" } });
+    const first = await grok.listConversations(f.http);
+    expect(first).toEqual({ items: [], next: "tok-2" });
+    expect((await grok.listConversations(f.http, first.next)).items.map((s) => s.id)).toEqual([G2]);
+  });
   it("GR1 names the field when a row changed", async () => {
     const routes = { [LIST]: { conversations: [{ id: G1, title: "x", modifyTime: "2026-09-02T08:00:00Z" }] } };
     expect(await code(grok.listConversations(open(routes).http))).toMatch(/^provider-schema: grok: conversations\[0\].conversationId is not text/);

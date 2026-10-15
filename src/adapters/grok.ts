@@ -54,7 +54,8 @@ export const grok: Adapter = {
     const items = stubs(page);
     const next = r.optStr(page.nextPageToken, "nextPageToken");
     if (next !== undefined && next === cursor) throw new FoxcacheError("pagination-loop", "grok: nextPageToken came back as the token that was sent.");
-    return { items, next: items.length > 0 ? next : undefined };
+    // An empty page with a token is not the end (GR40).
+    return { items, next };
   },
 
   async getConversation(http, stub) {
