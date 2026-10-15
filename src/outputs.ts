@@ -16,7 +16,9 @@ function escape(text: string): string {
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
-    .replace(/\]\(\s*(javascript|vbscript|data):/gi, "](unsafe-$1:");
+    .replace(/\]\(\s*(javascript|vbscript|data):/gi, "](unsafe-$1:")
+    // A reference definition, "[a]: javascript:...", makes a link too.
+    .replace(/^(\s*\[[^\]\n]*\]:\s*)(javascript|vbscript|data):/gim, "$1unsafe-$2:");
 }
 const oneLine = (text: string) => text.replace(/\s+/g, " ").trim();
 
