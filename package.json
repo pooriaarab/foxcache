@@ -46,6 +46,7 @@
     "create-foxkit": "^0.1.8",
     "esbuild": "^0.28.2",
     "oxlint": "^1.87.0",
+    "puppeteer-core": "^25.14.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3",
     "web-ext": "^10.7.0"
