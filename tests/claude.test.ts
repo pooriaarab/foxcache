@@ -60,6 +60,13 @@ describe("P3 branches", () => {
     expect(await code(claude.getConversation(fixtureHttp(ORIGIN, { ...routes, [key]: cycle }).http, { id: C1, title: "", updatedAt: "" }))).toMatch(/^provider-schema: claude: .*cycle/);
     expect(await code(claude.getConversation(fixtureHttp(ORIGIN, { ...routes, [key]: { ...base, current_leaf_message_uuid: "nope" } }).http, { id: C1, title: "", updatedAt: "" }))).toMatch(/^provider-schema: claude: .*leaf/);
   });
+  it("throws provider-schema when a parent is not in the conversation, and stops at the all-zero root (P7)", async () => {
+    const routes = fixture("claude");
+    const key = `${ORG}/chat_conversations/${C2}${DETAIL}`;
+    const gap = structuredClone(routes[key]) as { chat_messages: Array<{ parent_message_uuid: string }> };
+    gap.chat_messages[0]!.parent_message_uuid = "bbbbbbbb-0000-4000-8000-000000000099";
+    expect(await code(claude.getConversation(fixtureHttp(ORIGIN, { ...routes, [key]: gap }).http, { id: C2, title: "", updatedAt: "" }))).toMatch(/^provider-schema: claude: message bbbbbbbb-0000-4000-8000-000000000011 has the parent bbbbbbbb-0000-4000-8000-000000000099, which is not in the conversation/);
+  });
 });
 
 describe("P1 changed shapes", () => {
