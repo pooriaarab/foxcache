@@ -31,6 +31,7 @@ export interface HttpOptions {
 }
 
 const SESSION_PATH = "/api/auth/session";
+const API_PREFIX = "/backend-api/";
 
 /** Seconds from a Retry-After header: a number or an HTTP date. */
 function retryAfter(value: string | null): number | undefined {
@@ -123,7 +124,8 @@ export function createHttp(options: HttpOptions): Http {
   return {
     async get(path, query) {
       const u = url(path, query);
-      if (options.auth === "chatgpt-session" && u.pathname === SESSION_PATH) throw new FoxcacheError("not-allowed", `${SESSION_PATH} holds the session token; foxcache does not read it out.`);
+      // The token goes only to the API, so no spelling of SESSION_PATH reads it out (H7).
+      if (options.auth === "chatgpt-session" && (!u.pathname.startsWith(API_PREFIX) || /%(2e|2f|5c)/i.test(u.pathname))) throw new FoxcacheError("not-allowed", `${u.pathname} is not under ${API_PREFIX}; foxcache sends the session token nowhere else.`);
       try {
         return await send(u, await bearer(false));
       } catch (error) {
