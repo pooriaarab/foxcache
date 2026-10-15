@@ -39,9 +39,9 @@ no other path is called.
   hold no user content.
 - Non-chat projects (slides, docs) are kept as conversations; one with no
   `session_state` has no messages.
-- An update time: the list gives `ctime` only, so a chat continued after a
-  capture is not read again by a later capture. Check this with a real
-  account: if the list has an update field, use it.
+- An update time: the list and the project give `ctime` only, so foxcache
+  reads every project again on each capture (GENSPARK41). Check this with
+  a real account: if the list has an update field, use it.
 - Rate limits: none documented. The site is behind Cloudflare; same-origin
   reads from the signed-in tab are not challenged.
 
@@ -53,3 +53,4 @@ no other path is called.
 | GENSPARK2 | An answer has a `status` other than 0. | `provider-error` with the status. | `tests/genspark.test.ts` |
 | GENSPARK3 | The site ignores `offset` and repeats a full page. | The capture ends with `pagination-loop` (C4). | `tests/genspark.test.ts` |
 | GENSPARK40 | An answer with a `status` other than 0 carries a `message`, which may echo back site text (a prompt, a project name, a token). | `provider-error` names the path and a numeric status only, never the message, so the text stays out of the checkpoint and the popup. | `tests/genspark.test.ts` |
+| GENSPARK41 | A project gets new messages after a capture. The list and the project give `ctime` only, so a list stamp says nothing changed. | Every stub carries the time of the list read, so a capture reads every project again (one `/api/project` per project), and the project's `updatedAt` is that time, so the store keeps the new copy (ST1). `createdAt` stays `ctime`. Not checked with a real account; this is the safe reading. | `tests/genspark.test.ts` |
