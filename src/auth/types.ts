@@ -12,7 +12,7 @@ export interface AuthPage {
   storage: { getItem(key: string): string | null };
   /** The page's document.cookie (cookies that are not HttpOnly). */
   cookie(): string;
-  /** The text of each inline script of the page (one with no src). */
+  /** The text of each inline script of the page that is JavaScript: no src, and no type or text/javascript (H31). */
   scripts(): string[];
   /** Call a function the page's own script set on window, with no arguments, in the page, and give what it returns. undefined when there is none. */
   call(name: string): unknown;

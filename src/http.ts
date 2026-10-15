@@ -34,7 +34,7 @@ export interface Page {
   storage: { getItem(key: string): string | null };
   /** The page's document.cookie. */
   cookie(): string;
-  /** The text of the page's inline scripts. */
+  /** The text of the page's inline JavaScript scripts (inlineScripts). */
   scripts(): string[];
   /** Call a function the page's script set on window, in the page (Firefox: wrappedJSObject). */
   call(name: string): unknown;
