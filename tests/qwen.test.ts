@@ -24,6 +24,9 @@ describe("qwen detect and sign-in", () => {
     expect(await qwen.detect(open(swap("/api/v1/auths/", fail({ code: "Unauthorized", details: "token expired" }))).http)).toBe(false);
     expect(await code(qwen.listConversations(open(swap("/api/v2/chats/?page=1", fail({ code: "Unauthorized" }))).http))).toMatch(/^logged-out: qwen: /);
   });
+  it("QWEN42 throws provider-error, not signed out, when the user answer fails for another reason", async () => {
+    expect(await code(qwen.detect(open(swap("/api/v1/auths/", fail({ code: "RateLimited", details: "Too many requests" }))).http))).toMatch(/^provider-error: qwen: \/api\/v1\/auths\/ /);
+  });
   it("sends the page's source header with the bearer", async () => {
     const seen: Headers[] = [];
     const http = createHttp(qwen, { storage, scripts: () => [], call: () => undefined, fetch: async (_u, init) => (seen.push(new Headers(init.headers)), new Response("{}")) });
