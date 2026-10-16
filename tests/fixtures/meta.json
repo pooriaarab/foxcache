@@ -1,0 +1,35 @@
+{
+ "provider": "meta",
+ "origin": "https://www.meta.ai",
+ "note": "Synthetic data in the www.meta.ai Relay shapes (docs/providers/meta.md). No real chat. The E2E sees no POST body, so the plain POST answer holds the list (pinnedConversations, unpinnedConversations) and one chat (conversation); unit tests answer each doc_id by its exact body.",
+ "routes": {
+  "POST /api/graphql": {
+   "data": {
+    "pinnedConversations": {
+     "edges": [
+      {"node": {"id": "a1b2c3d4-0000-4000-8000-000000000001", "updatedAt": "2026-10-14T09:30:00.000Z", "lastSendMessageTimestampMs": 1760434200000, "conversationId": "a1b2c3d4-0000-4000-8000-000000000001", "title": "Porto weekend", "displayTitle": "Porto weekend", "pinned": true, "__typename": "Conversation"}, "cursor": "p1"}
+     ],
+     "pageInfo": {"endCursor": "p1", "hasNextPage": false}
+    },
+    "unpinnedConversations": {
+     "edges": [
+      {"node": {"id": "a1b2c3d4-0000-4000-8000-000000000002", "updatedAt": "2026-10-13T18:00:00.000Z", "lastSendMessageTimestampMs": 1760378400000, "conversationId": "a1b2c3d4-0000-4000-8000-000000000002", "title": "<script>alert(1)</script> soup", "displayTitle": "<script>alert(1)</script> soup", "pinned": false, "__typename": "Conversation"}, "cursor": "u1"}
+     ],
+     "pageInfo": {"endCursor": "u1", "hasNextPage": false}
+    },
+    "conversation": {
+     "id": "a1b2c3d4-0000-4000-8000-000000000001",
+     "isUnread": false,
+     "latestBranchPath": "1",
+     "messages": {
+      "edges": [
+       {"node": {"id": "m1", "__typename": "UserMessage", "turnId": "t1", "branchPath": "1", "content": "Two days in Porto?", "userContent": "Two days in Porto?", "createdAt": "2026-10-14T09:29:00.000Z", "userCreatedAt": "2026-10-14T09:29:00.000Z"}, "cursor": "c1"},
+       {"node": {"id": "m2", "__typename": "AssistantMessage", "turnId": "t1", "branchPath": "1", "content": "Day 1: Ribeira. Day 2: Foz.", "createdAt": "2026-10-14T09:30:00.000Z", "assistantCreatedAt": "2026-10-14T09:30:00.000Z", "streamingState": "DONE"}, "cursor": "c2"}
+      ],
+      "pageInfo": {"hasPreviousPage": false, "startCursor": "c1"}
+     }
+    }
+   }
+  }
+ }
+}
