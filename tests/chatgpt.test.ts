@@ -43,9 +43,9 @@ describe("chatgpt detect", () => {
 });
 
 describe("chatgpt list", () => {
-  it("pages the main list, the archived list and each project's list", async () => {
+  it("pages the main list, the archived list, each project's list and the Codex tasks", async () => {
     const f = open();
-    expect(await listAll(f.http)).toEqual([A, C, B]);
+    expect(await listAll(f.http)).toEqual([A, C, B, "task_e_0000000000000000000000000000c0d1", "task_e_0000000000000000000000000000c0d2"]);
     const first = await chatgpt.listConversations(open().http);
     expect(first.items).toEqual([{ id: A, title: "Trip plan", updatedAt: "2026-10-14T18:30:00.654Z" }]);
   });
