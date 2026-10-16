@@ -52,3 +52,4 @@ no other path is called.
 | GENSPARK1 | A path built from a project id, or a changed adapter, calls the delete GET or any other path. | `not-allowed` before any request (H8). A project id goes in the query, never in the path. | `tests/genspark.test.ts`, E2E |
 | GENSPARK2 | An answer has a `status` other than 0. | `provider-error` with the status. | `tests/genspark.test.ts` |
 | GENSPARK3 | The site ignores `offset` and repeats a full page. | The capture ends with `pagination-loop` (C4). | `tests/genspark.test.ts` |
+| GENSPARK40 | An answer with a `status` other than 0 carries a `message`, which may echo back site text (a prompt, a project name, a token). | `provider-error` names the path and a numeric status only, never the message, so the text stays out of the checkpoint and the popup. | `tests/genspark.test.ts` |
