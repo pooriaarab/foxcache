@@ -84,6 +84,6 @@ describe("huggingchat conversations", () => {
     expect(f.calls).toEqual([]);
   });
   it("throws too-large on a huge answer", async () => {
-    expect(await code(huggingchat.getConversation(createHttp(huggingchat, { fetch: hugeFetch, storage: { getItem: () => null }, cookie: () => "", scripts: () => [], call: () => undefined }), stub(H1)))).toMatch(/^too-large: /);
+    expect(await code(huggingchat.getConversation(createHttp(huggingchat, { fetch: hugeFetch, storage: { getItem: () => null }, scripts: () => [], call: () => undefined }), stub(H1)))).toMatch(/^too-large: /);
   });
 });

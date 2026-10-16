@@ -72,7 +72,7 @@ describe("zai conversations", () => {
     expect(f.calls).toEqual([]);
   });
   it("throws too-large on a huge answer", async () => {
-    expect(await code(zai.getConversation(createHttp(zai, { fetch: hugeFetch, storage, cookie: () => "", scripts: () => [], call: () => undefined }), stub(Z1)))).toMatch(/^too-large: /);
+    expect(await code(zai.getConversation(createHttp(zai, { fetch: hugeFetch, storage, scripts: () => [], call: () => undefined }), stub(Z1)))).toMatch(/^too-large: /);
   });
 });
 
