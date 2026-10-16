@@ -34,7 +34,8 @@
     "https://api.individual.githubcopilot.com/*",
     "https://www.kimi.com/*",
     "https://www.doubao.com/*",
-    "https://app.notion.com/*"
+    "https://app.notion.com/*",
+    "https://assistant.kagi.com/*"
   ],
   "background": {
     "scripts": [
