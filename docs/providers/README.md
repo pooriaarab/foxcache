@@ -6,7 +6,6 @@
 | ChatGPT Codex tasks | https://chatgpt.com | yes, in the ChatGPT adapter | [codex.md](codex.md) |
 | Claude | https://claude.ai | yes | [claude.md](claude.md) |
 | Le Chat (Mistral) | https://chat.mistral.ai | yes, conversations only | [mistral.md](mistral.md) |
-| Gemini | https://gemini.google.com | no: every read is a POST | [gemini.md](gemini.md) |
 | DeepSeek | https://chat.deepseek.com | yes, conversations only | [deepseek.md](deepseek.md) |
 | Grok | https://grok.com | yes, conversations only; the message text is one POST read | [grok.md](grok.md) |
 | Perplexity | https://www.perplexity.ai | yes, conversations and memories; the list and the memories are POST reads | [perplexity.md](perplexity.md) |
@@ -21,13 +20,13 @@
 | Z.ai | https://chat.z.ai | yes: conversations, custom instructions | [zai.md](zai.md) |
 | HuggingChat | https://huggingface.co (under /chat) | yes, conversations only | [huggingchat.md](huggingchat.md) |
 | Genspark | https://www.genspark.ai | yes, conversations only; exact paths only | [genspark.md](genspark.md) |
+| Gemini | https://gemini.google.com | yes: conversations, Gems, saved info | [gemini.md](gemini.md) |
 
 foxcache sends only the reads each adapter lists (`src/reads.ts`): exact
 GET paths, and POST calls whose body names a read operation, each
 checked by hand against its source. ChatGPT, Claude, Le Chat, DeepSeek,
 Kagi Assistant, Qwen Chat, Z.ai, HuggingChat and Genspark send GET only.
-Grok, Perplexity, Kimi, Doubao, Notion AI, Poe and Meta AI read by POST,
-each on its own read paths or commands. Gemini reads by POST, so it
-needs its list of read-only POST calls before it gets an adapter.
+Grok, Perplexity, Kimi, Doubao, Notion AI, Poe, Meta AI and Gemini read
+by POST, each on its own read paths, commands or rpc ids.
 
 To add a provider, follow [ADDING.md](ADDING.md).

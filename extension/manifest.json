@@ -41,7 +41,8 @@
     "https://chat.qwen.ai/*",
     "https://chat.z.ai/*",
     "https://huggingface.co/*",
-    "https://www.genspark.ai/*"
+    "https://www.genspark.ai/*",
+    "https://gemini.google.com/*"
   ],
   "background": {
     "scripts": [
