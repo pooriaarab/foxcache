@@ -28,16 +28,10 @@ const BOT_CHAT = 3;
 const TEXT_BLOCK = 10000;
 const read = (c: typeof LIST, source: string) => ({ method: "POST" as const, path: c.path, query: Object.keys(QUERY), body: { type: "json" as const, match: { cmd: c.cmd } }, headers: HEADERS, source });
 
-/** status_code values that are known not to mean "signed out": a missing header (H16) and the risk captcha (D40). */
-const NOT_SESSION = new Set([712012002, 710022004]);
-
-/** One pull, and its status_code. An error comes with HTTP 200 and a status_code that is not 0 (D2). */
-async function send(http: Http, c: typeof LIST, payload: Obj): Promise<{ answer: Obj; status: number }> {
-  const answer = r.obj(await http.post(c.path, { cmd: c.cmd, uplink_body: { [c.up]: payload }, sequence_id: crypto.randomUUID(), channel: 2, version: "1" }, QUERY), c.path);
-  return { answer, status: r.num(answer.status_code, `${c.path} status_code`) };
-}
+/** One pull. An error comes with HTTP 200 and a status_code that is not 0 (D2). */
 async function pull(http: Http, c: typeof LIST, payload: Obj): Promise<Obj> {
-  const { answer, status } = await send(http, c, payload);
+  const answer = r.obj(await http.post(c.path, { cmd: c.cmd, uplink_body: { [c.up]: payload }, sequence_id: crypto.randomUUID(), channel: 2, version: "1" }, QUERY), c.path);
+  const status = r.num(answer.status_code, `${c.path} status_code`);
   if (status !== 0) throw new FoxcacheError("provider-error", `doubao: ${c.path} answered status ${status}.`);
   return r.obj(r.obj(answer.downlink_body, `${c.path} downlink_body`)[c.down], `${c.path} ${c.down}`);
 }
@@ -105,11 +99,9 @@ export const doubao: Adapter = {
 
   async detect(http) {
     try {
-      const { status } = await send(http, LIST, { api_version: 1, conv_version: 0, direction: FROM_LATEST, limit: 1, message_count_per_conv: 0, option: LIST_OPTION });
-      if (status === 0) return true;
-      // VESTI: an expired session answers a status_code that is not 0; no source gives the code (D40).
-      if (NOT_SESSION.has(status)) throw new FoxcacheError("provider-error", `doubao: ${LIST.path} answered status ${status}.`);
-      return false;
+      // Only the documented 401 means signed out; no source names a status_code for it, so any code that is not 0 is provider-error (D40).
+      await pull(http, LIST, { api_version: 1, conv_version: 0, direction: FROM_LATEST, limit: 1, message_count_per_conv: 0, option: LIST_OPTION });
+      return true;
     } catch (error) {
       if (error instanceof FoxcacheError && error.code === "logged-out") return false;
       throw error;
