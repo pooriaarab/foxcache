@@ -7,7 +7,13 @@ import { deepseek } from "./deepseek.js";
 import { mistral } from "./mistral.js";
 import type { Adapter } from "./types.js";
 
-export const ADAPTERS: readonly Adapter[] = Object.freeze([chatgpt, claude, mistral, deepseek]);
+// One adapter per line: docs/providers/ADDING.md.
+export const ADAPTERS: readonly Adapter[] = Object.freeze([
+  chatgpt,
+  claude,
+  mistral,
+  deepseek,
+]);
 
 /** The adapter for a provider id. Throws for a provider with no adapter. */
 export function adapterFor(id: ProviderId | string): Adapter {
