@@ -46,7 +46,9 @@ its reads (`src/reads.ts`): the method and exact path of every request, with
 A GET is not trusted to be safe, since some sites delete with one. A POST
 read also names its operation: the GraphQL `queryName` or hash, the IM
 `cmd`, or the batchexecute rpc ids, so the same endpoint cannot carry a
-write. `http` refuses any other request before it is sent. An adapter cannot
+write. A read whose answer is not JSON (batchexecute, stream frames, HTML) names a
+`decode` for the text, under the same size cap. `http` refuses any other
+request before it is sent. An adapter cannot
 send, edit or delete anything on the provider. A site whose page reads from
 another host names it in `apiOrigins`; those reads also go from the tab, as
 the page's own calls do ([cors.md](cors.md)).

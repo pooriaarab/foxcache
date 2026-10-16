@@ -50,6 +50,9 @@ describe("H11 a wrong reads table", () => {
   it("takes the same GET path on two origins", () => {
     expect(() => createHttp({ origin: ORIGIN, auth: cookie, apiOrigins: ["https://api.example"], reads: defineReads([get("/a"), get("/a", { origin: "https://api.example" })]) }, page)).not.toThrow();
   });
+  it("refuses a decode that is not a function", () => {
+    expect(open(defineReads([get("/a", { decode: "json" as never })]))).toThrow(/decode/);
+  });
   it("refuses a method it does not know", () => {
     expect(open(defineReads([get("/a", { method: "DELETE" as "GET" })]))).toThrow(/method/);
   });

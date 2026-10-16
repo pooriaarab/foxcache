@@ -18,9 +18,9 @@ export { type Body, type BodyRule, type Query, type Read, type Site, defineReads
 export const MAX_RESPONSE_BYTES = 50 * 1024 * 1024;
 
 export interface Http {
-  /** GET a path of the origin that is one of the site's reads, and parse the JSON answer. */
+  /** GET a path of the origin that is one of the site's reads, and parse the JSON answer (or the read's decode). */
   get(path: string, query?: Query): Promise<unknown>;
-  /** POST a body that one of the site's POST reads allows, and parse the JSON answer. */
+  /** POST a body that one of the site's POST reads allows, and parse the JSON answer (or the read's decode). */
   post(path: string, body: Body, query?: Query): Promise<unknown>;
 }
 /** A site with the way it authenticates. */
@@ -79,7 +79,7 @@ export function createHttp(site: HttpSite, page: Page): Http {
     if (readsPath(site, path)) throw new Error(`The reads of ${origin} are wrong: a read names ${path}, which holds the ${site.auth.kind} token.`);
   }
 
-  async function send({ url, body }: Prepared, parts: AuthParts = {}): Promise<unknown> {
+  async function send({ url, body, decode }: Prepared, parts: AuthParts = {}): Promise<unknown> {
     const u = new URL(url);
     for (const [k, v] of Object.entries(parts.query ?? {})) u.searchParams.set(k, v);
     let wire = body?.text;
@@ -89,7 +89,7 @@ export function createHttp(site: HttpSite, page: Page): Http {
       for (const [k, v] of Object.entries(parts.form)) form.set(k, v);
       wire = form.toString();
     }
-    const headers: Record<string, string> = { accept: "application/json", ...parts.headers };
+    const headers: Record<string, string> = { accept: decode ? "*/*" : "application/json", ...parts.headers };
     if (body) headers["content-type"] = body.type;
     // Never the query: an auth kind may put a token there.
     const where = `${u.origin}${u.pathname}`;
@@ -107,6 +107,15 @@ export function createHttp(site: HttpSite, page: Page): Http {
     if (res.status === 404) throw new FoxcacheError("not-found", `${where} answered 404.`, { status: 404 });
     if (res.status < 200 || res.status >= 300) throw new FoxcacheError("provider-error", `${where} answered ${res.status}.`, { status: res.status });
     const text = await readCapped(res, where);
+    if (decode) {
+      try {
+        return decode(text);
+      } catch (error) {
+        // Not the decoder's message: it may quote the answer, and the answer may hold a key (H15).
+        if (error instanceof FoxcacheError) throw error;
+        throw new FoxcacheError("provider-schema", `${where} answered in a shape foxcache cannot read. The site may have changed; foxcache needs an update.`);
+      }
+    }
     try {
       return JSON.parse(text);
     } catch {
