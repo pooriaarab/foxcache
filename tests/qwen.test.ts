@@ -7,6 +7,7 @@ import { type Routes, fixture, fixtureHttp } from "./fixture-http.js";
 const Q1 = "7a1e0000-0000-4000-8000-000000000001";
 const Q2 = "7a1e0000-0000-4000-8000-000000000002";
 const Q3 = "7a1e0000-0000-4000-8000-000000000003";
+const Q4 = "7a1e0000-0000-4000-8000-000000000004";
 const storage = { getItem: (k: string) => (k === "token" ? "synthetic-token" : null) };
 const open = (routes: Routes = fixture("qwen")) => fixtureHttp(qwen, routes, storage);
 const stub = (id: string) => ({ id, title: "", updatedAt: "" });
@@ -46,8 +47,19 @@ describe("qwen list", () => {
       ids.push(page.items.map((s) => s.id));
       cursor = page.next;
     } while (cursor);
-    expect(ids).toEqual([[Q1, Q2], [], [Q3], []]);
-    expect(f.calls.filter((c) => c.startsWith("/api/v2/chats/?"))).toEqual(["/api/v2/chats/?page=1", "/api/v2/chats/?page=2", "/api/v2/chats/?page=1&project_id=proj-7a1e-0001", "/api/v2/chats/?page=2&project_id=proj-7a1e-0001"]);
+    expect(ids).toEqual([[Q4, Q1, Q2], [], [Q3], []]);
+    expect(f.calls.filter((c) => c.startsWith("/api/v2/chats/"))).toEqual(["/api/v2/chats/pinned", "/api/v2/chats/?page=1", "/api/v2/chats/?page=2", "/api/v2/chats/?page=1&project_id=proj-7a1e-0001", "/api/v2/chats/?page=2&project_id=proj-7a1e-0001"]);
+  });
+  it("QWEN40 reads the pinned chats once, also when the main list holds them", async () => {
+    const base = fixture("qwen");
+    const apart = await captureAll(qwen, open(base).http);
+    expect([apart.checkpoint.status, apart.checkpoint.counts.conversations]).toEqual(["done", 4]);
+    const page1 = base["/api/v2/chats/?page=1"] as { data: unknown[] };
+    const pinned = base["/api/v2/chats/pinned"] as { data: unknown[] };
+    const both = await captureAll(qwen, open({ ...base, "/api/v2/chats/?page=1": { ...page1, data: [...pinned.data, ...page1.data] } }).http);
+    expect([both.checkpoint.status, both.checkpoint.counts.conversations]).toEqual(["done", 4]);
+    const same = await captureAll(qwen, open({ ...base, "/api/v2/chats/?page=1": pinned }).http);
+    expect([same.checkpoint.status, same.checkpoint.error?.code]).toEqual(["done", undefined]);
   });
   it("throws provider-schema when the list shape drifts", async () => {
     expect(await code(qwen.listConversations(open(swap("/api/v2/chats/?page=1", { success: true, data: { chats: [] } })).http))).toMatch(/^provider-schema: qwen: chats is not a list/);
@@ -58,7 +70,7 @@ describe("qwen list", () => {
   });
   it("ends a capture with pagination-loop when a page comes again", async () => {
     const routes = fixture("qwen");
-    const { checkpoint } = await captureAll(qwen, open({ ...routes, "/api/v2/chats/?page=2": routes["/api/v2/chats/?page=1"] }).http);
+    const { checkpoint } = await captureAll(qwen, open({ ...routes, "/api/v2/chats/?page=2": routes["/api/v2/chats/?page=1"], "/api/v2/chats/?page=3": routes["/api/v2/chats/?page=1"] }).http);
     expect([checkpoint.status, checkpoint.error?.code]).toEqual(["failed", "pagination-loop"]);
   });
 });

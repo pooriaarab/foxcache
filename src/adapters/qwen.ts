@@ -28,7 +28,7 @@ async function v2(http: Http, path: string, query?: Query): Promise<unknown> {
   throw new FoxcacheError("provider-error", `qwen: ${path} failed: ${why}`);
 }
 
-/** The main list (chats outside projects), then each project's list, page by page from 1; an empty page ends a list. */
+/** The pinned chats with main page 1, then the main list (chats outside projects), then each project's list, page by page from 1; an empty page ends a list. */
 interface Cursor {
   page: number;
   projects?: string[];
@@ -54,6 +54,7 @@ export const qwen: Adapter = {
   reads: defineReads([
     { method: "GET", path: "/api/v1/auths/", source: `${MA}/extractor/api_client.py#L8` },
     { method: "GET", path: "/api/v2/chats/", query: ["page", "project_id"], source: `${MA}/extractor/api_client.py#L74-L164` },
+    { method: "GET", path: "/api/v2/chats/pinned", source: `${MA}/extractor/api_client.py#L154-L163` },
     { method: "GET", path: "/api/v2/chats/{id}", source: "https://github.com/R1y3n/qwenDataExport/blob/6a727185744e83c342b615380d153dadf9056fb3/main.py#L111-L126" },
     { method: "GET", path: "/api/v2/projects/", source: `${MA}/extractor/api_client.py#L171-L176` },
     { method: "GET", path: "/api/v2/memories/", query: ["page_size", "page_num"], source: `${MA}/extractor/account_memory.py#L23-L40` },
@@ -77,9 +78,12 @@ export const qwen: Adapter = {
   async listConversations(http, cursor) {
     const c: Cursor = cursor ? (JSON.parse(cursor) as Cursor) : { page: 1 };
     const project = c.projects?.[c.at ?? 0];
+    // Pinned chats have a list of their own, which the main list may or may not repeat: once, with page 1 (QWEN40).
+    const pinned = cursor === undefined ? r.arr(await v2(http, "/api/v2/chats/pinned"), "pinned").map((s, i) => stubOf(r.obj(s, `pinned[${i}]`), `pinned[${i}]`)) : [];
     const rows = r.arr(await v2(http, "/api/v2/chats/", { page: c.page, project_id: project }), "chats").map((s, i) => r.obj(s, `chats[${i}]`));
-    const items = rows.map((s, i) => stubOf(s, `chats[${i}]`));
-    if (items.length) return { items, next: JSON.stringify({ ...c, page: c.page + 1 }) };
+    const listed = rows.map((s, i) => stubOf(s, `chats[${i}]`));
+    const items = [...pinned, ...listed.filter((s) => !pinned.some((p) => p.id === s.id))];
+    if (listed.length) return { items, next: JSON.stringify({ ...c, page: c.page + 1 }) };
     const projects = c.projects ?? (await projectRows(http)).map((p, i) => r.str(p.id, `projects[${i}].id`));
     const at = c.projects ? (c.at ?? 0) + 1 : 0;
     return { items, next: at < projects.length ? JSON.stringify({ page: 1, projects, at }) : undefined };
