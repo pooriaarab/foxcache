@@ -14,7 +14,13 @@ export const fixture = (name: string): Routes => JSON.parse(readFileSync(new URL
 /** A status reply in a fixture: { "$status": 401 }. */
 const statusOf = (body: unknown) => (typeof body === "object" && body !== null && "$status" in body ? Number((body as { $status: unknown }).$status) : 200);
 
-export function fixtureHttp(site: HttpSite, routes: Routes, storage: { getItem(k: string): string | null } = { getItem: () => null }) {
+/** The page parts an auth kind may read: inline scripts and the functions the page set on window. */
+export interface FixturePage {
+  scripts?: string[];
+  globals?: Record<string, () => unknown>;
+}
+
+export function fixtureHttp(site: HttpSite, routes: Routes, storage: { getItem(k: string): string | null } = { getItem: () => null }, page: FixturePage = {}) {
   const calls: string[] = [];
   const fetch = async (url: string, init: RequestInit) => {
     const u = new URL(url);
@@ -26,5 +32,5 @@ export function fixtureHttp(site: HttpSite, routes: Routes, storage: { getItem(k
     if (body === undefined) return new Response('{"error":"not in the fixture"}', { status: 404 });
     return new Response(JSON.stringify(body), { status: statusOf(body), headers: { "content-type": "application/json" } });
   };
-  return { http: createHttp(site, { fetch, storage, cookie: () => "" }), calls };
+  return { http: createHttp(site, { fetch, storage, cookie: () => "", scripts: () => page.scripts ?? [], call: (name) => page.globals?.[name]?.() }), calls };
 }

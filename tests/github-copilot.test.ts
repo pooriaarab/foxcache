@@ -32,7 +32,7 @@ describe("github-copilot detect", () => {
       return new Response('{"threads":[]}');
     };
     const { createHttp } = await import("../src/index.js");
-    expect(await githubCopilot.detect(createHttp(githubCopilot, { fetch, storage, cookie: () => "" }))).toBe(true);
+    expect(await githubCopilot.detect(createHttp(githubCopilot, { fetch, storage, cookie: () => "", scripts: () => [], call: () => undefined }))).toBe(true);
     expect(seen).toEqual({ url: `${API}${LIST}`, auth: `GitHub-Bearer ${TOKEN}` });
   });
   it("GC2 is signed out with no token, or when the API answers 401 (an expired token)", async () => {

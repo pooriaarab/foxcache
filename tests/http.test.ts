@@ -5,8 +5,8 @@ import { reader } from "../src/adapters/read.js";
 const ORIGIN = "https://chatgpt.com";
 const SOURCE = "https://example.test/docs";
 const get = (path: string, query?: string[]): Read => ({ method: "GET", path, ...(query ? { query } : {}), source: SOURCE });
-const NO_STORAGE = { getItem: () => null };
-const NO_COOKIE = () => "";
+/** A page with no storage, no cookie, no scripts and no globals. */
+const NO_PAGE = { storage: { getItem: () => null }, cookie: () => "", scripts: () => [], call: () => undefined };
 const schema = reader("test");
 /** A decoder that finds a changed shape. */
 const strict = (): never => {
@@ -30,7 +30,7 @@ const fReq = (...ids: string[]) => JSON.stringify([ids.map((id) => [id, "[]", nu
 /** A batchexecute read that decodes its answer. */
 const BATCH_READS = defineReads([{ method: "POST", path: "/batch", body: { type: "batchexecute", rpcids: ["MaZiqc"] }, query: ["rpcids"], decode: (text) => batchexecute(text), source: SOURCE }]);
 /** An Http on ORIGIN with BATCH_READS. */
-const openBatch = (fetch: (url: string, init: RequestInit) => Promise<Response>) => createHttp({ origin: ORIGIN, auth: cookie, reads: BATCH_READS }, { fetch, storage: NO_STORAGE, cookie: NO_COOKIE });
+const openBatch = (fetch: (url: string, init: RequestInit) => Promise<Response>) => createHttp({ origin: ORIGIN, auth: cookie, reads: BATCH_READS }, { fetch, ...NO_PAGE });
 /** One batchexecute call of MaZiqc. */
 const call = (http: ReturnType<typeof openBatch>) => http.post("/batch", { "f.req": JSON.stringify([[["MaZiqc", "[]", null, "generic"]]]) }, { rpcids: "MaZiqc" });
 /** Google's batchexecute answer: a )]}' line, then length-prefixed JSON chunks. This decoder reads the first chunk. */
@@ -39,7 +39,7 @@ const batchexecute = (text: string): unknown => {
   return JSON.parse(text.slice(5).trim().split("\n")[1]!);
 };
 /** An Http on ORIGIN with READS and cookie auth. */
-const open = (fetch: (url: string, init: RequestInit) => Promise<Response>) => createHttp({ origin: ORIGIN, reads: READS, auth: cookie }, { fetch, storage: NO_STORAGE, cookie: NO_COOKIE });
+const open = (fetch: (url: string, init: RequestInit) => Promise<Response>) => createHttp({ origin: ORIGIN, reads: READS, auth: cookie }, { fetch, ...NO_PAGE });
 
 interface Call {
   url: string;
@@ -182,7 +182,7 @@ describe("H16 the fixed headers of a read", () => {
   const site = (auth = cookie) => ({ origin: ORIGIN, reads, auth });
   it("sends them on that read only, with its content-type in place of the body rule's", async () => {
     const f = fakeFetch({ "/im/pull": { body: "{}" }, "/im/other": { body: "{}" } });
-    const http = createHttp(site(), { fetch: f.fetch, storage: NO_STORAGE, cookie: NO_COOKIE });
+    const http = createHttp(site(), { fetch: f.fetch, ...NO_PAGE });
     await http.post("/im/pull", { cmd: 3100 });
     await http.post("/im/other", { cmd: 3100 });
     const [pull, other] = f.calls.map((c) => new Headers(c.init.headers));
@@ -191,7 +191,7 @@ describe("H16 the fixed headers of a read", () => {
   });
   it("keeps the auth header next to them", async () => {
     const f = fakeFetch({ "/im/pull": { body: "{}" } });
-    const http = createHttp(site(localStorageBearer({ key: "t" })), { fetch: f.fetch, storage: { getItem: () => "synthetic-token" }, cookie: NO_COOKIE });
+    const http = createHttp(site(localStorageBearer({ key: "t" })), { fetch: f.fetch, ...NO_PAGE, storage: { getItem: () => "synthetic-token" } });
     await http.post("/im/pull", { cmd: 3100 });
     expect(new Headers(f.calls[0]!.init.headers).get("authorization")).toBe("Bearer synthetic-token");
   });
@@ -217,7 +217,7 @@ describe("H12 a read on an API origin", () => {
   let calls: Call[] = [];
   it("sends it from the tab with the page cookies", async () => {
     calls = [];
-    const http = createHttp(site, { fetch: answer, storage: NO_STORAGE, cookie: NO_COOKIE });
+    const http = createHttp(site, { fetch: answer, ...NO_PAGE });
     expect(await http.get(`${API}/github/chat/threads`, { limit: 5 })).toEqual({ ok: true });
     expect(await http.get(`${NEO}/chats/c1`)).toEqual({ ok: true });
     expect(calls.map((c) => c.url)).toEqual([`${API}/github/chat/threads?limit=5`, `${NEO}/chats/c1`]);
@@ -235,7 +235,7 @@ describe("H12 a read on an API origin", () => {
     ["a dot segment", `${NEO}/chats/../chats/c1`],
   ])("refuses %s before any request", async (_, target) => {
     calls = [];
-    expect((await err(createHttp(site, { fetch: answer, storage: NO_STORAGE, cookie: NO_COOKIE }).get(target))).code).toBe("not-allowed");
+    expect((await err(createHttp(site, { fetch: answer, ...NO_PAGE }).get(target))).code).toBe("not-allowed");
     expect(calls).toHaveLength(0);
   });
 });
@@ -324,7 +324,7 @@ describe("H15 an answer that is not JSON", () => {
   });
   it("keeps the size cap", async () => {
     let decoded = false;
-    const http = createHttp({ origin: ORIGIN, auth: cookie, reads: defineReads([{ method: "GET", path: "/a", decode: () => (decoded = true), source: SOURCE }]) }, { fetch: fakeFetch({ "/a": { body: "x", headers: { "content-length": String(MAX_RESPONSE_BYTES + 1) } } }).fetch, storage: NO_STORAGE, cookie: NO_COOKIE });
+    const http = createHttp({ origin: ORIGIN, auth: cookie, reads: defineReads([{ method: "GET", path: "/a", decode: () => (decoded = true), source: SOURCE }]) }, { fetch: fakeFetch({ "/a": { body: "x", headers: { "content-length": String(MAX_RESPONSE_BYTES + 1) } } }).fetch, ...NO_PAGE });
     expect([(await err(http.get("/a"))).code, decoded]).toEqual(["too-large", false]);
   });
 });

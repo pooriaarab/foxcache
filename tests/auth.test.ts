@@ -1,7 +1,8 @@
-// H5, H7 and H14 in docs/failure-modes.md: each auth kind keeps its token
+// H5, H7, H14 and H17 in docs/failure-modes.md: each auth kind keeps its token
 // in the tab, inside http, and sends it only with a read.
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { type Auth, FoxcacheError, type Read, chatgpt, cookie, cookieBearer, createHttp, defineReads, localStorageBearer, pageSession } from "../src/index.js";
+import { type Auth, FoxcacheError, type Read, chatgpt, cookie, cookieBearer, createHttp, defineReads, localStorageBearer, pageFormkey, pageSession } from "../src/index.js";
 
 const ORIGIN = "https://chat.example";
 const TOKEN = "eyJ-synthetic-secret-token";
@@ -32,11 +33,21 @@ function fakeFetch(routes: Record<string, string | { status: number; body?: stri
   };
   return { fetch, calls };
 }
+/** A page with no storage, no cookie, no scripts and no globals. */
+const NO_PAGE = { storage: { getItem: () => null }, cookie: () => "", scripts: () => [], call: () => undefined };
+const header = (c: Call | undefined, name: string) => new Headers(c?.init.headers).get(name);
+const md5 = (text: string) => createHash("md5").update(text, "utf8").digest("hex");
 const bearerOf = (c: Call | undefined) => new Headers(c?.init.headers).get("authorization");
 
-function open(auth: Auth, fetch: (url: string, init: RequestInit) => Promise<Response>, page: { storage?: Record<string, string>; cookie?: string } = {}) {
+interface PageParts {
+  storage?: Record<string, string>;
+  cookie?: string;
+  scripts?: string[];
+  globals?: Record<string, () => unknown>;
+}
+function open(auth: Auth, fetch: (url: string, init: RequestInit) => Promise<Response>, page: PageParts = {}) {
   const storage = { getItem: (k: string) => page.storage?.[k] ?? null };
-  return createHttp({ origin: ORIGIN, reads: READS, auth }, { fetch, storage, cookie: () => page.cookie ?? "" });
+  return createHttp({ origin: ORIGIN, reads: READS, auth }, { fetch, storage, cookie: () => page.cookie ?? "", scripts: () => page.scripts ?? [], call: (name) => page.globals?.[name]?.() });
 }
 
 async function err(p: Promise<unknown>): Promise<FoxcacheError> {
@@ -75,14 +86,14 @@ describe("page-session (ChatGPT)", () => {
   });
   it("H7 refuses the session answer under every spelling, before any request", async () => {
     const f = fakeFetch(routes);
-    const http = createHttp(chatgpt, { fetch: f.fetch, storage: { getItem: () => null }, cookie: () => "" });
+    const http = createHttp(chatgpt, { fetch: f.fetch, ...NO_PAGE });
     const paths = ["/api/auth/session", "/api/auth/session/", "/api/auth/%73ession", "/api/auth/session;x", "/api/AUTH/session", "/backend-api/..%2Fapi%2Fauth%2Fsession", "/backend-api/%2e%2e/api/auth/session", "/backend-api/x%5C..%5Capi", "/backend-api"];
     for (const path of paths) expect((await err(http.get(path))).code, path).toBe("not-allowed");
     expect(f.calls).toHaveLength(0);
   });
   it.each([["/api/auth/session"], ["/api/auth/{name}"], ["/api/{a}/{b}"]])("H7 refuses a reads table with the read %s", (path) => {
     const reads = defineReads([{ method: "GET", path, source: SOURCE } as Read]);
-    expect(() => createHttp({ origin: ORIGIN, reads, auth: session }, { fetch: fakeFetch({}).fetch, storage: { getItem: () => null }, cookie: () => "" })).toThrow(/token/);
+    expect(() => createHttp({ origin: ORIGIN, reads, auth: session }, { fetch: fakeFetch({}).fetch, ...NO_PAGE })).toThrow(/token/);
   });
   it("H14 throws logged-out when the session has no token, and sends no read", async () => {
     for (const body of ["{}", '{"accessToken":""}', '{"accessToken":5}', "null"]) {
@@ -153,6 +164,61 @@ describe("cookie-bearer", () => {
     const f = fakeFetch({ "/api/me": "{}" });
     const e = await err(open(cookieBearer({ name: "session_id" }), f.fetch, { cookie: jar }).get("/api/me"));
     expect([e.code, leaks(e), f.calls.length]).toEqual(["logged-out", false, 0]);
+  });
+});
+
+describe("page-formkey (Poe)", () => {
+  // A formkey longer than 32 characters: the page keeps the first 32.
+  const KEY = `${TOKEN}-0123456789abcdef`;
+  const SALT = "synthetic-salt";
+  const SCRIPT = 'window.qX7pLm2Rd=function(){return window._k+"x"};';
+  const kind = pageFormkey({ fn: /window\.([a-zA-Z0-9]+)=function\(\)\{return window/, length: 32, header: "poe-formkey", tag: { header: "poe-tag-id", salt: SALT } });
+  const page = (globals: Record<string, () => unknown> = { qX7pLm2Rd: () => KEY }, scripts = ["var other=1;", SCRIPT]): PageParts => ({ scripts, globals });
+
+  it("calls the page function its inline script names, and sends the first 32 characters", async () => {
+    const f = fakeFetch({ "/api/me": "{}" });
+    await open(kind, f.fetch, page()).get("/api/me");
+    expect([header(f.calls[0], "poe-formkey"), header(f.calls[0], "poe-tag-id"), bearerOf(f.calls[0])]).toEqual([KEY.slice(0, 32), null, null]);
+  });
+  it("tags a POST with the md5 of the body as sent, the formkey and the salt", async () => {
+    const f = fakeFetch({ "/api/graph": "{}" });
+    await open(kind, f.fetch, page()).post("/api/graph", { queryName: "ChatListPaginationQuery", variables: { title: "Café <b>" } });
+    const body = String(f.calls[0]!.init.body);
+    expect(header(f.calls[0], "poe-tag-id")).toBe(md5(body + KEY.slice(0, 32) + SALT));
+  });
+  it("calls the page function once per http, and again after a 401", async () => {
+    let n = 0;
+    const f = fakeFetch({ "/api/me": "{}", "/api/fail": (k) => (k === 1 ? { status: 401 } : "{}") });
+    const http = open(kind, f.fetch, page({ qX7pLm2Rd: () => `${KEY}${n++}` }));
+    await http.get("/api/me");
+    await http.get("/api/me");
+    expect(n).toBe(1);
+    await http.get("/api/fail");
+    expect([n, f.calls.length]).toEqual([2, 4]);
+  });
+  it.each([
+    ["no inline script names one", page({}, ["var other=1;"])],
+    ["the named function is not on the page", page({})],
+    ["it gives no text", page({ qX7pLm2Rd: () => ({ key: KEY }) })],
+    ["it gives a shorter key", page({ qX7pLm2Rd: () => KEY.slice(0, 31) })],
+    ["it gives a key with a line break", page({ qX7pLm2Rd: () => `${KEY.slice(0, 20)}\r\nx-evil: 1${KEY}` })],
+    ["it throws a message that quotes the key", page({ qX7pLm2Rd: () => { throw new Error(KEY); } })],
+  ])("H17 throws provider-schema when %s, and sends nothing", async (_, parts) => {
+    const f = fakeFetch({ "/api/me": "{}" });
+    const e = await err(open(kind, f.fetch, parts).get("/api/me"));
+    expect([e.code, leaks(e), f.calls.length]).toEqual(["provider-schema", false, 0]);
+  });
+  it("H17 calls no name that is not a plain identifier", async () => {
+    const called: string[] = [];
+    const loose = pageFormkey({ fn: /window\.(\S+)=function/, length: 32, header: "poe-formkey", tag: { header: "poe-tag-id", salt: SALT } });
+    const f = fakeFetch({ "/api/me": "{}" });
+    const scripts = ['window.a.constructor=function(){return window};'];
+    const e = await err(createHttp({ origin: ORIGIN, reads: READS, auth: loose }, { fetch: f.fetch, ...NO_PAGE, scripts: () => scripts, call: (name) => called.push(name) }).get("/api/me"));
+    expect([e.code, called, f.calls.length]).toEqual(["provider-schema", [], 0]);
+  });
+  it("H5 keeps the formkey out of an error", async () => {
+    const e = await err(open(kind, fakeFetch({ "/api/fail": { status: 500 } }).fetch, page()).get("/api/fail"));
+    expect([e.code, leaks(e)]).toEqual(["provider-error", false]);
   });
 });
 
