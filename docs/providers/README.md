@@ -15,3 +15,5 @@ paths, and POST calls whose body names a read operation, each checked by
 hand against its source. The four adapters above send GET only. Gemini,
 Perplexity and Grok read by POST, so each needs its list of read-only POST
 calls before it gets an adapter.
+
+To add a provider, follow [ADDING.md](ADDING.md).

@@ -4,7 +4,16 @@
 import { FoxcacheError } from "./errors.js";
 
 export const SCHEMA = "foxcache/v1";
-export const PROVIDERS = ["chatgpt", "claude", "mistral", "gemini", "perplexity", "grok", "deepseek"] as const;
+// One id per line, so providers added in parallel do not edit the same line.
+export const PROVIDERS = [
+  "chatgpt",
+  "claude",
+  "mistral",
+  "gemini",
+  "perplexity",
+  "grok",
+  "deepseek",
+] as const;
 export type ProviderId = (typeof PROVIDERS)[number];
 export const ROLES = ["user", "assistant", "system", "tool"] as const;
 export type Role = (typeof ROLES)[number];
