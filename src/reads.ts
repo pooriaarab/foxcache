@@ -103,8 +103,14 @@ const fits = (site: Site, read: Read, method: string, origin: string, path: stri
  */
 export function findRead(site: Site, method: string, url: string): Read | undefined {
   const u = new URL(url);
-  return site.reads.find((r) => fits(site, r, method, u.origin, u.pathname, [...u.searchParams.keys()]));
+  // forEach, not an iterator: in a Firefox content script, searchParams is not iterable.
+  const keys: string[] = [];
+  u.searchParams.forEach((_, k) => keys.push(k));
+  return site.reads.find((r) => fits(site, r, method, u.origin, u.pathname, keys));
 }
+
+/** True when a read of any method on the site's own origin names this path. */
+export const readsPath = (site: Site, path: string): boolean => site.reads.some((r) => r.origin === undefined && matches(r.path, path));
 
 const at = (x: unknown, dotted: string): unknown => dotted.split(".").reduce<unknown>((o, k) => (typeof o === "object" && o !== null && Object.hasOwn(o, k) ? (o as Record<string, unknown>)[k] : undefined), x);
 

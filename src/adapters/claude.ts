@@ -1,6 +1,7 @@
 // claude.ai. Cookies only. Endpoints and sources: docs/providers/claude.md.
 import { FoxcacheError } from "../errors.js";
 import type { Http } from "../http.js";
+import { cookie } from "../auth/cookie.js";
 import { defineReads } from "../reads.js";
 import type { Attachment, Message, Project } from "../schema.js";
 import type { Adapter, Stub } from "./types.js";
@@ -69,6 +70,7 @@ export const claude: Adapter = {
   id: "claude",
   label: "Claude",
   origin: "https://claude.ai",
+  auth: cookie,
   reads: defineReads([
     { method: "GET", path: "/api/organizations", source: `${AV}#L86-L101` },
     { method: "GET", path: "/api/organizations/{org}/chat_conversations_v2", query: ["limit", "offset", "consistency"], source: `${AV}#L102-L123` },

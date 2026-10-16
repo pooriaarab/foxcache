@@ -3,6 +3,7 @@
 // Endpoints and sources: docs/providers/mistral.md.
 import { FoxcacheError } from "../errors.js";
 import type { Http } from "../http.js";
+import { cookie } from "../auth/cookie.js";
 import { defineReads } from "../reads.js";
 import { MAX_MESSAGES, type Message, type Role } from "../schema.js";
 import type { Adapter } from "./types.js";
@@ -47,6 +48,7 @@ export const mistral: Adapter = {
   id: "mistral",
   label: "Le Chat",
   origin: "https://chat.mistral.ai",
+  auth: cookie,
   // Each tRPC procedure, or batch of them, is its own path.
   reads: defineReads([
     { method: "GET", path: "/api/trpc/user.session", query: ["batch", "input"], source: "https://github.com/vkop007/mikacli/blob/324874123916ca5e687531cd9b50345af68f9eac/src/platforms/llm/mistral/service.ts#L311-L313" },

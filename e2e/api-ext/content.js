@@ -4,6 +4,7 @@
 // reads from a same-site API host, a cross-site one, one whose CORS does
 // not allow the page, and one it does not list, then puts the outcomes on
 // the page for the test to read.
+import { cookie } from "../../src/auth/cookie.ts";
 import { createHttp, defineReads } from "../../src/http.ts";
 
 const SAME = "https://api.chatgpt.com";
@@ -12,6 +13,7 @@ const SOURCE = "https://github.com/pooriaarab/foxcache/blob/main/docs/cors.md";
 const site = {
   origin: location.origin,
   apiOrigins: [SAME, CROSS],
+  auth: cookie,
   reads: defineReads([
     { method: "GET", origin: SAME, path: "/threads", source: SOURCE },
     { method: "GET", origin: CROSS, path: "/threads", source: SOURCE },
