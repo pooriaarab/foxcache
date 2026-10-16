@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FoxcacheError, MAX_RESPONSE_BYTES, type Read, cookie, createHttp, defineReads } from "../src/index.js";
+import { FoxcacheError, MAX_RESPONSE_BYTES, type Read, cookie, createHttp, defineReads, localStorageBearer } from "../src/index.js";
 import { reader } from "../src/adapters/read.js";
 
 const ORIGIN = "https://chatgpt.com";
@@ -169,6 +169,31 @@ describe("H9 a POST that is not a read", () => {
     const f = fakeFetch(routes);
     expect((await err(open(f.fetch).post(BATCH, { "f.req": req }, { rpcids }))).code).toBe("not-allowed");
     expect(f.calls).toHaveLength(0);
+  });
+});
+
+describe("H16 the fixed headers of a read", () => {
+  // Doubao's page sends these on its IM reads (docs/providers/doubao.md).
+  const IM = { "content-type": "application/json; encoding=utf-8", "agw-js-conv": "str" };
+  const reads = defineReads([
+    { method: "POST", path: "/im/pull", body: { type: "json", match: { cmd: 3100 } }, headers: IM, source: SOURCE },
+    { method: "POST", path: "/im/other", body: { type: "json", match: {} }, source: SOURCE },
+  ]);
+  const site = (auth = cookie) => ({ origin: ORIGIN, reads, auth });
+  it("sends them on that read only, with its content-type in place of the body rule's", async () => {
+    const f = fakeFetch({ "/im/pull": { body: "{}" }, "/im/other": { body: "{}" } });
+    const http = createHttp(site(), { fetch: f.fetch, storage: NO_STORAGE, cookie: NO_COOKIE });
+    await http.post("/im/pull", { cmd: 3100 });
+    await http.post("/im/other", { cmd: 3100 });
+    const [pull, other] = f.calls.map((c) => new Headers(c.init.headers));
+    expect([pull!.get("content-type"), pull!.get("agw-js-conv")]).toEqual(["application/json; encoding=utf-8", "str"]);
+    expect([other!.get("content-type"), other!.get("agw-js-conv")]).toEqual(["application/json", null]);
+  });
+  it("keeps the auth header next to them", async () => {
+    const f = fakeFetch({ "/im/pull": { body: "{}" } });
+    const http = createHttp(site(localStorageBearer({ key: "t" })), { fetch: f.fetch, storage: { getItem: () => "synthetic-token" }, cookie: NO_COOKIE });
+    await http.post("/im/pull", { cmd: 3100 });
+    expect(new Headers(f.calls[0]!.init.headers).get("authorization")).toBe("Bearer synthetic-token");
   });
 });
 
