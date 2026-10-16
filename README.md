@@ -78,8 +78,10 @@ flowchart LR
    their own page script reads; foxcache's agent reads it the same way, keeps it in the
    tab, and never stores or passes it on.
 4. Requests go one at a time, 1.5 s apart. A 429 waits for `Retry-After` or backs off
-   2, 4, 8 ... seconds. A second capture fetches only the conversations that changed;
-   it reads the whole list again unless the last capture ended with no error.
+   2, 4, 8 ... seconds. On a second capture, most sites fetch only the conversations
+   that changed; Gemini and Genspark read every chat again, since their lists give no
+   time that moves on a new message. It reads the whole list again unless the last
+   capture ended with no error.
 5. Each record is checked against the `foxcache/v1` schema and stored without the raw
    provider JSON. Attachments are kept as metadata (name, type, size), never as files.
 
@@ -106,7 +108,7 @@ Checked on 2026-10-15 against the linked pages.
 | How you get it | One click, in a minute or so | An email link, up to days later | One click |
 | Memories and custom instructions | Yes, where a read endpoint exists | Claude: `memories.json`; ChatGPT: not reliably | No |
 | Kept where | Your browser, then a local file | A zip you download | A file per export |
-| A second run | Fetches only what changed | A new full export | A new full export |
+| A second run | Most sites fetch only what changed; Gemini and Genspark read every chat again, as their lists give no time that moves on a new message | A new full export | A new full export |
 | Agents can read it | Through MCP and foxscope, by your rules | No | No |
 
 ## Coverage
