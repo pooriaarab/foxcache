@@ -95,8 +95,10 @@ The capture runner (`src/capture.ts`) then:
 1. calls `detect`, and stops with `logged-out` when the user is signed out;
 2. reads the optional kinds (projects, memories, preferences, library);
 3. pages through the conversation list, newest first. A stub whose
-   `updatedAt` is not newer than the stored copy is skipped, so a second
-   capture fetches only what changed;
+   `updatedAt` is not newer than the stored copy is skipped, so on a second
+   capture most sites fetch only what changed; Gemini and Genspark read every
+   chat again, since their lists give no time that moves on a new message, so
+   their stubs carry the time of the list read (GE40, GENSPARK41);
 4. fetches each new or changed conversation and sends it to the event page.
 
 Politeness: one request at a time, with a delay between requests (1.5 s by
