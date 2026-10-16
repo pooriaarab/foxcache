@@ -34,7 +34,7 @@ export const grok: Adapter = {
     { method: "GET", path: "/rest/app-chat/conversations_v2/{id}", source: "https://github.com/pinguarmy/ai-chat-exporter/blob/d760b045dd19ae17af4f21c7765e1c14e5d29671/src/lib/grok-api.ts#L130-L145" },
     { method: "GET", path: "/rest/app-chat/conversations/{id}/response-node", query: ["includeThreads"], source: "https://github.com/mvanhorn/agent-tincan/blob/98cc6ebe104933c6a49ae204c7916fd35fe23e60/extension/ops.js#L1272-L1287" },
     // Its only body is {responseIds}: there is no operation to name. The writes are under "Never call" in the doc.
-    { method: "POST", path: "/rest/app-chat/conversations/{id}/load-responses", body: { type: "json", match: {} }, source: `${MULTI}#L99-L106` },
+    { method: "POST", path: "/rest/app-chat/conversations/{id}/load-responses", body: { type: "json", match: {}, keys: ["responseIds"] }, source: `${MULTI}#L99-L106` },
   ]),
   // No source confirms the order of the list.
   newestFirst: false,

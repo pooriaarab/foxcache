@@ -19,7 +19,7 @@ const READS = defineReads([
   get("/backend-api/conversation/{id}"),
   { method: "GET", path: "/stream", decode: (text) => text.split("\n").filter(Boolean).map((line) => JSON.parse(line) as unknown), source: SOURCE },
   { method: "GET", path: "/strict", decode: strict, source: SOURCE },
-  { method: "POST", path: "/graphql", body: { type: "json", match: { queryName: "ThreadList", "extensions.persistedQuery.sha256Hash": "abc" } }, source: SOURCE },
+  { method: "POST", path: "/graphql", body: { type: "json", match: { queryName: "ThreadList", "extensions.persistedQuery.sha256Hash": "abc" }, keys: ["queryName", "variables", "extensions"] }, source: SOURCE },
   { method: "POST", path: "/im/chain", body: { type: "form", match: { cmd: "list" } }, source: SOURCE },
   { method: "POST", path: "/_/BardChatUi/data/batchexecute", query: ["rpcids", "rt"], body: { type: "batchexecute", rpcids: ["MaZiqc", "hNvQHb"] }, source: SOURCE },
 ]);
@@ -176,8 +176,8 @@ describe("H16 the fixed headers of a read", () => {
   // Doubao's page sends these on its IM reads (docs/providers/doubao.md).
   const IM = { "content-type": "application/json; encoding=utf-8", "agw-js-conv": "str" };
   const reads = defineReads([
-    { method: "POST", path: "/im/pull", body: { type: "json", match: { cmd: 3100 } }, headers: IM, source: SOURCE },
-    { method: "POST", path: "/im/other", body: { type: "json", match: {} }, source: SOURCE },
+    { method: "POST", path: "/im/pull", body: { type: "json", match: { cmd: 3100 }, keys: ["cmd"] }, headers: IM, source: SOURCE },
+    { method: "POST", path: "/im/other", body: { type: "json", match: {}, keys: ["cmd"] }, source: SOURCE },
   ]);
   const site = (auth = cookie) => ({ origin: ORIGIN, reads, auth });
   it("sends them on that read only, with its content-type in place of the body rule's", async () => {
