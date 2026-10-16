@@ -19,6 +19,8 @@ const CHAT = "hNvQHb";
 const GEMS = "CNgdBe";
 const SAVED_INFO = "ZKcapf";
 const PAGE = 20;
+/** ZKcapf is asked for this many items; as many or more is an incomplete list (GE41). */
+const SAVED_MAX = 100;
 /** hNvQHb reads at most this many turns and has no cursor (GE4). */
 const MAX_TURNS = 1000;
 /** The list streams: the pinned chats, then the rest. */
@@ -119,9 +121,12 @@ export const gemini: Adapter = {
 
   // Saved info ("Instructions for Gemini"): one memory per item.
   async memories(http) {
-    const o = r.arr(await call(http, SAVED_INFO, [100], "/saved-info"), SAVED_INFO);
+    const o = r.arr(await call(http, SAVED_INFO, [SAVED_MAX], "/saved-info"), SAVED_INFO);
     if (o.length === 0) return [];
-    return r.arr(o[0], `${SAVED_INFO}[0]`).map((x, i) => {
+    const items = r.arr(o[0], `${SAVED_INFO}[0]`);
+    // No source pages past the first 100, and a cut list would delete the rest from the store (C11).
+    if (items.length >= SAVED_MAX) throw new FoxcacheError("too-large", `gemini: saved info has ${SAVED_MAX} items or more, and foxcache cannot read past the first ${SAVED_MAX}; no stored item is deleted.`);
+    return items.map((x, i) => {
       const where = `${SAVED_INFO}[0][${i}]`;
       return { provider: "gemini", id: r.str(r.pos(x, [0], where), `${where}[0]`), text: r.str(r.pos(x, [1], where), `${where}[1]`), createdAt: r.stamp(r.pos(x, [2], where), `${where}[2]`) };
     });
