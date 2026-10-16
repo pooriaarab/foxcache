@@ -1,0 +1,25 @@
+{
+ "provider": "genspark",
+ "origin": "https://www.genspark.ai",
+ "note": "Synthetic data in the documented www.genspark.ai web API shapes (docs/providers/genspark.md). No real chat.",
+ "routes": {
+  "/api/is_login": {"status": 0, "message": "success", "data": {"is_login": true, "cogen_id": "cogen-synthetic", "cogen_email": "synthetic@example.invalid"}},
+  "/api/project/my?from=agents&offset=0&limit=50": {"status": 0, "message": "success", "data": {"projects": [
+   {"id": "6e5f0000-0000-4000-8000-000000000001", "chat_model": "synthetic-model-1", "name": "Porto weekend", "type": "ai_chat", "status": "FINISHED", "ctime": "2026-09-14T08:30:00.125000"},
+   {"id": "6e5f0000-0000-4000-8000-000000000002", "chat_model": "synthetic-model-1", "name": "<b>Hostile</b> Genspark", "type": "ai_chat", "status": "FINISHED", "ctime": "2026-09-12T10:00:00.000000"},
+   {"id": "6e5f0000-0000-4000-8000-000000000003", "chat_model": null, "name": "Pitch deck", "type": "slides", "status": "FINISHED", "ctime": "2026-09-10T16:46:20.955172"}
+  ]}},
+  "/api/project?id=6e5f0000-0000-4000-8000-000000000001": {"status": 0, "message": "success", "data": {"id": "6e5f0000-0000-4000-8000-000000000001", "name": "Porto weekend", "type": "ai_chat", "chat_model": "synthetic-model-1", "ctime": "2026-09-14T08:30:00.125000", "session_state": {"messages": [
+   {"id": "m1", "role": "system", "content": "You are a helpful assistant."},
+   {"id": "m2", "role": "user", "content": "Two days in Porto?"},
+   {"id": "m3", "role": "assistant", "content": null},
+   {"id": "m4", "role": "tool", "content": "{\"results\": []}"},
+   {"id": "m5", "role": "assistant", "content": "Day 1: Ribeira. Day 2: Foz."}
+  ]}}},
+  "/api/project?id=6e5f0000-0000-4000-8000-000000000002": {"status": 0, "message": "success", "data": {"id": "6e5f0000-0000-4000-8000-000000000002", "name": "<b>Hostile</b> Genspark", "type": "ai_chat", "chat_model": "synthetic-model-1", "ctime": "2026-09-12T10:00:00.000000", "session_state": {"messages": [
+   {"id": "m1", "role": "user", "content": "Show this: <img src=x onerror=\"document.title='owned'\"><script>alert(1)</script>"},
+   {"id": "m2", "role": "assistant", "content": "Here it is as text: <img src=x onerror=\"document.title='owned'\">"}
+  ]}}},
+  "/api/project?id=6e5f0000-0000-4000-8000-000000000003": {"status": 0, "message": "success", "data": {"id": "6e5f0000-0000-4000-8000-000000000003", "name": "Pitch deck", "type": "slides", "chat_model": null, "ctime": "2026-09-10T16:46:20.955172", "session_state": null}}
+ }
+}

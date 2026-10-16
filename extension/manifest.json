@@ -40,7 +40,8 @@
     "https://www.meta.ai/*",
     "https://chat.qwen.ai/*",
     "https://chat.z.ai/*",
-    "https://huggingface.co/*"
+    "https://huggingface.co/*",
+    "https://www.genspark.ai/*"
   ],
   "background": {
     "scripts": [

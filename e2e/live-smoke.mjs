@@ -19,7 +19,7 @@ import { parseArgs } from "node:util";
 import puppeteer from "puppeteer-core";
 import { findFirefox, poll } from "create-foxkit/e2e";
 
-const ORIGINS = { chatgpt: "https://chatgpt.com", claude: "https://claude.ai", mistral: "https://chat.mistral.ai", deepseek: "https://chat.deepseek.com", notion: "https://app.notion.com", kagi: "https://assistant.kagi.com", qwen: "https://chat.qwen.ai", zai: "https://chat.z.ai", huggingchat: "https://huggingface.co" };
+const ORIGINS = { chatgpt: "https://chatgpt.com", claude: "https://claude.ai", mistral: "https://chat.mistral.ai", deepseek: "https://chat.deepseek.com", notion: "https://app.notion.com", kagi: "https://assistant.kagi.com", qwen: "https://chat.qwen.ai", zai: "https://chat.z.ai", huggingchat: "https://huggingface.co", genspark: "https://www.genspark.ai" };
 const { values: o } = parseArgs({ options: { providers: { type: "string", default: Object.keys(ORIGINS).join(",") }, limit: { type: "string" }, headed: { type: "boolean", default: false } } });
 const providers = o.providers.split(",").filter(Boolean);
 const limit = o.limit === undefined ? Infinity : Number(o.limit);
