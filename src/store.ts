@@ -99,7 +99,7 @@ export function createStore(backend: Backend) {
     backend,
     all,
 
-    /** Check and store one record. A conversation keeps the copy with the newer updatedAt (ST1). */
+    /** Check and store one record. A conversation keeps the copy with the newer updatedAt, or with an equal one and more messages (ST1). */
     async put<K extends Kind>(kind: K, input: unknown): Promise<PutResult> {
       const record = check(kind, input);
       const key = recordKey(kind, record);
@@ -113,7 +113,9 @@ export function createStore(backend: Backend) {
       }
       if (valid !== undefined) {
         if (kind === "conversations") {
-          if ((valid as Conversation).updatedAt >= (record as Conversation).updatedAt) return "same";
+          const [old, now] = [valid as Conversation, record as Conversation];
+          // A site with no update time keeps it: a continued chat has more messages (GENSPARK41).
+          if (old.updatedAt > now.updatedAt || (old.updatedAt === now.updatedAt && old.messages.length >= now.messages.length)) return "same";
         } else if (JSON.stringify(valid) === JSON.stringify(record)) return "same";
       }
       await backend.put(kind, key, record);

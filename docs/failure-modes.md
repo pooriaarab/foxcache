@@ -21,7 +21,7 @@ All errors are `FoxcacheError` with a `code`. The codes are in the rows.
 
 | # | Failure mode | Wanted behavior | Test |
 |---|---|---|---|
-| ST1 | The same conversation is captured twice. | One record. The copy with the newer `updatedAt` wins. An equal `updatedAt` keeps the stored copy. | `tests/store.test.ts` |
+| ST1 | The same conversation is captured twice. | One record. The copy with the newer `updatedAt` wins. An equal `updatedAt` keeps the stored copy, unless the new copy has more messages: a site with no update time (Genspark) keeps it equal on a continued chat (GENSPARK41). | `tests/store.test.ts` |
 | ST2 | The same memory comes twice without an id. | One record: the key is a hash of the provider and the text. | `tests/store.test.ts` |
 | ST3 | A stored record fails its check (an older or broken write). | Reads skip it and count it in `problems`. It is not deleted. Other records still load. | `tests/store.test.ts` |
 | ST4 | Delete all is called. | Every kind and the checkpoints are empty after it. | `tests/store.test.ts` |
