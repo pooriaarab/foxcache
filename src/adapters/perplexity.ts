@@ -41,11 +41,11 @@ export const perplexity: Adapter = {
   auth: cookie,
   reads: defineReads([
     { method: "GET", path: "/api/auth/session", query: ["version", "source"], source: `${DEPLEXITY}/user.go#L28-L53` },
-    { method: "POST", path: "/rest/thread/list_pinned_ask_threads", query: ["version", "source"], body: { type: "json", match: {} }, source: `${MULTI}#L62-L70` },
-    { method: "POST", path: "/rest/thread/list_ask_threads", query: ["version", "source"], body: { type: "json", match: { search_term: "" } }, source: `${MULTI}#L50-L60` },
+    { method: "POST", path: "/rest/thread/list_pinned_ask_threads", query: ["version", "source"], body: { type: "json", match: {}, keys: [] }, source: `${MULTI}#L62-L70` },
+    { method: "POST", path: "/rest/thread/list_ask_threads", query: ["version", "source"], body: { type: "json", match: { search_term: "" }, keys: ["limit", "ascending", "offset", "search_term", "exclude_asi"] }, source: `${MULTI}#L50-L60` },
     { method: "GET", path: "/rest/thread/{uuid}", query: ["with_schematized_response", "version", "source", "limit", "offset", "from_first", "cursor"], source: `${DEPLEXITY}/threads.go#L104-L116` },
     // One GraphQL endpoint: the read names its query. Mutations are under "Never call" in the doc.
-    { method: "POST", path: "/rest/perplexity_ask/graphql", body: { type: "json", match: { operationName: MEMORY_QUERY.name, "extensions.persistedQuery.sha256Hash": MEMORY_QUERY.hash } }, source: `${MULTI}#L126-L145` },
+    { method: "POST", path: "/rest/perplexity_ask/graphql", body: { type: "json", match: { operationName: MEMORY_QUERY.name, "extensions.persistedQuery.sha256Hash": MEMORY_QUERY.hash }, keys: ["operationName", "variables", "extensions"] }, source: `${MULTI}#L126-L145` },
   ]),
   // No source says what the list is sorted by.
   newestFirst: false,
