@@ -137,7 +137,13 @@ describe("poe conversations", () => {
   it("P1 names the field when a message changed, and refuses a chat with no messages", async () => {
     expect(await code(poe.getConversation(open({ [messages(C1, null)]: chat(C1, [msg(1, "human", "x", "soon" as unknown as number)]) }).http, stub(C1)))).toMatch(/^provider-schema: poe: messages\[0\].creationTime is not a number/);
     expect(await code(poe.getConversation(open({ [messages(C1, null)]: chat(C1, [{ node: { author: "human", creationTime: 1e15 } }]) }).http, stub(C1)))).toMatch(/^provider-schema: poe: messages\[0\].text is not text/);
-    expect(await code(poe.getConversation(open({ [messages(C1, null)]: chat(C1, []) }).http, stub(C1)))).toMatch(/^provider-schema: poe: the chat has no messages/);
+    expect(await code(poe.getConversation(open({ [messages(C1, null)]: chat(C1, []) }).http, stub(C1)))).toMatch(/^not-found: poe: chat .* has no messages/);
+  });
+  it("PO40 goes on past three empty chats in a row", async () => {
+    const empty = ["RTE=", "RTI=", "RTM="];
+    const routes = { ...fixture("poe"), [list(null)]: page([...empty, C1], false, "e"), ...Object.fromEntries(empty.map((id) => [messages(id, null), chat(id, [])])) };
+    const cp = await runCapture({ adapter: poe, http: open(routes).http, sink: { put: go, checkpoint: go, keep: go }, stamps: {}, delayMs: 0 });
+    expect([cp.status, cp.counts.conversations, cp.counts.errors]).toEqual(["done", 1, 3]);
   });
   it("throws too-large on a chat answer that streams past the size limit", async () => {
     const chunk = new Uint8Array(8 * 1024 * 1024);
