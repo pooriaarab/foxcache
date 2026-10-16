@@ -60,6 +60,9 @@ table and your manifest lines with no edit.
   `http.get("https://api.host/path")`. Read [../cors.md](../cors.md) first.
   The API must answer CORS for the site's page. Confirm it with a live smoke
   run before the PR.
+- Google batchexecute: one `batchRead({ path, rpcid, source })` per rpc id,
+  called with `callBatch` (`src/batchexecute.ts`), and the
+  `google-page-tokens` auth.
 - An answer that is not JSON: give the read a `decode(text)`. Throw
   `r.fail(...)` from it for a changed shape.
 - A header the site's page sends on a read (Doubao's `agw-js-conv: str`,
@@ -79,6 +82,7 @@ table and your manifest lines with no edit.
 | `cookie-bearer` | a token in a cookie the page's script can read | `cookieBearer({ name, field? })` |
 | `page-formkey` | a key a page function computes (its name changes per build), plus an md5 tag of each POST body | `pageFormkey({ fn, length, header, tag })` |
 | `with-headers` | fixed headers the page adds, on top of a token kind | `withHeaders(kind, { name: value })` |
+| `google-page-tokens` | Google batchexecute: `at`, `bl` and `f.sid` in the HTML of a page | `googlePageTokens({ path })` |
 
 `field` is a dotted path into a JSON value. `scheme` is the word the page
 puts before the token in `Authorization` when it is not `Bearer`. A site that needs another kind

@@ -128,16 +128,18 @@ export function createHttp(site: HttpSite, page: Page): Http {
   }
 
   // The token stays in this closure. tokenPaths are read here with the cookies only, and no read names one (H7).
+  const tokenPath = (path: string, decode?: (text: string) => unknown) => {
+    if (!site.auth.tokenPaths.includes(path)) throw new FoxcacheError("not-allowed", `${path} is not a token path of the ${site.auth.kind} auth.`);
+    return send({ url: new URL(path, origin), ...(decode ? { decode } : {}) });
+  };
   const sign = site.auth.open({
     origin,
     storage: page.storage,
     cookie: () => page.cookie(),
     scripts: () => page.scripts(),
     call: (name) => page.call(name),
-    getJson: async (path) => {
-      if (!site.auth.tokenPaths.includes(path)) throw new FoxcacheError("not-allowed", `${path} is not a token path of the ${site.auth.kind} auth.`);
-      return send({ url: new URL(path, origin) });
-    },
+    getJson: async (path) => tokenPath(path),
+    getText: async (path) => (await tokenPath(path, (text) => text)) as string,
   });
 
   async function read(request: Prepared): Promise<unknown> {
