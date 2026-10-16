@@ -72,6 +72,12 @@ function check() {
     "listing description": en(meta.description),
   };
   for (const [where, text] of Object.entries(seen)) if (text && BANNED.test(text)) fail(`${where} uses the word "${BANNED.exec(text)[0]}"`);
+  // R60: a reviewer compares the permissions with the listing.
+  const told = en(meta.description) ?? "";
+  for (const pattern of [...(manifest.host_permissions ?? []), ...(manifest.optional_host_permissions ?? [])]) {
+    const host = /^[a-z*]+:\/\/([^/]+)\//.exec(pattern)?.[1] ?? pattern;
+    if (!new RegExp(`(^|[^\\w.-])${host.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w-]|\\.\\w)`).test(told)) fail(`the listing description must name the host "${host}" from the manifest`);
+  }
   const data = manifest.browser_specific_settings?.gecko?.data_collection_permissions ?? {};
   const sends = [...(data.required ?? []), ...(data.optional ?? [])].some((p) => p !== "none");
   if (sends && !en(meta.privacy_policy)) fail("the manifest declares data collection, so privacy_policy is required");

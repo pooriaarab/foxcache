@@ -39,6 +39,7 @@ so a rebase conflict is one line:
 | `src/adapters/index.ts` | the import, and the adapter in `ADAPTERS` |
 | `extension/manifest.json` | `"https://<host>/*"` in `optional_host_permissions`, and one per API origin |
 | `docs/providers/README.md` | the table row |
+| `extension/amo-metadata.json` | in the description: the site in the list of sites, each host you added to the manifest under **Permissions**, and the site in the POST sentence if it reads by POST. `pnpm check:amo` fails on a manifest host the listing does not name (R60). Keep [../amo-data.md](../amo-data.md) in step. |
 
 `tests/reads.test.ts` and `tests/registry.test.ts` then check your reads
 table and your manifest lines with no edit.
