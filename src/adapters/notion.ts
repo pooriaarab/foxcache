@@ -67,9 +67,9 @@ export const notion: Adapter = {
   auth: cookie,
   // Three read operations, each its own path. The writes beside them are under "Never call" in the doc.
   reads: defineReads([
-    { method: "POST", path: "/api/v3/loadUserContent", body: { type: "json", match: {} }, source: "https://github.com/jamalex/notion-py/blob/f31081edef26882298eb0c31cf023e810a2a9a09/notion/client.py#L124-L133" },
-    { method: "POST", path: "/api/v3/getInferenceTranscriptsForUser", body: { type: "json", match: { "threadParentPointer.table": "space" } }, source: `${MCP}#L549-L551` },
-    { method: "POST", path: "/api/v3/syncRecordValuesSpaceInitial", body: { type: "json", match: { "spacePointer.table": "space" } }, source: `${CONNECTOR}#L217-L243` },
+    { method: "POST", path: "/api/v3/loadUserContent", body: { type: "json", match: {}, keys: [] }, source: "https://github.com/jamalex/notion-py/blob/f31081edef26882298eb0c31cf023e810a2a9a09/notion/client.py#L124-L133" },
+    { method: "POST", path: "/api/v3/getInferenceTranscriptsForUser", body: { type: "json", match: { "threadParentPointer.table": "space" }, keys: ["threadParentPointer", "limit", "includeWriterChats", "includeWorkflowThreads", "cursor"] }, source: `${MCP}#L549-L551` },
+    { method: "POST", path: "/api/v3/syncRecordValuesSpaceInitial", body: { type: "json", match: { "spacePointer.table": "space" }, keys: ["requests", "spacePointer"] }, source: `${CONNECTOR}#L217-L243` },
   ]),
   // No source gives the order of the list.
   newestFirst: false,

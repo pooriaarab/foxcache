@@ -46,11 +46,11 @@ export const kimi: Adapter = {
   label: "Kimi",
   origin: "https://www.kimi.com",
   auth: localStorageBearer({ key: "access_token" }),
-  // Each method reads only, so each takes any body. The writes are under "Never call" in the doc.
+  // Each method reads only, so each takes the keys its calls send. The writes are under "Never call" in the doc.
   reads: defineReads([
-    { method: "POST", path: LIST, body: { type: "json", match: {} }, source: "https://github.com/xiaoY233/Chat2API/blob/59f03ab2988867a4d7bacb97d98f3ee018b0e4d0/src/main/proxy/adapters/kimi.ts#L392-L421" },
-    { method: "POST", path: CHAT, body: { type: "json", match: {} }, source: `${MULTI_AI}#L109-L112` },
-    { method: "POST", path: MESSAGES, body: { type: "json", match: {} }, source: `${MULTI_AI}#L114-L118` },
+    { method: "POST", path: LIST, body: { type: "json", match: {}, keys: ["page_size", "query", "page_token"] }, source: "https://github.com/xiaoY233/Chat2API/blob/59f03ab2988867a4d7bacb97d98f3ee018b0e4d0/src/main/proxy/adapters/kimi.ts#L392-L421" },
+    { method: "POST", path: CHAT, body: { type: "json", match: {}, keys: ["chatId"] }, source: `${MULTI_AI}#L109-L112` },
+    { method: "POST", path: MESSAGES, body: { type: "json", match: {}, keys: ["chatId"] }, source: `${MULTI_AI}#L114-L118` },
   ]),
   // No source documents the order of ListChats.
   newestFirst: false,
