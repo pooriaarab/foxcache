@@ -11,7 +11,7 @@ has a page under [providers/](providers/).
 provider tab (chatgpt.com, claude.ai, ...)
   capture agent: a content script that foxcache injects on Capture.
   It runs the provider adapter and fetches the site's own JSON endpoints
-  with the page's session cookies. GET only.
+  with the page's session cookies. Only the reads the adapter lists.
         | runtime.sendMessage, one record at a time
         v
 event page (extension/background.js)
@@ -40,13 +40,14 @@ Every provider has one adapter with the same interface (`src/adapters/types.ts`)
 | `getConversation(http, stub)` | One conversation, normalized to `foxcache/v1`. |
 | `projects`, `memories`, `preferences`, `library` | Optional. Each returns normalized records. |
 
-`http` is the only way an adapter reaches the network. It allows GET on a
-path of the adapter's own origin, nothing else: no POST, no absolute URL, no
-other host. An adapter cannot send, edit or delete anything on the provider.
-And a GET is not trusted to be safe: some sites delete with one. Each
-adapter lists its reads (`src/reads.ts`): the exact paths, with `{name}` for
-one plain id segment, and the query keys of each, with a source URL. `http`
-refuses any other request before it is sent.
+`http` is the only way an adapter reaches the network. Each adapter lists
+its reads (`src/reads.ts`): the method and exact path of every request, with
+`{name}` for one plain id segment, the query keys of each, and a source URL.
+A GET is not trusted to be safe, since some sites delete with one. A POST
+read also names its operation: the GraphQL `queryName` or hash, the IM
+`cmd`, or the batchexecute rpc ids, so the same endpoint cannot carry a
+write. `http` refuses any other request before it is sent. An adapter cannot
+send, edit or delete anything on the provider.
 
 Each endpoint, its source and a confidence level are in
 `docs/providers/<id>.md`. An endpoint that no open-source exporter confirms

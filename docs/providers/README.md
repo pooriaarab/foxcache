@@ -10,8 +10,8 @@
 | Grok | https://grok.com | no: message text is a POST | [grok.md](grok.md) |
 | DeepSeek | https://chat.deepseek.com | yes, conversations only | [deepseek.md](deepseek.md) |
 
-foxcache sends GET only (`src/http.ts`), so a GET can never change anything
-on the provider. A provider whose reads need a POST has no adapter in this
-version. A short list of read-only POST calls, each checked by hand, would
-let foxcache cover Gemini, Perplexity and Grok; that is an open decision,
-not a fallback.
+foxcache sends only the reads each adapter lists (`src/reads.ts`): exact GET
+paths, and POST calls whose body names a read operation, each checked by
+hand against its source. The four adapters above send GET only. Gemini,
+Perplexity and Grok read by POST, so each needs its list of read-only POST
+calls before it gets an adapter.

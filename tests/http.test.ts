@@ -11,7 +11,14 @@ const READS = defineReads([
   get("/backend-api/conversations", ["offset", "limit", "skip"]),
   get("/backend-api/conversation/{id}"),
   get("/api/v0/users/current"),
+  { method: "POST", path: "/graphql", body: { type: "json", match: { queryName: "ThreadList", "extensions.persistedQuery.sha256Hash": "abc" } }, source: SOURCE },
+  { method: "POST", path: "/im/chain", body: { type: "form", match: { cmd: "list" } }, source: SOURCE },
+  { method: "POST", path: "/_/BardChatUi/data/batchexecute", query: ["rpcids", "rt"], body: { type: "batchexecute", rpcids: ["MaZiqc", "hNvQHb"] }, source: SOURCE },
 ]);
+const THREADS = { queryName: "ThreadList", variables: { first: 20 }, extensions: { persistedQuery: { sha256Hash: "abc" } } };
+const BATCH = "/_/BardChatUi/data/batchexecute";
+/** A batchexecute f.req that calls these rpc ids. */
+const fReq = (...ids: string[]) => JSON.stringify([ids.map((id) => [id, "[]", null, "generic"])]);
 const NO_STORAGE = { getItem: () => null };
 /** An Http on ORIGIN with READS. */
 const open = (fetch: (url: string, init: RequestInit) => Promise<Response>, auth?: AuthKind, storage: { getItem(k: string): string | null } = NO_STORAGE, origin = ORIGIN) => createHttp({ origin, reads: READS, ...(auth ? { auth } : {}) }, { fetch, storage });
@@ -64,9 +71,9 @@ describe("H1 GET on the own origin only", () => {
     expect(f.calls[0]!.init).toMatchObject({ method: "GET", credentials: "include", redirect: "manual" });
     expect(f.calls[0]!.init.body).toBeUndefined();
   });
-  it("has no method other than get", () => {
+  it("has no method other than get and post", () => {
     const http = open(fakeFetch({}).fetch);
-    expect(Object.keys(http)).toEqual(["get"]);
+    expect(Object.keys(http)).toEqual(["get", "post"]);
   });
 });
 
@@ -84,6 +91,61 @@ describe("H8 a GET that is not a read", () => {
     expect(f.calls).toHaveLength(0);
     expect(await http.get("/a", { x: undefined })).toEqual([]);
     expect(await http.get("/backend-api/conversations", { offset: 0 })).toEqual([]);
+  });
+});
+
+describe("H9 a POST that is not a read", () => {
+  const routes = { "/graphql": { body: '{"data":{}}' }, "/im/chain": { body: "{}" }, [BATCH]: { body: "[]" } };
+  it("sends a listed JSON operation with the page cookies", async () => {
+    const f = fakeFetch(routes);
+    expect(await open(f.fetch).post("/graphql", THREADS)).toEqual({ data: {} });
+    expect(f.calls[0]!.init).toMatchObject({ method: "POST", credentials: "include", redirect: "manual", body: JSON.stringify(THREADS) });
+    expect(new Headers(f.calls[0]!.init.headers).get("content-type")).toBe("application/json");
+  });
+  it.each([
+    ["another operation", { ...THREADS, queryName: "DeleteThread" }],
+    ["another persisted query", { ...THREADS, extensions: { persistedQuery: { sha256Hash: "def" } } }],
+    ["no persisted query", { queryName: "ThreadList" }],
+    ["a list", [THREADS]],
+  ])("refuses a JSON body with %s", async (_, body) => {
+    const f = fakeFetch(routes);
+    expect((await err(open(f.fetch).post("/graphql", body as never))).code).toBe("not-allowed");
+    expect(f.calls).toHaveLength(0);
+  });
+  it("refuses a POST to a GET read, a GET to a POST read, and a path no read names", async () => {
+    const f = fakeFetch(routes);
+    const http = open(f.fetch);
+    for (const p of [http.post("/a", {}), http.get("/graphql"), http.post("/graphql/x", THREADS), http.post("/graphql", THREADS, { x: 1 })]) expect((await err(p)).code).toBe("not-allowed");
+    expect(f.calls).toHaveLength(0);
+  });
+  it("sends a form with the listed field, and refuses another value or a field that is not text", async () => {
+    const f = fakeFetch(routes);
+    const http = open(f.fetch);
+    expect(await http.post("/im/chain", { cmd: "list", cursor: "0" })).toEqual({});
+    expect(f.calls[0]!.init.body).toBe("cmd=list&cursor=0");
+    expect(new Headers(f.calls[0]!.init.headers).get("content-type")).toBe("application/x-www-form-urlencoded;charset=UTF-8");
+    expect((await err(http.post("/im/chain", { cmd: "delete" }))).code).toBe("not-allowed");
+    expect((await err(http.post("/im/chain", { cmd: "list", n: 1 }))).code).toBe("not-allowed");
+    expect(f.calls).toHaveLength(1);
+  });
+  it("sends batchexecute calls of listed rpc ids", async () => {
+    const f = fakeFetch(routes);
+    expect(await open(f.fetch).post(BATCH, { "f.req": fReq("MaZiqc", "hNvQHb", "MaZiqc") }, { rpcids: "MaZiqc,hNvQHb", rt: "c" })).toEqual([]);
+    expect(f.calls[0]!.url).toBe(`${ORIGIN}${BATCH}?rpcids=MaZiqc%2ChNvQHb&rt=c`);
+    expect(new URLSearchParams(f.calls[0]!.init.body as string).get("f.req")).toBe(fReq("MaZiqc", "hNvQHb", "MaZiqc"));
+  });
+  it.each([
+    ["a write id (NotebookLM J7Gthc)", fReq("J7Gthc"), "J7Gthc"],
+    ["a write id next to a listed one", fReq("MaZiqc", "J7Gthc"), "MaZiqc,J7Gthc"],
+    ["an rpcids query that hides an id", fReq("MaZiqc", "J7Gthc"), "MaZiqc"],
+    ["an rpcids query with an id f.req does not call", fReq("MaZiqc"), "MaZiqc,hNvQHb"],
+    ["an f.req that is not JSON", "[[[", "MaZiqc"],
+    ["an f.req with no call", "[[]]", ""],
+    ["no rpcids query", fReq("MaZiqc"), undefined],
+  ])("refuses %s", async (_, req, rpcids) => {
+    const f = fakeFetch(routes);
+    expect((await err(open(f.fetch).post(BATCH, { "f.req": req }, { rpcids }))).code).toBe("not-allowed");
+    expect(f.calls).toHaveLength(0);
   });
 });
 
