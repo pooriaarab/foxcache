@@ -43,3 +43,10 @@ describe("C8 the docs say which sites read every chat again", () => {
     }
   });
 });
+
+describe("P61 the design auth table lists every adapter under its kind", () => {
+  const rows = Object.fromEntries([...readFileSync("docs/design.md", "utf8").matchAll(/^\| `([a-zA-Z-]+)` \| [^|]+ \| ([^|]+) \|$/gm)].map((m) => [m[1]!, m[2]!]));
+  it("names each adapter in the Used by cell of its auth kind", () => {
+    for (const a of ADAPTERS) expect(rows[a.auth.kind] ?? "", `${a.id} (${a.auth.kind})`).toContain(a.label);
+  });
+});

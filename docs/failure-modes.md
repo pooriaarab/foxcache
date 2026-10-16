@@ -109,6 +109,7 @@ All errors are `FoxcacheError` with a `code`. The codes are in the rows.
 | P10 | Claude's `detect` gets an answer that is not JSON (a "Just a moment..." challenge page) or a changed shape. | `detect` throws that error, so the capture ends with `provider-schema` and does not tell the user to sign in. Only a 401, a 403 or an account with no chat organization means signed out. | `tests/claude.test.ts` |
 | P30 | A library user imports an adapter the extension ships, or an auth kind an adapter uses (`withHeaders`), and `foxcache` does not export it. | `src/index.ts` exports every adapter in `ADAPTERS` and every auth kind in `src/auth/`. A test checks both lists. | `tests/exports.test.ts` |
 | P60 | An adapter is added or changed and the README or `docs/providers/README.md` still describes the old set: no Coverage row, a missing site, or a GET-only list that names a site that reads by POST. | A test reads both files: one README Coverage row and one providers row per adapter, the README site list equal to the adapters, and the GET-only and POST lists equal to what each adapter's reads send. | `tests/docs.test.ts` |
+| P61 | An adapter gets a new auth kind and `docs/design.md` still lists it under the old one, or not at all. | A test reads the auth table: each adapter's label is in the Used by cell of its own kind. | `tests/docs.test.ts` |
 
 ## SCENT
 
