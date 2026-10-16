@@ -345,6 +345,16 @@ try {
     await run({ fox, net, ask, check, until, ended, running });
   }
 
+  // 11b. The archive page names every captured site with its adapter's label (X60).
+  const labelled = await fox.openExtensionPage("archive.html");
+  const captured = Object.keys(await ask("archive:counts"));
+  const shown = await until("the site filter", () => labelled.evaluate((n) => {
+    const options = [...document.querySelectorAll("#provider option")].slice(1);
+    return options.length === n ? { options: options.map((o) => o.textContent).toSorted(), undefinedInPage: document.body.textContent.includes("undefined") } : null;
+  }, captured.length));
+  check("the archive names every captured site", { options: ADAPTERS.filter((a) => captured.includes(a.id)).map((a) => a.label).toSorted(), undefinedInPage: false }, shown);
+  await labelled.close();
+
   // 12. Every request the adapters sent was one of their reads, and the fixtures knew it (X5).
   check("no request went to a path the fixtures do not know", [], net.log.filter((l) => l.status === 404 && !l.url.endsWith("/favicon.ico")).map((l) => l.url));
   record.requests = net.log.length;

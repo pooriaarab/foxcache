@@ -36,7 +36,6 @@ so a rebase conflict is one line:
 | File | Line |
 |---|---|
 | `src/schema.ts` | the id in `PROVIDERS`, if it is not there |
-| `extension/archive.js` | the label in `LABELS`, if the id is new |
 | `src/adapters/index.ts` | the import, and the adapter in `ADAPTERS` |
 | `extension/manifest.json` | `"https://<host>/*"` in `optional_host_permissions`, and one per API origin |
 | `docs/providers/README.md` | the table row |
