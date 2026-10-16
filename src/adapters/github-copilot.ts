@@ -29,8 +29,9 @@ function cachedToken(): Auth {
       return async (request, fresh) => {
         const raw = page.storage.getItem(KEY);
         const expiration = raw === null ? undefined : field(raw, "expiration");
-        // No time, or not a time, is past: Date.parse gives NaN, and NaN > now is false.
-        if (raw !== null && !(typeof expiration === "string" && Date.parse(expiration) > Date.now())) throw new FoxcacheError("logged-out", "The GitHub Copilot token in this tab expired: open github.com/copilot to renew it.");
+        // A date string or epoch ms, as the script's new Date(expiration) takes. No time, or not a time, is past: NaN > now is false.
+        const at = typeof expiration === "string" ? Date.parse(expiration) : typeof expiration === "number" ? expiration : Number.NaN;
+        if (raw !== null && !(Number.isFinite(at) && at > Date.now())) throw new FoxcacheError("logged-out", "The GitHub Copilot token in this tab expired: open github.com/copilot to renew it.");
         return sign(request, fresh);
       };
     },
