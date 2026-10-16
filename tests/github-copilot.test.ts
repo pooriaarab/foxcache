@@ -10,7 +10,8 @@ const API = "https://api.individual.githubcopilot.com";
 const TOKEN = "synthetic-copilot-token";
 const LIST = "/github/chat/threads";
 const THREAD = (id: string) => `/github/chat/threads/${id}/messages`;
-const storage = { getItem: (k: string) => (k === "COPILOT_AUTH_TOKEN" ? JSON.stringify({ value: TOKEN, expiration: "2026-10-15T12:00:00Z" }) : null) };
+const cached = (expiration: unknown) => ({ getItem: (k: string) => (k === "COPILOT_AUTH_TOKEN" ? JSON.stringify({ value: TOKEN, expiration }) : null) });
+const storage = cached("2099-01-01T00:00:00Z");
 const open = (routes = fixture("github-copilot")) => fixtureHttp(githubCopilot, routes, storage);
 const stub = (id: string) => ({ id, title: "", updatedAt: "" });
 
@@ -38,6 +39,21 @@ describe("github-copilot detect", () => {
   it("GC2 is signed out with no token, or when the API answers 401 (an expired token)", async () => {
     expect(await githubCopilot.detect(fixtureHttp(githubCopilot, fixture("github-copilot")).http)).toBe(false);
     expect(await githubCopilot.detect(open({ [LIST]: { $status: 401 } }).http)).toBe(false);
+  });
+});
+
+describe("github-copilot expired token (GC40)", () => {
+  it("sends no request with a token past its expiration, or with no expiration", async () => {
+    for (const expiration of ["2020-01-01T00:00:00Z", undefined, "soon"]) {
+      const f = fixtureHttp(githubCopilot, fixture("github-copilot"), cached(expiration));
+      expect(await githubCopilot.detect(f.http)).toBe(false);
+      expect(await code(githubCopilot.listConversations(f.http))).toMatch(/^logged-out: /);
+      expect(f.calls).toEqual([]);
+    }
+  });
+  it("is signed out when the API answers 400 to detect", async () => {
+    expect(await githubCopilot.detect(open({ [LIST]: { $status: 400 } }).http)).toBe(false);
+    expect(await code(githubCopilot.getConversation(open({ [THREAD(C1)]: { $status: 400 } }).http, stub(C1)))).toMatch(/^provider-error: /);
   });
 });
 
