@@ -4,6 +4,7 @@ import type { ProviderId } from "../schema.js";
 import { chatgpt } from "./chatgpt.js";
 import { claude } from "./claude.js";
 import { deepseek } from "./deepseek.js";
+import { githubCopilot } from "./github-copilot.js";
 import { grok } from "./grok.js";
 import { mistral } from "./mistral.js";
 import { perplexity } from "./perplexity.js";
@@ -17,6 +18,7 @@ export const ADAPTERS: readonly Adapter[] = Object.freeze([
   deepseek,
   grok,
   perplexity,
+  githubCopilot,
 ]);
 
 /** The adapter for a provider id. Throws for a provider with no adapter. */

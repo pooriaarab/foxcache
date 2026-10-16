@@ -9,6 +9,7 @@
 | DeepSeek | https://chat.deepseek.com | yes, conversations only | [deepseek.md](deepseek.md) |
 | Grok | https://grok.com | yes, conversations only; the message text is one POST read | [grok.md](grok.md) |
 | Perplexity | https://www.perplexity.ai | yes, conversations and memories; the list and the memories are POST reads | [perplexity.md](perplexity.md) |
+| GitHub Copilot | https://github.com | yes, conversations only; read from https://api.individual.githubcopilot.com | [github-copilot.md](github-copilot.md) |
 
 foxcache sends only the reads each adapter lists (`src/reads.ts`): exact GET
 paths, and POST calls whose body names a read operation, each checked by
