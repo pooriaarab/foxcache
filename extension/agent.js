@@ -4,7 +4,7 @@
 // carries the session the page already has. It sends each record to the
 // event page, one at a time, and stops when the answer says so.
 // Read-only: http (src/http.ts) sends the adapter's reads and nothing else.
-import { adapterAt, createHttp, runCapture } from "../src/index.ts";
+import { adapterAt, createHttp, inlineScripts, runCapture } from "../src/index.ts";
 
 /** The event page stores each record and answers { stop }. No answer means stop. */
 async function send(message) {
@@ -13,8 +13,8 @@ async function send(message) {
   return { stop: answer?.stop !== false };
 }
 
-/** The text of the page's inline scripts, for an auth kind that finds a page function by name (page-formkey). */
-const pageScripts = () => [...document.scripts].filter((s) => !s.src).map((s) => s.text);
+/** The text of the page's inline JavaScript, for an auth kind that finds a page function by name (page-formkey). No data block (H31). */
+const pageScripts = () => inlineScripts([...document.scripts]);
 /** Call a function the page's own script set on window. It runs in the page, as the page's own call would; wrappedJSObject is how Firefox reaches it. */
 function callPage(name) {
   const fn = window.wrappedJSObject[name];
