@@ -14,7 +14,7 @@ Auth: chatgpt.com's own script gets a bearer token from `GET /api/auth/session`
 (cookies) and sends `Authorization: Bearer` on every `/backend-api` call.
 Cookies alone are not enough. foxcache's `http` does the same in the tab,
 keeps the token in a variable there, and never passes it to the extension,
-the store or an export (auth `chatgpt-session`, `tests/http.test.ts` H5). A
+the store or an export (auth `page-session`, `tests/auth.test.ts` H5). A
 session with no `accessToken` means signed out. (PX L18-L37, SM L285-L301,
 ML L135-L160: confirmed)
 

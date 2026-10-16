@@ -1,12 +1,12 @@
 // H11 in docs/failure-modes.md: a wrong reads table fails when http is
 // created, and every adapter's table passes.
 import { describe, expect, it } from "vitest";
-import { ADAPTERS, type Read, createHttp, defineReads } from "../src/index.js";
+import { ADAPTERS, type Read, cookie, createHttp, defineReads } from "../src/index.js";
 
 const ORIGIN = "https://chatgpt.com";
 const SOURCE = "https://example.test/docs#get";
 const page = { fetch: async () => new Response("{}"), storage: { getItem: () => null } };
-const open = (reads: readonly Read[]) => () => createHttp({ origin: ORIGIN, reads }, page);
+const open = (reads: readonly Read[]) => () => createHttp({ origin: ORIGIN, reads, auth: cookie }, page);
 const get = (path: string, extra: Partial<Read> = {}): Read => ({ method: "GET", path, source: SOURCE, ...extra });
 const op = (queryName: string): Read => get("/graphql", { method: "POST", body: { type: "json", match: { queryName } } });
 
@@ -41,14 +41,14 @@ describe("H11 a wrong reads table", () => {
     expect(open(defineReads([op("ThreadList"), op("Thread")]))).not.toThrow();
   });
   it.each([["http://api.example"], ["https://api.example/v1"], ["https://api.example/"], [ORIGIN], ["api.example"]])("refuses the API origin %j", (api) => {
-    expect(() => createHttp({ origin: ORIGIN, apiOrigins: [api], reads: defineReads([get("/a")]) }, page)).toThrow(/API origin/);
+    expect(() => createHttp({ origin: ORIGIN, auth: cookie, apiOrigins: [api], reads: defineReads([get("/a")]) }, page)).toThrow(/API origin/);
   });
   it("refuses a read on an origin that is not one of the API origins", () => {
-    expect(() => createHttp({ origin: ORIGIN, apiOrigins: ["https://api.example"], reads: defineReads([get("/a", { origin: "https://other.example" })]) }, page)).toThrow(/apiOrigins/);
-    expect(() => createHttp({ origin: ORIGIN, reads: defineReads([get("/a", { origin: ORIGIN })]) }, page)).toThrow(/apiOrigins/);
+    expect(() => createHttp({ origin: ORIGIN, auth: cookie, apiOrigins: ["https://api.example"], reads: defineReads([get("/a", { origin: "https://other.example" })]) }, page)).toThrow(/apiOrigins/);
+    expect(() => createHttp({ origin: ORIGIN, auth: cookie, reads: defineReads([get("/a", { origin: ORIGIN })]) }, page)).toThrow(/apiOrigins/);
   });
   it("takes the same GET path on two origins", () => {
-    expect(() => createHttp({ origin: ORIGIN, apiOrigins: ["https://api.example"], reads: defineReads([get("/a"), get("/a", { origin: "https://api.example" })]) }, page)).not.toThrow();
+    expect(() => createHttp({ origin: ORIGIN, auth: cookie, apiOrigins: ["https://api.example"], reads: defineReads([get("/a"), get("/a", { origin: "https://api.example" })]) }, page)).not.toThrow();
   });
   it("refuses a method it does not know", () => {
     expect(open(defineReads([get("/a", { method: "DELETE" as "GET" })]))).toThrow(/method/);

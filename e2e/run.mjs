@@ -37,11 +37,12 @@ const MAIN_LIST = "/backend-api/conversations?offset=0&limit=100&order=updated&i
 
 /** The adapter that reads from this request's origin, page or API host. */
 const adapterOf = (l) => ADAPTERS.find((a) => originsOf(a).includes(new URL(l.url).origin));
-/** True when a logged request is one of its adapter's reads, the ChatGPT session that http reads for the token, or the tab's own page load or favicon. */
+/** True when a logged request is one of its adapter's reads, a token path its auth reads (the ChatGPT session), or the tab's own page load or favicon. */
 function isRead(l) {
   const u = new URL(l.url);
-  if (u.pathname === "/" || u.pathname === "/favicon.ico" || (u.origin === CHATGPT && u.pathname === "/api/auth/session" && !u.search)) return true;
-  return Boolean(findRead(adapterOf(l), l.method, l.url));
+  const adapter = adapterOf(l);
+  if (u.pathname === "/" || u.pathname === "/favicon.ico" || (u.origin === adapter.origin && adapter.auth.tokenPaths.includes(u.pathname) && !u.search && l.method === "GET")) return true;
+  return Boolean(findRead(adapter, l.method, l.url));
 }
 
 // The API hosts of the stand-in in e2e/api-ext/. Each answers CORS for the ChatGPT page as a real API does for its own site, except /no-cors.
@@ -282,7 +283,7 @@ try {
   // 7. Exports, and the CLI reads the archive file.
   const json = JSON.parse(await ask("export:json"));
   check("the JSON export is a foxcache/v1 archive with every record", { schema: "foxcache/v1", conversations: 5, projects: 2, memories: 5, preferences: 5 }, { schema: json.schema, conversations: json.conversations.length, projects: json.projects.length, memories: json.memories.length, preferences: json.preferences.length });
-  check("the JSON export has no raw provider fields", false, /"mapping"|"chat_messages"|"extracted_content"|accessToken/.test(JSON.stringify(json)));
+  check("the JSON export has no raw provider fields and no token", false, /"mapping"|"chat_messages"|"extracted_content"|accessToken|synthetic-access-token-not-real/.test(JSON.stringify(json)));
   const memories = await ask("export:memories");
   check("the memory list has one line per memory", 5, memories.split("\n").filter((l) => /^- \[(chatgpt|claude)\] /.test(l)).length);
   const zipInfo = await popup.evaluate(async () => {
