@@ -68,11 +68,12 @@ flowchart LR
    so the request carries the session that your tab already has. foxcache never reads a
    password or a cookie.
 3. Every request is one of the reads the adapter lists (`src/reads.ts`): GETs, and POSTs
-   that only read, such as Grok's message text by id or a Gemini batchexecute call whose
-   rpc id is on the list. So foxcache cannot send, edit or delete anything on the site.
-   ChatGPT, DeepSeek and GitHub Copilot send a bearer token, and Gemini a token from its
-   page, that their own page script reads; foxcache's agent reads it the same way, keeps
-   it in the tab, and never stores or passes it on.
+   that only read, such as Grok's message text by id or a Gemini or NotebookLM
+   batchexecute call whose rpc id is on the list. So foxcache cannot send, edit or delete
+   anything on the site. ChatGPT, DeepSeek and GitHub Copilot send a bearer token, and
+   Gemini and NotebookLM a token from their page, that their own page script reads;
+   foxcache's agent reads it the same way, keeps it in the tab, and never stores or
+   passes it on.
 4. Requests go one at a time, 1.5 s apart. A 429 waits for `Retry-After` or backs off
    2, 4, 8 ... seconds. A second capture fetches only the conversations that changed;
    it reads the whole list again unless the last capture ended with no error.
@@ -98,7 +99,7 @@ Checked on 2026-10-15 against the linked pages.
 
 | Item | foxcache | Official exports (ChatGPT, Claude) | [chatgpt-exporter](https://github.com/pionxzh/chatgpt-exporter) |
 |---|---|---|---|
-| Sites | ChatGPT, Claude, Le Chat, DeepSeek, Gemini, Kimi, Doubao | One each | ChatGPT |
+| Sites | ChatGPT, Claude, Le Chat, DeepSeek, Gemini, NotebookLM, Kimi, Doubao | One each | ChatGPT |
 | How you get it | One click, in a minute or so | An email link, up to days later | One click |
 | Memories and custom instructions | Yes, where a read endpoint exists | Claude: `memories.json`; ChatGPT: not reliably | No |
 | Kept where | Your browser, then a local file | A zip you download | A file per export |
@@ -117,6 +118,7 @@ Checked on 2026-10-15 against the linked pages.
 | GitHub Copilot adapter | Implemented, conversations only, individual plan | vitest on synthetic fixtures, and E2E at github.com and its API host |
 | Kimi, Doubao adapters | Implemented, conversations only, by read POST | vitest on synthetic fixtures, and E2E at its origin |
 | Gemini adapter | Implemented: conversations, Gems, saved info | vitest on synthetic fixtures, and E2E at the real origin |
+| NotebookLM adapter | Implemented: notebooks, each one's latest chat | vitest on synthetic fixtures, and E2E at the real origin |
 | File store, CLI, MCP server | Implemented | vitest, the MCP server with the SDK in-memory client |
 | Firefox extension | Implemented | E2E on Ichabod (remote Firefox 158) and local Firefox, 32 checks |
 | SCENT with the real foxscope | Not tested | A stand-in extension with the foxscope id is used |
@@ -193,7 +195,8 @@ The memory list has one memory per line, for foxpack:
 
 ## Limits
 
-- Gemini's chat list stops near 500-600 chats; Google Takeout has the rest. [docs/providers/](docs/providers/README.md) has the sources.
+- Gemini's chat list stops near 500-600 chats; Google Takeout has the rest. NotebookLM
+  gives only the latest chat of each notebook, and no source text, notes or artifacts. [docs/providers/](docs/providers/README.md) has the sources.
 - Not captured: Claude's topic memory (POST only), ChatGPT's GPTs (no confirmed endpoint),
   Le Chat and DeepSeek projects and memories (no known endpoint), and the contents of any file.
 - The endpoints are private web APIs that the sites can change. A changed shape fails
