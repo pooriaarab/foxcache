@@ -13,16 +13,15 @@ function provider(opts: { stubs?: Stub[]; pageSize?: number; reply?: (path: stri
   const size = opts.pageSize ?? 2;
   const log: string[] = [];
   const counts = new Map<string, number>();
-  const http: Http = {
-    async get(path) {
-      log.push(path);
-      const n = (counts.get(path) ?? 0) + 1;
-      counts.set(path, n);
-      const r = opts.reply?.(path, n);
-      if (r instanceof Error) throw r;
-      return r;
-    },
+  const answer = async (path: string) => {
+    log.push(path);
+    const n = (counts.get(path) ?? 0) + 1;
+    counts.set(path, n);
+    const r = opts.reply?.(path, n);
+    if (r instanceof Error) throw r;
+    return r;
   };
+  const http: Http = { get: answer, post: (path) => answer(`POST ${path}`) };
   const adapter: Adapter = {
     id: "chatgpt",
     label: "ChatGPT",
@@ -105,6 +104,22 @@ describe("C2 polite order", () => {
     expect(sleeps).toEqual(Array(p.log.length - 1).fill(1500));
     expect(s.records.map(([k]) => k)).toEqual(Array(5).fill("conversations"));
     expect(cp.counts).toMatchObject({ conversations: 5, skipped: 0, errors: 0 });
+  });
+});
+
+describe("C2 a POST read", () => {
+  it("goes in the same order, with the delay and the 429 backoff", async () => {
+    const extras: Partial<Adapter> = {
+      async detect(h) {
+        await h.post("/me", { op: "Viewer" });
+        return true;
+      },
+    };
+    const p = provider({ extras, reply: (path, n) => (path === "POST /me" && n === 1 ? err("rate-limited", { status: 429, retryAfter: 3 }) : undefined) });
+    const cp = await run(p, sink());
+    expect(cp.status).toBe("done");
+    expect(p.log.slice(0, 3)).toEqual(["POST /me", "POST /me", "/list?0"]);
+    expect(sleeps.slice(0, 2)).toEqual([3000, 1500]);
   });
 });
 
