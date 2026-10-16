@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>foxcache archive</title><link rel="stylesheet" href="style.css"></head>
+<body class="wide">
+  <header><img class="mark" src="icons/icon-48.png" alt="" width="22" height="22"><h1>Archive</h1></header>
+  <p class="note" id="counts">Nothing captured yet.</p>
+  <div class="toolbar row">
+    <input id="query" type="search" placeholder="Search titles and messages" aria-label="Search" maxlength="200">
+    <select id="provider" aria-label="Provider"><option value="">All sites</option></select>
+    <select id="kind" aria-label="Kind">
+      <option value="conversations">Conversations</option>
+      <option value="projects">Projects</option>
+      <option value="memories">Memories</option>
+      <option value="preferences">Preferences</option>
+      <option value="library">Library</option>
+    </select>
+  </div>
+  <div id="list" class="list" aria-live="polite"></div>
+  <section id="detail" class="card" hidden></section>
+  <h2>Export</h2>
+  <p class="note"><code>foxcache import</code> reads the archive file. foxpack reads the memory list.</p>
+  <div class="row exports">
+    <button id="export-json" class="small">Archive (JSON)</button>
+    <button id="export-markdown" class="small">Markdown (zip)</button>
+    <button id="export-memories" class="small">Memory list</button>
+    <span id="status" class="hint"></span>
+  </div>
+  <script src="archive.js"></script>
+</body>
+</html>

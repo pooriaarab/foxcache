@@ -1,0 +1,35 @@
+# Providers
+
+| Provider | Origin | Adapter | Why |
+|---|---|---|---|
+| ChatGPT | https://chatgpt.com | yes | [chatgpt.md](chatgpt.md) |
+| ChatGPT Codex tasks | https://chatgpt.com | yes, in the ChatGPT adapter | [codex.md](codex.md) |
+| Claude | https://claude.ai | yes | [claude.md](claude.md) |
+| Le Chat (Mistral) | https://chat.mistral.ai | yes, conversations only | [mistral.md](mistral.md) |
+| DeepSeek | https://chat.deepseek.com | yes, conversations only | [deepseek.md](deepseek.md) |
+| Grok | https://grok.com | yes, conversations only; the message text is one POST read | [grok.md](grok.md) |
+| Perplexity | https://www.perplexity.ai | yes, conversations and memories; the list and the memories are POST reads | [perplexity.md](perplexity.md) |
+| GitHub Copilot | https://github.com | yes, conversations only; read from https://api.individual.githubcopilot.com | [github-copilot.md](github-copilot.md) |
+| Kimi | https://www.kimi.com | yes, conversations only, by read POST | [kimi.md](kimi.md) |
+| Doubao | https://www.doubao.com | yes, conversations only, by read POST | [doubao.md](doubao.md) |
+| Notion AI | https://app.notion.com | yes, AI chats only (read POSTs) | [notion.md](notion.md) |
+| Kagi Assistant | https://assistant.kagi.com | yes, conversations, instructions, assistants | [kagi.md](kagi.md) |
+| Poe | https://poe.com | yes, conversations only; read POST | [poe.md](poe.md) |
+| Meta AI | https://www.meta.ai | yes, conversations only; read POST | [meta.md](meta.md) |
+| Qwen Chat | https://chat.qwen.ai | yes: conversations, projects, memories, personalization | [qwen.md](qwen.md) |
+| Z.ai | https://chat.z.ai | yes: conversations, custom instructions | [zai.md](zai.md) |
+| HuggingChat | https://huggingface.co (under /chat) | yes, conversations only | [huggingchat.md](huggingchat.md) |
+| Genspark | https://www.genspark.ai | yes, conversations only; exact paths only | [genspark.md](genspark.md) |
+| Gemini | https://gemini.google.com | yes: conversations, Gems, saved info | [gemini.md](gemini.md) |
+| NotebookLM | https://notebook.google.com | yes: notebooks, each one's latest chat | [notebooklm.md](notebooklm.md) |
+
+foxcache sends only the reads each adapter lists (`src/reads.ts`): exact
+GET paths, and POST calls whose body names a read operation, each
+checked by hand against its source.
+
+- GET only: ChatGPT, Claude, Le Chat, DeepSeek, GitHub Copilot, Kagi Assistant, Qwen Chat, Z.ai, HuggingChat and Genspark.
+- By POST as well: Grok, Perplexity, Kimi, Doubao, Notion AI, Poe, Meta AI, Gemini and NotebookLM.
+
+Each POST is on its own read paths, commands or rpc ids.
+
+To add a provider, follow [ADDING.md](ADDING.md).

@@ -1,0 +1,82 @@
+// H11 in docs/failure-modes.md: a wrong reads table fails when http is
+// created, and every adapter's table passes.
+import { describe, expect, it } from "vitest";
+import { ADAPTERS, type Read, cookie, createHttp, defineReads } from "../src/index.js";
+
+const ORIGIN = "https://chatgpt.com";
+const SOURCE = "https://example.test/docs#get";
+const page = { fetch: async () => new Response("{}"), storage: { getItem: () => null }, scripts: () => [], call: () => undefined };
+const open = (reads: readonly Read[]) => () => createHttp({ origin: ORIGIN, reads, auth: cookie }, page);
+const get = (path: string, extra: Partial<Read> = {}): Read => ({ method: "GET", path, source: SOURCE, ...extra });
+const op = (queryName: string): Read => get("/graphql", { method: "POST", body: { type: "json", match: { queryName }, keys: ["queryName"] } });
+
+describe("H11 a wrong reads table", () => {
+  it("refuses a table that is not frozen", () => {
+    expect(open([get("/a")])).toThrow(/frozen/);
+    const shallow = Object.freeze([{ ...get("/a"), query: ["x"] }]);
+    expect(open(shallow)).toThrow(/frozen/);
+  });
+  it.each([["http://example.test/x"], ["docs/providers/chatgpt.md"], [""]])("refuses the source %j", (source) => {
+    expect(open(defineReads([get("/a", { source })]))).toThrow(/source/);
+  });
+  it.each([["a"], ["/"], ["//a"], ["/a//"], ["/a//b"], ["/a/../b"], ["/a/./b"], ["/a?x=1"], ["/a#x"], ["/a%2Fb"], ["/a\\b"], ["/{}"], ["/{a"], ["/a b"]])("refuses the path %j", (path) => {
+    expect(open(defineReads([get(path)]))).toThrow(/path/);
+  });
+  it("takes a path that ends in one slash, and sends only that spelling", async () => {
+    const http = open(defineReads([get("/api/v1/chats/")]))();
+    await expect(http.get("/api/v1/chats/", {})).resolves.toEqual({});
+    for (const path of ["/api/v1/chats", "/api/v1/chats//"]) await expect(http.get(path)).rejects.toMatchObject({ code: "not-allowed" });
+  });
+  it("refuses two GET reads of one path", () => {
+    expect(open(defineReads([get("/a/{id}"), get("/a/{id}", { query: ["x"] })]))).toThrow(/twice/);
+  });
+  it("refuses a GET with a body rule, and a POST without one", () => {
+    expect(open(defineReads([get("/a", { body: { type: "json", match: {}, keys: [] } })]))).toThrow(/body/);
+    expect(open(defineReads([get("/a", { method: "POST" })]))).toThrow(/body/);
+  });
+  it("refuses a body rule it does not know, or one with no match", () => {
+    expect(open(defineReads([get("/a", { method: "POST", body: { type: "xml" } as never })]))).toThrow(/body/);
+    expect(open(defineReads([get("/a", { method: "POST", body: { type: "json" } as never })]))).toThrow(/match/);
+  });
+  it("refuses a batchexecute read with no rpc id, or that does not allow the rpcids query", () => {
+    expect(open(defineReads([get("/b", { method: "POST", query: ["rpcids"], body: { type: "batchexecute", rpcids: [] } })]))).toThrow(/rpc/);
+    expect(open(defineReads([get("/b", { method: "POST", body: { type: "batchexecute", rpcids: ["MaZiqc"] } })]))).toThrow(/rpcids/);
+  });
+  it("takes POST reads of one path that differ in their body rule", () => {
+    expect(open(defineReads([op("ThreadList"), op("Thread")]))).not.toThrow();
+  });
+  it.each([["http://api.example"], ["https://api.example/v1"], ["https://api.example/"], [ORIGIN], ["api.example"]])("refuses the API origin %j", (api) => {
+    expect(() => createHttp({ origin: ORIGIN, auth: cookie, apiOrigins: [api], reads: defineReads([get("/a")]) }, page)).toThrow(/API origin/);
+  });
+  it("refuses a read on an origin that is not one of the API origins", () => {
+    expect(() => createHttp({ origin: ORIGIN, auth: cookie, apiOrigins: ["https://api.example"], reads: defineReads([get("/a", { origin: "https://other.example" })]) }, page)).toThrow(/apiOrigins/);
+    expect(() => createHttp({ origin: ORIGIN, auth: cookie, reads: defineReads([get("/a", { origin: ORIGIN })]) }, page)).toThrow(/apiOrigins/);
+  });
+  it("takes the same GET path on two origins", () => {
+    expect(() => createHttp({ origin: ORIGIN, auth: cookie, apiOrigins: ["https://api.example"], reads: defineReads([get("/a"), get("/a", { origin: "https://api.example" })]) }, page)).not.toThrow();
+  });
+  it("refuses a decode that is not a function", () => {
+    expect(open(defineReads([get("/a", { decode: "json" as never })]))).toThrow(/decode/);
+  });
+  it.each([["authorization"], ["cookie"], ["host"], ["origin"], ["referer"], ["content-length"], ["Agw-Js-Conv"], ["x y"], [""]])("refuses the fixed header %j", (name) => {
+    expect(open(defineReads([get("/a", { headers: { [name]: "str" } })]))).toThrow(/header/);
+  });
+  it("refuses a fixed header value with a line break or a control character", () => {
+    expect(open(defineReads([get("/a", { headers: { "agw-js-conv": "str\r\nx-evil: 1" } })]))).toThrow(/header/);
+    expect(open(defineReads([get("/a", { headers: { "agw-js-conv": "s\u0000" } })]))).toThrow(/header/);
+  });
+  it("takes a fixed header the page sends", () => {
+    expect(open(defineReads([get("/a", { headers: { "agw-js-conv": "str", "content-type": "application/json; encoding=utf-8" } })]))).not.toThrow();
+  });
+  it("refuses a method it does not know", () => {
+    expect(open(defineReads([get("/a", { method: "DELETE" as "GET" })]))).toThrow(/method/);
+  });
+});
+
+describe("every adapter's reads", () => {
+  it.each(ADAPTERS.map((a) => [a.id, a]))("%s has a table that http takes, each read with its source", (_, adapter) => {
+    expect(() => createHttp(adapter, page)).not.toThrow();
+    expect(adapter.reads.length).toBeGreaterThan(0);
+    for (const read of adapter.reads) expect(read.source).toMatch(/^https:\/\/\S+$/);
+  });
+});

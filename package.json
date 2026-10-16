@@ -1,0 +1,73 @@
+{
+  "name": "foxcache-ai",
+  "version": "0.2.0",
+  "description": "Capture your own AI chats, projects, memories and preferences into your browser.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Pooria Arab",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pooriaarab/foxcache.git"
+  },
+  "homepage": "https://github.com/pooriaarab/foxcache#readme",
+  "packageManager": "pnpm@11.10.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "default": "./dist/node.js"
+    }
+  },
+  "bin": {
+    "foxcache": "dist/bin.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint --deny-warnings",
+    "test": "vitest run --passWithNoTests",
+    "ci:local": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm build:ext && pnpm lint:ext && pnpm check:amo",
+    "build:ext": "node scripts/build-ext.mjs",
+    "lint:ext": "web-ext lint -s dist-ext --warnings-as-errors",
+    "check:amo": "node scripts/amo-listing.mjs check",
+    "e2e": "pnpm build && node scripts/build-ext.mjs --e2e && node e2e/run.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.1",
+    "create-foxkit": "^0.1.8",
+    "esbuild": "^0.28.2",
+    "oxlint": "^1.87.0",
+    "puppeteer-core": "^25.14.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3",
+    "web-ext": "^10.7.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^4.6.7"
+  },
+  "keywords": [
+    "firefox",
+    "webextension",
+    "ai-chat",
+    "chat-export",
+    "chatgpt-export",
+    "claude-export",
+    "backup",
+    "memories",
+    "custom-instructions",
+    "mcp",
+    "scent",
+    "local-first",
+    "privacy"
+  ]
+}
