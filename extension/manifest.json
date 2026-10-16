@@ -27,7 +27,8 @@
     "https://chatgpt.com/*",
     "https://claude.ai/*",
     "https://chat.mistral.ai/*",
-    "https://chat.deepseek.com/*"
+    "https://chat.deepseek.com/*",
+    "https://grok.com/*"
   ],
   "background": {
     "scripts": [
