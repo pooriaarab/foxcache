@@ -111,6 +111,10 @@ describe("perplexity memories", () => {
     expect(await code(perplexity.memories!(open({ [MEMORY]: { errors: [{ message: "PersistedQueryNotFound" }] } }).http))).toMatch(/^provider-schema: perplexity: memory query answered errors/);
     expect(await code(perplexity.memories!(open({ [MEMORY]: memories([], { hasNextPage: false }, "PARTIAL") }).http))).toMatch(/^provider-schema: perplexity: memoryCategories\[0\].items.status is "PARTIAL"/);
   });
+  it("PX40 throws provider-schema on an empty category list, so no stored memory is deleted", async () => {
+    const empty = { data: { viewer: { knowledgeContext: { scopeByKind: { id: "s", memoryCategories: [] } } } } };
+    expect(await code(perplexity.memories!(open({ [MEMORY]: empty }).http))).toMatch(/^provider-schema: perplexity: memoryCategories is empty/);
+  });
   it("PX4 throws pagination-loop when endCursor comes again, or never ends", async () => {
     const again = memories([], { hasNextPage: true, endCursor: "c1" });
     expect(await code(perplexity.memories!(open({ [MEMORY]: again }).http))).toMatch(/^pagination-loop: perplexity: /);
