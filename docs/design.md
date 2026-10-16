@@ -77,7 +77,7 @@ Each adapter names its auth kind, one file each in `src/auth/`:
 | `page-session` | a field of a session answer the page reads with its cookies | ChatGPT (`/api/auth/session`) |
 | `localStorage-bearer` | a localStorage key, or a field of its JSON | DeepSeek (`userToken`) |
 | `cookie-bearer` | a cookie the page's script can read, or a field of its JSON | none yet |
-| `page-formkey` | a key a page function gives, found by name in the inline scripts, plus an md5 tag of each POST body (`src/md5.ts`) | none yet |
+| `page-formkey` | a key a page function gives, found by name in the inline scripts, plus an md5 tag of each POST body (`src/md5.ts`) | Poe (`poe-formkey`, `poe-tag-id`) |
 
 `http` opens the kind once, inside the content script, so the token lives
 in a closure there. It goes only onto requests that are reads, and never to
