@@ -1,7 +1,7 @@
 # foxcache
 
-[![npm version](https://img.shields.io/npm/v/@pooriaarab/foxcache)](https://www.npmjs.com/package/@pooriaarab/foxcache)
-[![Downloads/month](https://img.shields.io/npm/dm/@pooriaarab/foxcache)](https://www.npmjs.com/package/@pooriaarab/foxcache)
+[![npm version](https://img.shields.io/npm/v/foxcache-ai)](https://www.npmjs.com/package/foxcache-ai)
+[![Downloads/month](https://img.shields.io/npm/dm/foxcache-ai)](https://www.npmjs.com/package/foxcache-ai)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://opensource.org/license/mit)
 
 [Quickstart](#capture-your-first-site) · [Providers](docs/providers/README.md) · [API reference](#runtime-surfaces) · [Coverage](#coverage) · [FAQ](#faq)
@@ -20,10 +20,10 @@ pnpm install
 pnpm build:ext
 ```
 
-The npm package is `@pooriaarab/foxcache`; its command is `foxcache`. It needs Node.js 24 or later and includes TypeScript declarations:
+The npm package is `foxcache-ai`; its command is `foxcache`. It needs Node.js 24 or later and includes TypeScript declarations:
 
 ```bash
-npm install @pooriaarab/foxcache
+npm install foxcache-ai
 ```
 
 It has two runtime dependencies, `@modelcontextprotocol/sdk` and `zod`, for the MCP server.
@@ -42,9 +42,9 @@ It has two runtime dependencies, `@modelcontextprotocol/sdk` and `zod`, for the 
 From a shell, read that file:
 
 ```bash
-npx @pooriaarab/foxcache import ~/Downloads/foxcache-archive-2026-10-15.json
-npx @pooriaarab/foxcache search "lisbon"
-npx @pooriaarab/foxcache export --memories > memories.md
+npx foxcache-ai import ~/Downloads/foxcache-archive-2026-10-15.json
+npx foxcache-ai search "lisbon"
+npx foxcache-ai export --memories > memories.md
 ```
 
 ## How it works
@@ -182,7 +182,7 @@ The memory list has one memory per line, for foxpack:
 `search_conversations` and `get_conversation`.
 
 ```json
-{ "mcpServers": { "foxcache": { "command": "npx", "args": ["-y", "@pooriaarab/foxcache", "mcp"] } } }
+{ "mcpServers": { "foxcache": { "command": "npx", "args": ["-y", "foxcache-ai", "mcp"] } } }
 ```
 
 ## Limits
