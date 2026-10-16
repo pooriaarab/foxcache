@@ -8,7 +8,7 @@ import type { Http } from "../http.js";
 import { defineReads } from "../reads.js";
 import type { Message } from "../schema.js";
 import { reader } from "./read.js";
-import type { Adapter } from "./types.js";
+import type { Adapter, Stub } from "./types.js";
 
 const r = reader("gemini");
 const PATH = "/_/BardChatUi/data/batchexecute";
@@ -32,6 +32,11 @@ const SRC = {
   saved: "https://github.com/mrlnlms/multi-ai-session-data-extractor/blob/01450c0dafcf4d1af62056392fd387124febe4b2/src/platforms/gemini/extractor/api_client.py#L84-L141",
 };
 
+/** A list row. updatedAt is the time of the list read, so every chat is read again (GE40); rowAt is the row's own time [5]. */
+interface Row extends Stub {
+  rowAt: string;
+}
+
 const call = (http: Http, rpcid: string, args: unknown, sourcePath: string) => callBatch(http, PATH, rpcid, args, sourcePath);
 
 export const gemini: Adapter = {
@@ -46,7 +51,7 @@ export const gemini: Adapter = {
     batchRead({ path: PATH, rpcid: GEMS, source: SRC.gems }),
     batchRead({ path: PATH, rpcid: SAVED_INFO, source: SRC.saved }),
   ]),
-  // The row time may be the creation time (GE6), and two streams are read in turn.
+  // The row time does not move on a new turn (GE6), and two streams are read in turn.
   newestFirst: false,
 
   async detect(http) {
@@ -61,6 +66,7 @@ export const gemini: Adapter = {
 
   // The cursor is "<stream>:<token>": the pinned stream first, then the rest from its first page.
   async listConversations(http, cursor) {
+    const listedAt = new Date().toISOString();
     const stream = cursor === undefined ? PINNED : Number(cursor.slice(0, cursor.indexOf(":")));
     const token = cursor === undefined ? null : cursor.slice(cursor.indexOf(":") + 1) || null;
     const page = await call(http, LIST, [PAGE, token, [stream, null, 1]], "/app");
@@ -74,13 +80,13 @@ export const gemini: Adapter = {
       .map(({ row, where }) => {
         const id = /^c_([A-Za-z0-9_-]+)$/.exec(r.str(row[0], `${where}[0]`))?.[1];
         if (!id) throw r.fail(`${where}[0]`, "is not a chat id");
-        return { id, title: r.optStr(row[1], `${where}[1]`) ?? "", updatedAt: r.stamp(row[5], `${where}[5]`) };
+        return { id, title: r.optStr(row[1], `${where}[1]`) ?? "", updatedAt: listedAt, rowAt: r.stamp(row[5], `${where}[5]`) };
       });
     const next = r.optStr(o[1], `${LIST}[1]`);
     return { items, next: next ? `${stream}:${next}` : stream === PINNED ? `${REST}:` : undefined };
   },
 
-  async getConversation(http, stub) {
+  async getConversation(http, stub: Row) {
     const turns = r.arr(r.arr(await call(http, CHAT, [`c_${stub.id}`, MAX_TURNS, null, 1, [1], [4], null, 1], `/app/${stub.id}`), CHAT)[0], `${CHAT}[0]`);
     if (turns.length >= MAX_TURNS) throw new FoxcacheError("too-large", `gemini: the chat has ${MAX_TURNS} turns or more, and Gemini gives no more than ${MAX_TURNS}; foxcache does not store a cut chat.`);
     // Newest first on the wire.
@@ -96,8 +102,9 @@ export const gemini: Adapter = {
       ];
     });
     const times = messages.flatMap((m) => (m.createdAt ? [m.createdAt] : []));
-    const updatedAt = [stub.updatedAt, ...times].toSorted().at(-1)!;
-    return { provider: "gemini", id: stub.id, title: stub.title, createdAt: times[0] ?? stub.updatedAt, updatedAt, messages };
+    // A new turn has a newer time, so the store keeps the new copy (GE40).
+    const updatedAt = [stub.rowAt, ...times].toSorted().at(-1)!;
+    return { provider: "gemini", id: stub.id, title: stub.title, createdAt: times[0] ?? stub.rowAt, updatedAt, messages };
   },
 
   async library(http) {
