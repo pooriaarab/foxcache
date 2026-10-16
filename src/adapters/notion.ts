@@ -83,20 +83,27 @@ export const notion: Adapter = {
     }
   },
 
-  // The cursor is [workspace index, Notion's cursor or null]: the list goes through each workspace in turn.
+  // The cursor is [workspace id, Notion's cursor or null]. The workspaces go in id order, not sidebar order, so a reordered sidebar cannot send one workspace's cursor to another (N40).
   async listConversations(http, cursor) {
-    const all = await spaces(http);
-    const [at, notionCursor] = cursor ? (JSON.parse(cursor) as [number, string | null]) : [0, null];
-    const space = all[at];
+    const all = (await spaces(http)).toSorted();
+    const [space, notionCursor] = cursor ? (JSON.parse(cursor) as [unknown, string | null]) : [all[0], null];
     if (space === undefined) return { items: [] };
+    if (typeof space !== "string") throw r.fail("the list cursor", "does not name a workspace");
+    const after = (id: string) => all.find((s) => s > id);
+    if (!all.includes(space)) {
+      // The workspace is gone since the cursor was saved: go on with the next one.
+      const next = after(space);
+      return { items: [], next: next === undefined ? undefined : JSON.stringify([next, null]) };
+    }
     const body = { threadParentPointer: { table: "space", id: space, spaceId: space }, limit: PAGE, includeWriterChats: false, includeWorkflowThreads: true, ...(notionCursor ? { cursor: notionCursor } : {}) };
     const page = r.obj(await http.post("/api/v3/getInferenceTranscriptsForUser", body), "getInferenceTranscriptsForUser");
     const items = r.arr(page.transcripts, "transcripts").map((x, i) => {
       const t = r.obj(x, `transcripts[${i}]`);
       return { id: `${space}:${r.str(t.id, `transcripts[${i}].id`)}`, title: r.optStr(t.title, `transcripts[${i}].title`) ?? "", updatedAt: ms(t.updated_at, `transcripts[${i}].updated_at`) };
     });
-    if (r.bool(page.hasMore, "hasMore")) return { items, next: JSON.stringify([at, r.str(page.nextCursor, "nextCursor")]) };
-    return { items, next: at + 1 < all.length ? JSON.stringify([at + 1, null]) : undefined };
+    if (r.bool(page.hasMore, "hasMore")) return { items, next: JSON.stringify([space, r.str(page.nextCursor, "nextCursor")]) };
+    const next = after(space);
+    return { items, next: next === undefined ? undefined : JSON.stringify([next, null]) };
   },
 
   async getConversation(http, stub) {

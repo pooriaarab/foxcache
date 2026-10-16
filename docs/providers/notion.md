@@ -64,3 +64,4 @@ The reads table lists three paths, so http refuses all of these.
 | N6 | The user has several workspaces. | Each one is listed in turn, and each id names its workspace. | `tests/notion.test.ts` |
 | N7 | Notion answers 429. | `rate-limited` passes on, so the capture waits (C3). | `tests/notion.test.ts` |
 | N8 | A message holds HTML or a script. | It stays text. | `tests/notion.test.ts` |
+| N40 | The user reorders the sidebar, or leaves a workspace, between a stopped capture and its resume. A cursor that named the workspace by its place in the list would send workspace B's Notion cursor to workspace A. | The cursor names the workspace by id, and workspaces go in id order, not sidebar order. A resume reads the same workspace's next page; a workspace that is gone is passed for the next one in id order. | `tests/notion.test.ts` |
