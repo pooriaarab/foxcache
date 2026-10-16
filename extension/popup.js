@@ -6,7 +6,7 @@ const ask = async (type, data = {}) => {
   return reply.value;
 };
 const $ = (id) => document.getElementById(id);
-const HUES = { chatgpt: 160, claude: 40, mistral: 25, deepseek: 250, poe: 270, meta: 215, qwen: 270, zai: 200 };
+const HUES = { chatgpt: 160, claude: 40, mistral: 25, deepseek: 250, poe: 270, meta: 215, qwen: 270, zai: 200, huggingchat: 50 };
 const STATES = {
   "no-permission": ["Not allowed", ""],
   "no-tab": ["No tab open", ""],
