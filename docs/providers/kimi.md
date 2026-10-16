@@ -72,3 +72,4 @@ none of these can be sent:
 | K6 | `ListChats` gives a page token or a page it gave before. | The capture stops with `pagination-loop` (C4). | `tests/kimi.test.ts` |
 | K7 | A chat has more than 20 000 messages. | `too-large` (S4). | `tests/kimi.test.ts` |
 | K8 | A chat file carries a `signUrl`. | No record holds it. | `tests/kimi.test.ts` |
+| K40 | A `ListChats` page has no chats but a `nextPageToken`, as an empty Grok page can (GR40). | The list follows the token; only a missing or empty token ends it. A token that repeats still ends in `pagination-loop` (K6). | `tests/kimi.test.ts` |
