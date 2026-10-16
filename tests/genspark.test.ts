@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type Conversation, FoxcacheError, type Http, MAX_RESPONSE_BYTES, type Stub, check, createHttp, runCapture } from "../src/index.js";
+import { type Conversation, FoxcacheError, type Http, MAX_RESPONSE_BYTES, type Stub, check, createHttp, createStore, memoryBackend, runCapture } from "../src/index.js";
 import { genspark } from "../src/adapters/genspark.js";
 import { type Routes, fixture, fixtureHttp } from "./fixture-http.js";
 
@@ -127,14 +127,8 @@ describe("genspark capture again (GENSPARK41)", () => {
   afterEach(() => void vi.useRealTimers());
   it("reads a continued project again and stores the copy with the new messages", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
-    const stored: Record<string, Conversation> = {};
-    // The store keeps the copy with the newer updatedAt (ST1).
-    const put = async (_: unknown, c: unknown) => {
-      const conv = c as Conversation;
-      if (!stored[conv.id] || stored[conv.id]!.updatedAt < conv.updatedAt) stored[conv.id] = conv;
-      return { stop: false };
-    };
-    const capture = (routes: Routes) => runCapture({ adapter: genspark, http: open(routes).http, stamps: Object.fromEntries(Object.values(stored).map((c) => [c.id, c.updatedAt])), delayMs: 0, sink: { put, checkpoint: go, keep: go } });
+    const store = createStore(memoryBackend());
+    const capture = async (routes: Routes) => runCapture({ adapter: genspark, http: open(routes).http, stamps: await store.stamps("genspark"), delayMs: 0, sink: { put: async (k, c) => (await store.put(k, c), { stop: false }), checkpoint: go, keep: go } });
     vi.setSystemTime(new Date("2026-10-01T00:00:00Z"));
     await capture(fixture("genspark"));
     const key = `/api/project?id=${G1}`;
@@ -143,8 +137,19 @@ describe("genspark capture again (GENSPARK41)", () => {
     vi.setSystemTime(new Date("2026-10-02T00:00:00Z"));
     const again = await capture({ ...fixture("genspark"), [key]: p });
     expect([again.status, again.counts.skipped]).toEqual(["done", 0]);
-    expect(stored[G1]!.messages.at(-1)?.text).toBe("And a third day?");
-    expect([stored[G1]!.createdAt, stored[G1]!.updatedAt]).toEqual(["2026-09-14T08:30:00.125Z", "2026-10-02T00:00:00.000Z"]);
+    const stored = (await store.get("conversations", `genspark:${G1}`))!;
+    expect(stored.messages.at(-1)?.text).toBe("And a third day?");
+    expect([stored.createdAt, stored.updatedAt]).toEqual(["2026-09-14T08:30:00.125Z", "2026-09-14T08:30:00.125Z"]);
+  });
+  it("keeps the project time as updatedAt, so a capture does not show every project as updated", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const store = createStore(memoryBackend());
+    const capture = async () => runCapture({ adapter: genspark, http: open().http, stamps: await store.stamps("genspark"), delayMs: 0, sink: { put: async (k, c) => (await store.put(k, c), { stop: false }), checkpoint: go, keep: go } });
+    vi.setSystemTime(new Date("2026-10-01T00:00:00Z"));
+    await capture();
+    vi.setSystemTime(new Date("2026-10-02T00:00:00Z"));
+    await capture();
+    expect(Object.fromEntries((await store.all("conversations")).map((c) => [c.id, c.updatedAt]))).toEqual({ [G1]: "2026-09-14T08:30:00.125Z", [G2]: "2026-09-12T10:00:00.000Z", [G3]: "2026-09-10T16:46:20.955Z" });
   });
 });
 
@@ -152,7 +157,7 @@ describe("genspark conversations", () => {
   it("keeps user and assistant text, drops system, tool and empty tool-call turns, and reads ctime as ISO-8601 UTC (P4)", async () => {
     const c = await genspark.getConversation(open().http, stub(G1));
     expect(check("conversations", c)).toEqual(c);
-    expect(c).toMatchObject({ provider: "genspark", id: G1, title: "Porto weekend", createdAt: "2026-09-14T08:30:00.125Z", updatedAt: "2026-10-15T00:00:00.000Z", model: "synthetic-model-1" });
+    expect(c).toMatchObject({ provider: "genspark", id: G1, title: "Porto weekend", createdAt: "2026-09-14T08:30:00.125Z", updatedAt: "2026-09-14T08:30:00.125Z", model: "synthetic-model-1" });
     expect(c.messages.map((m) => [m.role, m.text])).toEqual([
       ["user", "Two days in Porto?"],
       ["assistant", "Day 1: Ribeira. Day 2: Foz."],

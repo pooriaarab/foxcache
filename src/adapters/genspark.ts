@@ -65,6 +65,7 @@ export const genspark: Adapter = {
     const data = await read(http, "/api/project/my", { from: "agents", offset, limit: LIMIT });
     const rows = r.arr(data.projects, "project/my projects").map((p, i) => r.obj(p, `projects[${i}]`));
     // The list has no update time, only ctime: each stub gets the time of this read, so every project is read again (GENSPARK41).
+    // That time stays in the stub: the project keeps its ctime as updatedAt.
     const listedAt = new Date().toISOString();
     const items = rows.map((p, i) => {
       r.time(p.ctime, `projects[${i}].ctime`);
@@ -86,8 +87,8 @@ export const genspark: Adapter = {
       id: r.str(p.id, `${where}.id`),
       title: r.optStr(p.name, `${where}.name`) ?? "",
       createdAt,
-      // The time of the list read: a later capture's copy is newer, so the store keeps its new messages (GENSPARK41).
-      updatedAt: s.updatedAt,
+      // The site gives no update time, so it stays ctime; the store keeps a continued copy by its message count (ST1, GENSPARK41).
+      updatedAt: createdAt,
       ...(model ? { model } : {}),
       messages,
     };
