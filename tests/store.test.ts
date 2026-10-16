@@ -30,6 +30,15 @@ describe("ST1 duplicate capture", () => {
     const all = await store.all("conversations");
     expect(all.map((c) => c.messages[0]!.text)).toEqual(["newer"]);
   });
+  it("takes a copy with an equal time and more messages: a continued chat on a site with no update time (GENSPARK41)", async () => {
+    const store = createStore(memoryBackend());
+    const at = "2026-01-02T00:00:00.000Z";
+    const longer = { ...conv("c1", at, "first"), messages: [...conv("c1", at, "first").messages, { role: "assistant" as const, text: "more", attachments: [] }] };
+    await store.put("conversations", conv("c1", at, "first"));
+    expect(await store.put("conversations", longer)).toBe("updated");
+    expect(await store.put("conversations", conv("c1", at, "fewer"))).toBe("same");
+    expect((await store.all("conversations"))[0]!.messages.map((m) => m.text)).toEqual(["first", "more"]);
+  });
   it("checks every record it stores", async () => {
     const store = createStore(memoryBackend());
     expect(await code(store.put("conversations", { ...conv("c1", "2026-01-02T00:00:00.000Z"), provider: "nope" } as never))).toBe("invalid-record");
