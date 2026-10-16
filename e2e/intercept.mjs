@@ -15,21 +15,27 @@ function answer(f, method, u, key) {
 const PAGE = (host) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${host} (fixture)</title></head><body><p>A fixture page for ${host}. The E2E serves it in place of the real site.</p></body></html>`;
 
 /**
- * Intercept every request to the fixture origins, and to the extra hosts,
+ * Intercept every request to the fixture origins and their apiOrigins
+ * (with CORS for the fixture origin), and to the extra hosts,
  * which hosts[host](url) answers. Each request is logged as { method, url,
  * status, origin, cookies }: its Origin header and the names of the
  * cookies it carried. override(url-key, fn) answers one route with
  * fn(count) -> { status, body, headers } | undefined (the fixture).
  */
 export async function serveFixtures(connection, providers, hosts = {}) {
-  const byHost = new Map(providers.map((p) => load(p)).map((f) => [new URL(f.origin).host, f]));
+  const fixtures = providers.map((p) => load(p));
+  const byHost = new Map(fixtures.map((f) => [new URL(f.origin).host, f]));
+  // A fixture's apiOrigins serve its routes too, with the CORS answer a real API gives its site's page.
+  const cors = new Map();
+  for (const f of fixtures) for (const api of f.apiOrigins ?? []) cors.set(new URL(api).host, { f, headers: { "access-control-allow-origin": f.origin, "access-control-allow-credentials": "true" } });
   const log = [];
   const overrides = new Map();
   const counts = new Map();
   connection.on("network.beforeRequestSent", async (event) => {
     if (!event.isBlocked) return;
     const u = new URL(event.request.url);
-    const f = byHost.get(u.host);
+    const api = cors.get(u.host);
+    const f = byHost.get(u.host) ?? api?.f;
     const key = keyOf(u);
     const n = (counts.get(`${u.host}${key}`) ?? 0) + 1;
     counts.set(`${u.host}${key}`, n);
@@ -40,13 +46,14 @@ export async function serveFixtures(connection, providers, hosts = {}) {
       else if (body === undefined) reply = { status: 404, body: '{"error":"not in the fixture"}' };
       else reply = { status: typeof body === "object" && body && "$status" in body ? body.$status : 200, body: JSON.stringify(body) };
     }
+    if (api) reply = { ...reply, headers: { ...reply.headers, ...api.headers } };
     const origin = event.request.headers.find((h) => h.name.toLowerCase() === "origin")?.value.value;
     log.push({ method: event.request.method, url: event.request.url, status: reply.status, origin, cookies: (event.request.cookies ?? []).map((c) => c.name) });
     const headers = [{ name: "content-type", value: { type: "string", value: reply.type ?? "application/json" } }, ...Object.entries(reply.headers ?? {}).map(([name, value]) => ({ name, value: { type: "string", value } }))];
     await connection.send("network.provideResponse", { request: event.request.request, statusCode: reply.status, reasonPhrase: reply.status === 200 ? "OK" : "Fixture", headers, body: { type: "string", value: reply.body } });
   });
   await connection.send("session.subscribe", { events: ["network.beforeRequestSent"] });
-  for (const host of [...byHost.keys(), ...Object.keys(hosts)]) await connection.send("network.addIntercept", { phases: ["beforeRequestSent"], urlPatterns: [{ type: "pattern", protocol: "https", hostname: host }] });
+  for (const host of [...byHost.keys(), ...cors.keys(), ...Object.keys(hosts)]) await connection.send("network.addIntercept", { phases: ["beforeRequestSent"], urlPatterns: [{ type: "pattern", protocol: "https", hostname: host }] });
   return {
     log,
     override: (origin, key, fn) => overrides.set(`${new URL(origin).host}${key}`, fn),
