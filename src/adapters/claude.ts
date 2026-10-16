@@ -1,11 +1,14 @@
 // claude.ai. Cookies only. Endpoints and sources: docs/providers/claude.md.
 import { FoxcacheError } from "../errors.js";
 import type { Http } from "../http.js";
+import { defineReads } from "../reads.js";
 import type { Attachment, Message, Project } from "../schema.js";
 import type { Adapter, Stub } from "./types.js";
 import { type Obj, pathToRoot, reader } from "./read.js";
 
 const r = reader("claude");
+const AV = "https://github.com/kenn-io/agentsview/blob/e989152895065fc1c84784662b61fb3a69c7eeba/internal/importer/claude_ai_sync.go";
+const QOL = "https://github.com/lugia19/Claude-QoL/blob/dc61e64e1314e534098ee0023e71c40c06765553/content";
 const PAGE = 50;
 /** The parent_message_uuid of the first message. */
 const ROOT = "00000000-0000-4000-8000-000000000000";
@@ -66,6 +69,17 @@ export const claude: Adapter = {
   id: "claude",
   label: "Claude",
   origin: "https://claude.ai",
+  reads: defineReads([
+    { method: "GET", path: "/api/organizations", source: `${AV}#L86-L101` },
+    { method: "GET", path: "/api/organizations/{org}/chat_conversations_v2", query: ["limit", "offset", "consistency"], source: `${AV}#L102-L123` },
+    { method: "GET", path: "/api/organizations/{org}/chat_conversations/{id}", query: ["tree", "rendering_mode", "render_all_tools"], source: "https://github.com/twilligon/claude-backup/blob/6184ba75e6e139a5de7dd88feacf69e8bcf312df/claude_backup/__init__.py#L402-L408" },
+    { method: "GET", path: "/api/organizations/{org}/projects", source: "https://github.com/agoramachina/claude-exporter/blob/d7cc384fbaefd1c020e74392512b8cfb3292c7b9/chrome/content.js#L538-L560" },
+    { method: "GET", path: "/api/organizations/{org}/projects/{id}", source: `${QOL}/helpers/claude-api.js#L1636-L1645` },
+    { method: "GET", path: "/api/organizations/{org}/projects/{id}/docs", source: `${QOL}/helpers/claude-api.js#L1647-L1694` },
+    { method: "GET", path: "/api/organizations/{org}/projects/{id}/files", source: `${QOL}/helpers/claude-api.js#L1647-L1694` },
+    { method: "GET", path: "/api/organizations/{org}/memory", source: "https://github.com/mrlnlms/multi-ai-session-data-extractor/blob/01450c0dafcf4d1af62056392fd387124febe4b2/src/platforms/claude_ai/extractor/api_client.py#L139-L147" },
+    { method: "GET", path: "/api/account_profile", source: `${QOL}/isolated/pref-switcher.js#L311-L316` },
+  ]),
   newestFirst: true,
 
   async detect(http) {

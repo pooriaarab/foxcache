@@ -43,6 +43,10 @@ Every provider has one adapter with the same interface (`src/adapters/types.ts`)
 `http` is the only way an adapter reaches the network. It allows GET on a
 path of the adapter's own origin, nothing else: no POST, no absolute URL, no
 other host. An adapter cannot send, edit or delete anything on the provider.
+And a GET is not trusted to be safe: some sites delete with one. Each
+adapter lists its reads (`src/reads.ts`): the exact paths, with `{name}` for
+one plain id segment, and the query keys of each, with a source URL. `http`
+refuses any other request before it is sent.
 
 Each endpoint, its source and a confidence level are in
 `docs/providers/<id>.md`. An endpoint that no open-source exporter confirms

@@ -1,11 +1,15 @@
 // The only way an adapter reaches the network: GET on a path of its own
-// origin, with the page's cookies. No other method exists here, so an
-// adapter cannot send, edit or delete anything on the provider (H1).
+// origin, with the page's cookies, and only a path its reads list
+// (src/reads.ts). No other method exists here, so an adapter cannot send,
+// edit or delete anything on the provider (H1, H8).
 //
 // Some sites send a bearer token that their own script gets from the page.
 // http gets it the same way, keeps it in this closure, and adds it to its
 // own requests. It never returns it and never puts it in an error (H5).
 import { FoxcacheError } from "./errors.js";
+import { type Query, type Site, checkSite, readUrl } from "./reads.js";
+
+export { type Query, type Read, type Site, defineReads, findRead } from "./reads.js";
 
 export const MAX_RESPONSE_BYTES = 50 * 1024 * 1024;
 
@@ -17,21 +21,22 @@ export const MAX_RESPONSE_BYTES = 50 * 1024 * 1024;
  */
 export type AuthKind = "chatgpt-session" | "deepseek-local";
 
-export type Query = Record<string, string | number | boolean | undefined>;
 export interface Http {
-  /** GET a path of the origin and parse the JSON answer. */
+  /** GET a path of the origin that is one of the site's reads, and parse the JSON answer. */
   get(path: string, query?: Query): Promise<unknown>;
 }
-export interface HttpOptions {
-  origin: string;
-  fetch: (url: string, init: RequestInit) => Promise<Response>;
+/** A site with the way it authenticates. */
+export interface HttpSite extends Site {
   auth?: AuthKind;
+}
+/** What http uses from the page it runs in. */
+export interface Page {
+  fetch: (url: string, init: RequestInit) => Promise<Response>;
   /** The page's localStorage, for deepseek-local. */
-  storage?: { getItem(key: string): string | null };
+  storage: { getItem(key: string): string | null };
 }
 
 const SESSION_PATH = "/api/auth/session";
-const API_PREFIX = "/backend-api/";
 
 /** Seconds from a Retry-After header: a number or an HTTP date. */
 function retryAfter(value: string | null): number | undefined {
@@ -68,22 +73,15 @@ async function readCapped(res: Response, where: string): Promise<string> {
   return new TextDecoder().decode(all);
 }
 
-export function createHttp(options: HttpOptions): Http {
-  const origin = new URL(options.origin).origin;
+export function createHttp(site: HttpSite, page: Page): Http {
+  checkSite(site);
+  const origin = new URL(site.origin).origin;
   let token: string | undefined;
-
-  function url(path: string, query: Query = {}): URL {
-    if (!path.startsWith("/") || path.startsWith("//") || path.includes("\\")) throw new FoxcacheError("not-allowed", `${path} is not a path on ${origin}.`);
-    const u = new URL(path, origin);
-    if (u.origin !== origin) throw new FoxcacheError("not-allowed", `${path} is not a path on ${origin}.`);
-    for (const [k, v] of Object.entries(query)) if (v !== undefined) u.searchParams.set(k, String(v));
-    return u;
-  }
 
   async function send(u: URL, auth?: string): Promise<unknown> {
     const headers: Record<string, string> = { accept: "application/json" };
     if (auth) headers.authorization = `Bearer ${auth}`;
-    const res = await options.fetch(u.href, { method: "GET", credentials: "include", redirect: "manual", headers });
+    const res = await page.fetch(u.href, { method: "GET", credentials: "include", redirect: "manual", headers });
     const where = `${origin}${u.pathname}`;
     // redirect: "manual" gives an opaque redirect: a login page is where it goes.
     if (res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400)) throw new FoxcacheError("logged-out", `${where} redirected: sign in to ${origin}.`);
@@ -100,8 +98,8 @@ export function createHttp(options: HttpOptions): Http {
   }
 
   async function bearer(fresh: boolean): Promise<string | undefined> {
-    if (options.auth === "deepseek-local") {
-      const raw = options.storage?.getItem("userToken");
+    if (site.auth === "deepseek-local") {
+      const raw = page.storage.getItem("userToken");
       let value: unknown;
       try {
         value = raw ? (JSON.parse(raw) as { value?: unknown }).value : undefined;
@@ -111,9 +109,9 @@ export function createHttp(options: HttpOptions): Http {
       if (typeof value !== "string" || !value) throw new FoxcacheError("logged-out", `No session on ${origin}: sign in.`);
       return value;
     }
-    if (options.auth === "chatgpt-session") {
+    if (site.auth === "chatgpt-session") {
       if (token && !fresh) return token;
-      const session = (await send(url(SESSION_PATH))) as { accessToken?: unknown } | null;
+      const session = (await send(new URL(SESSION_PATH, origin))) as { accessToken?: unknown } | null;
       if (typeof session?.accessToken !== "string" || !session.accessToken) throw new FoxcacheError("logged-out", `No session on ${origin}: sign in.`);
       token = session.accessToken;
       return token;
@@ -123,14 +121,13 @@ export function createHttp(options: HttpOptions): Http {
 
   return {
     async get(path, query) {
-      const u = url(path, query);
-      // The token goes only to the API, so no spelling of SESSION_PATH reads it out (H7).
-      if (options.auth === "chatgpt-session" && (!u.pathname.startsWith(API_PREFIX) || /%(2e|2f|5c)/i.test(u.pathname))) throw new FoxcacheError("not-allowed", `${u.pathname} is not under ${API_PREFIX}; foxcache sends the session token nowhere else.`);
+      // No read names SESSION_PATH, so no spelling of it reads the token out (H7).
+      const u = readUrl(site, "GET", path, query);
       try {
         return await send(u, await bearer(false));
       } catch (error) {
         // A token can expire during a long capture: get a new one once.
-        if (options.auth !== "chatgpt-session" || !(error instanceof FoxcacheError) || error.code !== "logged-out" || error.status !== 401) throw error;
+        if (site.auth !== "chatgpt-session" || !(error instanceof FoxcacheError) || error.code !== "logged-out" || error.status !== 401) throw error;
         return send(u, await bearer(true));
       }
     },
