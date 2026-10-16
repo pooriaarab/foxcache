@@ -1,14 +1,24 @@
 import { describe, expect, it } from "vitest";
 import { FoxcacheError, MAX_RESPONSE_BYTES, type Read, cookie, createHttp, defineReads } from "../src/index.js";
+import { reader } from "../src/adapters/read.js";
 
 const ORIGIN = "https://chatgpt.com";
 const SOURCE = "https://example.test/docs";
 const get = (path: string, query?: string[]): Read => ({ method: "GET", path, ...(query ? { query } : {}), source: SOURCE });
+const NO_STORAGE = { getItem: () => null };
+const NO_COOKIE = () => "";
+const schema = reader("test");
+/** A decoder that finds a changed shape. */
+const strict = (): never => {
+  throw schema.fail("thread", "is not a list");
+};
 /** The reads these tests send. */
 const READS = defineReads([
   ...["/a", "/b", "/big", "/missing", "/api/me", "/backend-api/me", "/backend-api/fail"].map((p) => get(p)),
   get("/backend-api/conversations", ["offset", "limit", "skip"]),
   get("/backend-api/conversation/{id}"),
+  { method: "GET", path: "/stream", decode: (text) => text.split("\n").filter(Boolean).map((line) => JSON.parse(line) as unknown), source: SOURCE },
+  { method: "GET", path: "/strict", decode: strict, source: SOURCE },
   { method: "POST", path: "/graphql", body: { type: "json", match: { queryName: "ThreadList", "extensions.persistedQuery.sha256Hash": "abc" } }, source: SOURCE },
   { method: "POST", path: "/im/chain", body: { type: "form", match: { cmd: "list" } }, source: SOURCE },
   { method: "POST", path: "/_/BardChatUi/data/batchexecute", query: ["rpcids", "rt"], body: { type: "batchexecute", rpcids: ["MaZiqc", "hNvQHb"] }, source: SOURCE },
@@ -17,8 +27,17 @@ const THREADS = { queryName: "ThreadList", variables: { first: 20 }, extensions:
 const BATCH = "/_/BardChatUi/data/batchexecute";
 /** A batchexecute f.req that calls these rpc ids. */
 const fReq = (...ids: string[]) => JSON.stringify([ids.map((id) => [id, "[]", null, "generic"])]);
-const NO_STORAGE = { getItem: () => null };
-const NO_COOKIE = () => "";
+/** A batchexecute read that decodes its answer. */
+const BATCH_READS = defineReads([{ method: "POST", path: "/batch", body: { type: "batchexecute", rpcids: ["MaZiqc"] }, query: ["rpcids"], decode: (text) => batchexecute(text), source: SOURCE }]);
+/** An Http on ORIGIN with BATCH_READS. */
+const openBatch = (fetch: (url: string, init: RequestInit) => Promise<Response>) => createHttp({ origin: ORIGIN, auth: cookie, reads: BATCH_READS }, { fetch, storage: NO_STORAGE, cookie: NO_COOKIE });
+/** One batchexecute call of MaZiqc. */
+const call = (http: ReturnType<typeof openBatch>) => http.post("/batch", { "f.req": JSON.stringify([[["MaZiqc", "[]", null, "generic"]]]) }, { rpcids: "MaZiqc" });
+/** Google's batchexecute answer: a )]}' line, then length-prefixed JSON chunks. This decoder reads the first chunk. */
+const batchexecute = (text: string): unknown => {
+  if (!text.startsWith(")]}'\n")) throw new Error(`no XSSI prefix in ${text}`);
+  return JSON.parse(text.slice(5).trim().split("\n")[1]!);
+};
 /** An Http on ORIGIN with READS and cookie auth. */
 const open = (fetch: (url: string, init: RequestInit) => Promise<Response>) => createHttp({ origin: ORIGIN, reads: READS, auth: cookie }, { fetch, storage: NO_STORAGE, cookie: NO_COOKIE });
 
@@ -255,6 +274,33 @@ describe("H4 a big answer with no Content-Length", () => {
     const big = "é".repeat(26 * 1024 * 1024);
     const fetch = async () => new Response(`"${big}"`, { status: 200 });
     expect((await err(open(fetch).get("/big"))).code).toBe("too-large");
+  });
+});
+
+describe("H15 an answer that is not JSON", () => {
+  const SECRET = "sk-user-api-key-in-the-answer";
+  it("gives the answer text to the read's decoder, and asks for any type", async () => {
+    const f = fakeFetch({ "/batch": { body: ')]}\'\n\n52\n[["wrb.fr","MaZiqc","[[\\"c_1\\",\\"Trip\\"]]",null,"generic"]]\n25\n[["di",42]]\n' } });
+    expect(await call(openBatch(f.fetch))).toEqual([["wrb.fr", "MaZiqc", '[["c_1","Trip"]]', null, "generic"]]);
+    expect(new Headers(f.calls[0]!.init.headers).get("accept")).toBe("*/*");
+  });
+  it("decodes stream frames on a GET read", async () => {
+    const f = fakeFetch({ "/stream": { body: '{"t":"a"}\n{"t":"b"}\n', headers: { "content-type": "text/event-stream" } } });
+    expect(await open(f.fetch).get("/stream")).toEqual([{ t: "a" }, { t: "b" }]);
+  });
+  it("passes a FoxcacheError of the decoder on as it is", async () => {
+    const e = await err(open(fakeFetch({ "/strict": { body: "x" } }).fetch).get("/strict"));
+    expect([e.code, e.message]).toEqual(["provider-schema", "test: thread is not a list. The site may have changed; foxcache needs an update."]);
+  });
+  it("turns any other throw into provider-schema, with no answer text", async () => {
+    const e = await err(call(openBatch(fakeFetch({ "/batch": { body: `<html>${SECRET}</html>` } }).fetch)));
+    expect(e.code).toBe("provider-schema");
+    expect(`${e.message} ${e.stack} ${JSON.stringify(e)}`).not.toContain(SECRET);
+  });
+  it("keeps the size cap", async () => {
+    let decoded = false;
+    const http = createHttp({ origin: ORIGIN, auth: cookie, reads: defineReads([{ method: "GET", path: "/a", decode: () => (decoded = true), source: SOURCE }]) }, { fetch: fakeFetch({ "/a": { body: "x", headers: { "content-length": String(MAX_RESPONSE_BYTES + 1) } } }).fetch, storage: NO_STORAGE, cookie: NO_COOKIE });
+    expect([(await err(http.get("/a"))).code, decoded]).toEqual(["too-large", false]);
   });
 });
 
