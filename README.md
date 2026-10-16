@@ -97,7 +97,7 @@ Checked on 2026-10-15 against the linked pages.
 
 | Item | foxcache | Official exports (ChatGPT, Claude) | [chatgpt-exporter](https://github.com/pionxzh/chatgpt-exporter) |
 |---|---|---|---|
-| Sites | ChatGPT, Claude, Le Chat, DeepSeek, Kimi | One each | ChatGPT |
+| Sites | ChatGPT, Claude, Le Chat, DeepSeek, Kimi, Doubao | One each | ChatGPT |
 | How you get it | One click, in a minute or so | An email link, up to days later | One click |
 | Memories and custom instructions | Yes, where a GET endpoint exists | Claude: `memories.json`; ChatGPT: not reliably | No |
 | Kept where | Your browser, then a local file | A zip you download | A file per export |
@@ -114,7 +114,7 @@ Checked on 2026-10-15 against the linked pages.
 | Grok adapter | Implemented, conversations only | vitest on synthetic fixtures, and E2E at grok.com |
 | Perplexity adapter | Implemented, conversations and memories | vitest on synthetic fixtures, and E2E at www.perplexity.ai |
 | GitHub Copilot adapter | Implemented, conversations only, individual plan | vitest on synthetic fixtures, and E2E at github.com and its API host |
-| Kimi adapter | Implemented, conversations only, by read POST | vitest on synthetic fixtures, and E2E at its origin |
+| Kimi, Doubao adapters | Implemented, conversations only, by read POST | vitest on synthetic fixtures, and E2E at its origin |
 | Gemini | No adapter: its reads need POST | [docs/providers/](docs/providers/README.md) |
 | File store, CLI, MCP server | Implemented | vitest, the MCP server with the SDK in-memory client |
 | Firefox extension | Implemented | E2E on Ichabod (remote Firefox 158) and local Firefox, 32 checks |

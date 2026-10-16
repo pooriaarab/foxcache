@@ -1,0 +1,10 @@
+{
+ "provider": "doubao",
+ "origin": "https://www.doubao.com",
+ "note": "Synthetic data in the documented www.doubao.com IM shapes (docs/providers/doubao.md). No real chat.",
+ "routes": {
+  "POST /im/chain/recent_conv": {"status_code":0,"status_desc":"","downlink_body":{"pull_recent_conv_chain_downlink_body":{"cells":[{"conversation":{"conversation_id":"7420000000000000001","name":"周末去杭州","create_time":"1788300000","update_time":"1788336000","conversation_type":3}},{"conversation":{"conversation_id":"7420000000000000002","name":"Notes","create_time":"1788200000000","update_time":1788200100}}],"next_conv_version":"1788336000123","has_more":false}}},
+  "POST /im/conversation/info": {"status_code":0,"status_desc":"","downlink_body":{"get_conv_info_downlink_body":{"conversation_info":{"conversation_id":"7420000000000000001","name":"周末去杭州","latest_index":"4","create_time":"1788300000","update_time":"1788336000"}}}},
+  "POST /im/chain/single": {"status_code":0,"status_desc":"","downlink_body":{"pull_singe_chain_downlink_body":{"messages":[{"message_id":"m4","conversation_id":"7420000000000000001","index_in_conv":"4","user_type":2,"content_type":9999,"content":"","content_block":[{"block_type":10000,"content":{"text_block":{"text":"西湖边走走，"}}},{"block_type":10040,"content":{"card":{"url":"https://example.invalid/card"}}},{"block_type":10000,"content":"{\"text_block\":{\"text\":\"再去灵隐寺。\"}}"}],"create_time":"1788336000","status":0},{"message_id":"m3","conversation_id":"7420000000000000001","index_in_conv":"3","user_type":1,"content_type":1,"content":"{\"text\":\"<img src=x onerror=alert(1)>\"}","create_time":"1788335990","status":0},{"message_id":"m2","conversation_id":"7420000000000000001","index_in_conv":"2","user_type":2,"content_type":9999,"content":"[{\"block_type\":10000,\"content\":{\"text_block\":{\"text\":\"两天够了。\"}}}]","create_time":1788300010000,"status":0},{"message_id":"m1","conversation_id":"7420000000000000001","index_in_conv":"1","user_type":1,"content_type":1,"content":"周末去杭州玩两天？","create_time":"1788300000","status":0}],"has_more":false}}}
+ }
+}
