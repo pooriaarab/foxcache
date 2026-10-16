@@ -25,7 +25,7 @@ async function code(p: Promise<unknown>): Promise<string> {
   return "no error";
 }
 
-describe("kagi detect (K1)", () => {
+describe("kagi detect (KA1)", () => {
   it("is signed in when /api/init answers", async () => {
     expect(await kagi.detect(open().http)).toBe(true);
   });
@@ -57,17 +57,17 @@ describe("kagi list", () => {
     expect((await kagi.listConversations(f.http, first.next)).items.map((s) => s.id)).toEqual([K2]);
     expect(f.calls).toEqual([LIST, `${LIST}&after_id=${K1}`]);
   });
-  it("K3 gives the same cursor for the same page, so the capture can see a loop", async () => {
+  it("KA3 gives the same cursor for the same page, so the capture can see a loop", async () => {
     const all = fixture("kagi")[LIST] as { items: unknown[] };
     const page = { items: [all.items[0]], has_more: true };
     const routes = { ...fixture("kagi"), [LIST]: page, [`${LIST}&after_id=${K1}`]: page };
     expect((await kagi.listConversations(open(routes).http, K1)).next).toBe(K1);
   });
-  it("K2 names the field when the list changed", async () => {
+  it("KA2 names the field when the list changed", async () => {
     expect(await code(kagi.listConversations(open({ [LIST]: { conversations: [] } }).http))).toMatch(/^provider-schema: kagi: conversations.items is not a list/);
     expect(await code(kagi.listConversations(open({ [LIST]: { items: [{ conversation: { uuid: K1 } }], has_more: false } }).http))).toMatch(/^provider-schema: kagi: conversations.items\[0\].updated_at is not a time/);
   });
-  it("K6 passes a 429 on as rate-limited", async () => {
+  it("KA6 passes a 429 on as rate-limited", async () => {
     expect(await code(kagi.listConversations(open({ [LIST]: { $status: 429 } }).http))).toMatch(/^rate-limited: /);
   });
 });
@@ -84,11 +84,11 @@ describe("kagi conversations", () => {
     ]);
     expect(JSON.stringify(c)).not.toMatch(/hidden thinking|<p>/);
   });
-  it("K7 keeps hostile text as text", async () => {
+  it("KA7 keeps hostile text as text", async () => {
     const c = await kagi.getConversation(open().http, stub(K2));
     expect([c.title, ...c.messages.map((m) => m.text)]).toEqual(["<b>Hostile</b> thread", '<img src=x onerror="document.title=1">', "<script>alert(1)</script> stays text."]);
   });
-  it("K2 names a message whose role is new", async () => {
+  it("KA2 names a message whose role is new", async () => {
     const c = one();
     c.messages.items[1]!.role = "robot";
     expect(await code(kagi.getConversation(open({ [ONE]: c }).http, stub(K1)))).toMatch(/^provider-schema: kagi: messages\[1\].role is "robot"/);
@@ -121,7 +121,7 @@ function endless(size: number, fresh: boolean) {
   return { http, calls: () => calls };
 }
 
-describe("kagi older-message pages (K4, K5)", () => {
+describe("kagi older-message pages (KA4, KA5)", () => {
   it("throws pagination-loop when a page comes again", async () => {
     expect(await code(kagi.getConversation(endless(1, false).http, stub(K1)))).toMatch(/^pagination-loop: kagi: the older messages gave the same page again/);
   });

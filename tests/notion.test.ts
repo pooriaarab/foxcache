@@ -27,7 +27,7 @@ async function code(p: Promise<unknown>): Promise<string> {
   return "no error";
 }
 
-describe("notion detect (N1)", () => {
+describe("notion detect (NO1)", () => {
   it("is signed in when loadUserContent has a user", async () => {
     expect(await notion.detect(open().http)).toBe(true);
   });
@@ -53,10 +53,10 @@ describe("notion list", () => {
     });
     expect(f.calls).toEqual([USER, LIST]);
   });
-  it("N2 names the field when the list changed", async () => {
+  it("NO2 names the field when the list changed", async () => {
     expect(await code(notion.listConversations(open({ ...fixture("notion"), [LIST]: { threads: [] } }).http))).toMatch(/^provider-schema: notion: transcripts is not a list/);
   });
-  it("N3 follows nextCursor, and fails when hasMore comes with no cursor", async () => {
+  it("NO3 follows nextCursor, and fails when hasMore comes with no cursor", async () => {
     const routes = { ...fixture("notion"), [listKey(S)]: page([T1], { hasMore: true, nextCursor: "c-2" }), [listKey(S, "c-2")]: page([T2], { hasMore: false, nextCursor: null }) };
     const first = await notion.listConversations(open(routes).http);
     expect(first.items.map((s) => s.id)).toEqual([`${S}:${T1}`]);
@@ -64,12 +64,12 @@ describe("notion list", () => {
     expect(second).toMatchObject({ items: [{ id: `${S}:${T2}` }], next: undefined });
     expect(await code(notion.listConversations(open({ ...routes, [listKey(S)]: page([T1], { hasMore: true }) }).http))).toMatch(/^provider-schema: notion: nextCursor is not text/);
   });
-  it("N3 gives the same cursor for the same page, so the capture can see a loop", async () => {
+  it("NO3 gives the same cursor for the same page, so the capture can see a loop", async () => {
     const routes = { ...fixture("notion"), [listKey(S)]: page([T1], { hasMore: true, nextCursor: "same" }), [listKey(S, "same")]: page([T1], { hasMore: true, nextCursor: "same" }) };
     const first = await notion.listConversations(open(routes).http);
     expect((await notion.listConversations(open(routes).http, first.next)).next).toBe(first.next);
   });
-  it("N6 lists each workspace in turn", async () => {
+  it("NO6 lists each workspace in turn", async () => {
     const user = structuredClone(fixture("notion")[USER]) as { recordMap: { user_root: Record<string, { value: { value: { space_view_pointers: unknown[] } } }> } };
     Object.values(user.recordMap.user_root)[0]!.value.value.space_view_pointers.push({ id: "6a000000-0000-4000-8000-0000000000c2", spaceId: S2, table: "space_view" });
     const routes = { ...fixture("notion"), [USER]: user, [listKey(S)]: page([T1], { hasMore: false }), [listKey(S2)]: page([T2], { hasMore: false }) };
@@ -78,7 +78,7 @@ describe("notion list", () => {
     const second = await notion.listConversations(open(routes).http, first.next);
     expect(second).toEqual({ items: [{ id: `${S2}:${T2}`, title: "chat 2", updatedAt: "2026-09-21T14:15:00.000Z" }], next: undefined });
   });
-  it("N40 resumes in the same workspace after the sidebar is reordered, and passes one that is gone", async () => {
+  it("NO40 resumes in the same workspace after the sidebar is reordered, and passes one that is gone", async () => {
     type User = { recordMap: { user_root: Record<string, { value: { value: { space_view_pointers: unknown[] } } }> } };
     const withSpaces = (ids: string[]) => {
       const user = structuredClone(fixture("notion")[USER]) as User;
@@ -93,7 +93,7 @@ describe("notion list", () => {
     expect(gone.items).toEqual([]);
     expect((await notion.listConversations(open(withSpaces([S2])).http, gone.next)).items.map((s) => s.id)).toEqual([`${S2}:3d4e0000-0000-4000-8000-000000000009`]);
   });
-  it("N7 passes a 429 on as rate-limited", async () => {
+  it("NO7 passes a 429 on as rate-limited", async () => {
     expect(await code(notion.listConversations(open({ ...fixture("notion"), [LIST]: { $status: 429 } }).http))).toMatch(/^rate-limited: /);
   });
 });
@@ -112,24 +112,24 @@ describe("notion conversations", () => {
     expect(f.calls).toEqual([RECORDS, RECORDS]);
     expect(JSON.stringify(c)).not.toMatch(/synthetic-codename|Synthetic Space|The user wants a plan/);
   });
-  it("N8 keeps hostile text as text, from the older record envelope", async () => {
+  it("NO8 keeps hostile text as text, from the older record envelope", async () => {
     const c = await notion.getConversation(open().http, stub(T2));
     expect([c.title, ...c.messages.map((m) => m.text)]).toEqual(["<b>Hostile</b> notes", '<img src=x onerror="document.title=1">', "Kept as text."]);
   });
-  it("N2 names the step when its type is not text", async () => {
+  it("NO2 names the step when its type is not text", async () => {
     const r = records();
     (Object.values(r.recordMap.thread_message)[2] as { value: { value: { step: { type: unknown } } } }).value.value.step.type = 7;
     expect(await code(notion.getConversation(open({ [RECORDS]: r }).http, stub(T1)))).toMatch(/^provider-schema: notion: thread_message .*\.step\.type is not text/);
   });
-  it("N2 refuses an id that is not <space>:<thread>", async () => {
+  it("NO2 refuses an id that is not <space>:<thread>", async () => {
     expect(await code(notion.getConversation(open().http, { id: T1, title: "", updatedAt: "" }))).toMatch(/^provider-schema: notion: conversation id /);
   });
-  it("N4 names a message the record answer does not hold", async () => {
+  it("NO4 names a message the record answer does not hold", async () => {
     const r = records();
     r.recordMap.thread[T1]!.value.value.messages = [...(r.recordMap.thread[T1]!.value.value.messages as string[]), "9f00ffff-0000-4000-8000-000000000000"];
     expect(await code(notion.getConversation(open({ [RECORDS]: r }).http, stub(T1)))).toMatch(/^provider-schema: notion: thread_message 9f00ffff-0000-4000-8000-000000000000 is not in the answer/);
   });
-  it("N5 refuses a thread longer than foxcache keeps, before it reads a message", async () => {
+  it("NO5 refuses a thread longer than foxcache keeps, before it reads a message", async () => {
     const r = records();
     r.recordMap.thread[T1]!.value.value.messages = Array.from({ length: MAX_MESSAGES + 1 }, (_, i) => `m-${i}`);
     const f = open({ [RECORDS]: r });

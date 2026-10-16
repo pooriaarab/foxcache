@@ -83,7 +83,7 @@ export const notion: Adapter = {
     }
   },
 
-  // The cursor is [workspace id, Notion's cursor or null]. The workspaces go in id order, not sidebar order, so a reordered sidebar cannot send one workspace's cursor to another (N40).
+  // The cursor is [workspace id, Notion's cursor or null]. The workspaces go in id order, not sidebar order, so a reordered sidebar cannot send one workspace's cursor to another (NO40).
   async listConversations(http, cursor) {
     const all = (await spaces(http)).toSorted();
     const [space, notionCursor] = cursor ? (JSON.parse(cursor) as [unknown, string | null]) : [all[0], null];
