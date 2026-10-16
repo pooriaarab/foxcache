@@ -19,8 +19,13 @@ describe("H11 a wrong reads table", () => {
   it.each([["http://example.test/x"], ["docs/providers/chatgpt.md"], [""]])("refuses the source %j", (source) => {
     expect(open(defineReads([get("/a", { source })]))).toThrow(/source/);
   });
-  it.each([["a"], ["//a"], ["/a/"], ["/a//b"], ["/a/../b"], ["/a/./b"], ["/a?x=1"], ["/a#x"], ["/a%2Fb"], ["/a\\b"], ["/{}"], ["/{a"], ["/a b"]])("refuses the path %j", (path) => {
+  it.each([["a"], ["/"], ["//a"], ["/a//"], ["/a//b"], ["/a/../b"], ["/a/./b"], ["/a?x=1"], ["/a#x"], ["/a%2Fb"], ["/a\\b"], ["/{}"], ["/{a"], ["/a b"]])("refuses the path %j", (path) => {
     expect(open(defineReads([get(path)]))).toThrow(/path/);
+  });
+  it("takes a path that ends in one slash, and sends only that spelling", async () => {
+    const http = open(defineReads([get("/api/v1/chats/")]))();
+    await expect(http.get("/api/v1/chats/", {})).resolves.toEqual({});
+    for (const path of ["/api/v1/chats", "/api/v1/chats//"]) await expect(http.get(path)).rejects.toMatchObject({ code: "not-allowed" });
   });
   it("refuses two GET reads of one path", () => {
     expect(open(defineReads([get("/a/{id}"), get("/a/{id}", { query: ["x"] })]))).toThrow(/twice/);

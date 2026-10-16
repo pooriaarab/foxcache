@@ -22,7 +22,7 @@ export interface Read {
   method: "GET" | "POST";
   /** One of the site's apiOrigins, for a read on an API host. Left out: the site's own origin. */
   origin?: string;
-  /** The exact path. `{name}` stands for one segment of letters, digits and `-_.~:@`, not `.` or `..`. */
+  /** The exact path. `{name}` stands for one segment of letters, digits and `-_.~:@`, not `.` or `..`. It may end in one `/`, as open-webui's lists do (`/api/v1/chats/`); then only that spelling matches. */
   path: string;
   /** The query keys the read may carry. None when left out. */
   query?: readonly string[];
@@ -96,7 +96,9 @@ export function checkSite(site: Site): void {
     if (rule?.type === "batchexecute" && (!Array.isArray(rule.rpcids) || rule.rpcids.length === 0)) throw bad(`${at} lists no rpc id`);
     if (rule?.type === "batchexecute" && !read.query?.includes("rpcids")) throw bad(`${at} must allow the rpcids query`);
     const segments = read.path.split("/");
-    if (segments[0] !== "" || segments.length < 2 || !segments.slice(1).every((s) => PLACEHOLDER.test(s) || (LITERAL.test(s) && s !== "." && s !== ".."))) throw bad(`${at} is not an exact path`);
+    // One trailing "/" is part of the exact path; no other segment may be empty.
+    const named = segments.length > 2 && segments.at(-1) === "" ? segments.slice(1, -1) : segments.slice(1);
+    if (segments[0] !== "" || segments.length < 2 || !named.every((s) => PLACEHOLDER.test(s) || (LITERAL.test(s) && s !== "." && s !== ".."))) throw bad(`${at} is not an exact path`);
     if (!/^https:\/\/\S+$/.test(read.source)) throw bad(`${at} has no https source`);
     if (read.decode !== undefined && typeof read.decode !== "function") throw bad(`${at} has a decode that is not a function`);
     for (const [name, value] of Object.entries(read.headers ?? {})) if (!HEADER.test(name) || NOT_FIXED.has(name) || typeof value !== "string" || !/^[\x20-\x7e]*$/.test(value)) throw bad(`${at} has a fixed header foxcache does not send: ${JSON.stringify(name)}`);
