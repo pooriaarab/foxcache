@@ -53,6 +53,7 @@ describe("H20 decodeBatch", () => {
   });
   it.each([
     [[16], "logged-out"],
+    [[7], "logged-out"],
     [[8], "rate-limited"],
     [[8, null, [["type.googleapis.com/google.internal.UserDisplayableError", [1]]]], "rate-limited"],
     [[null, null, ["UserDisplayableError"]], "rate-limited"],
