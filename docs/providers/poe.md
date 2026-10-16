@@ -74,5 +74,6 @@ So a name ending in `Query` is not enough: only the two pairs above pass.
 | PO2 | A persisted hash changed: Poe answers `{data: null, errors}`. | `provider-schema` naming the operation, without the site's error text. | `tests/poe.test.ts` |
 | PO3 | The list has no time. | Every stub gets the capture's time, so each chat is read again; nothing is skipped by a guessed time. | `tests/poe.test.ts` |
 | PO4 | The message pages give a `startCursor` they gave before. | `provider-schema` (a loop); `pagination-loop` after 1 000 pages; `too-large` past 20 000 messages. | `tests/poe.test.ts` |
-| PO5 | A chat with no messages. | `provider-schema`: no time to give it. | `tests/poe.test.ts` |
+| PO5 | A chat with no messages. | Not stored: it has no time to give it (PO40). | `tests/poe.test.ts` |
 | PO30 | The page's JavaScript names two formkey functions, or a bot's text in a data block quotes the pattern. | The data block is not read. Two matches in the JavaScript: `provider-schema`, and no page function is called (H31). | `tests/page-formkey-scripts.test.ts`, E2E (Poe) |
+| PO40 | Three empty chats come in a row. As `provider-schema` they counted as bad conversations, and the runner stopped the capture after three in a row, so later chats went unread. | An empty chat throws `not-found`: the runner counts it as an error, stores nothing for it, and goes on. | `tests/poe.test.ts` |
