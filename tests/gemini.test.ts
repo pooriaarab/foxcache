@@ -16,7 +16,7 @@ const LIST = post("MaZiqc", "/app");
 const CHAT_A = post("hNvQHb", `/app/${A}`);
 const row = (id: string, title: unknown, pinned: true | null, seconds: unknown = 1789000000) => [id, title, pinned, null, null, [seconds, 0], null, null, null, 2];
 const turn = (q: unknown, a: unknown, seconds = 1789000000) => [["c_x", "r_1"], ["c_x", "r_1", "rc_1"], [[q], 1, null, 0], [[["rc_1", [a], [], null, null, null, null, null, [2]]]], [seconds, 0]];
-const stub = (id: string) => ({ id, title: "T", updatedAt: "2026-09-21T14:13:20.500Z" });
+const stub = (id: string) => ({ id, title: "T", updatedAt: "2026-10-15T00:00:00.000Z", rowAt: "2026-09-21T14:13:20.500Z" });
 const open = (routes: Routes = {}) => fixtureHttp(gemini, { ...fixture("gemini"), ...routes });
 
 async function code(p: Promise<unknown>): Promise<string> {
@@ -50,9 +50,10 @@ describe("gemini list", () => {
   it("reads the pinned stream, then the rest, and reads each chat once (GE3)", async () => {
     const f = open();
     const pinned = await gemini.listConversations(f.http);
-    expect(pinned).toEqual({ items: [{ id: A, title: "Lisbon in three days", updatedAt: "2026-09-21T14:13:20.500Z" }], next: "0:" });
+    const listedAt = expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/);
+    expect(pinned).toEqual({ items: [{ id: A, title: "Lisbon in three days", updatedAt: listedAt, rowAt: "2026-09-21T14:13:20.500Z" }], next: "0:" });
     const rest = await gemini.listConversations(f.http, pinned.next);
-    expect(rest).toEqual({ items: [{ id: B, title: "<b>Hostile</b> title", updatedAt: "2026-09-10T00:26:40.500Z" }], next: undefined });
+    expect(rest).toEqual({ items: [{ id: B, title: "<b>Hostile</b> title", updatedAt: listedAt, rowAt: "2026-09-10T00:26:40.500Z" }], next: undefined });
   });
   it("follows the next-page token of a stream", async () => {
     const routes = { [call("MaZiqc", [20, null, [0, null, 1]], "/app")]: be("MaZiqc", [null, "tok-2", [row(`c_${A}`, "One", null)]]), [call("MaZiqc", [20, "tok-2", [0, null, 1]], "/app")]: be("MaZiqc", [null, null, [row(`c_${B}`, "Two", null)]]) };
@@ -85,6 +86,19 @@ describe("gemini list", () => {
   });
 });
 
+describe("gemini capture again (GE40)", () => {
+  it("reads a chat again whose row time stayed while it got a new turn", async () => {
+    const stored: Record<string, string> = {};
+    const sink = { put: async (_: unknown, c: unknown) => ((stored[(c as { id: string }).id] = (c as { updatedAt: string }).updatedAt), { stop: false }), checkpoint: async () => ({ stop: false }), keep: async () => ({ stop: false }) };
+    const capture = (routes: Routes) => runCapture({ adapter: gemini, http: open(routes).http, stamps: { ...stored }, delayMs: 0, sink });
+    expect((await capture({})).counts.conversations).toBe(2);
+    const turns = [turn("And day 4?", "Day 4: Cascais.", 1790100000), ...(fixture("gemini")[CHAT_A] as { $batchexecute: { hNvQHb: unknown[][] } }).$batchexecute.hNvQHb[0]!];
+    const again = await capture({ [CHAT_A]: be("hNvQHb", [turns]) });
+    expect([again.status, again.counts.skipped]).toEqual(["done", 0]);
+    expect(stored[A]).toBe("2026-09-22T18:00:00.000Z");
+  });
+});
+
 describe("gemini conversations", () => {
   it("reads the turns oldest first and passes the foxcache/v1 check", async () => {
     const f = open();
@@ -105,7 +119,7 @@ describe("gemini conversations", () => {
   });
   it("reads a turn with no time, and takes the list time for the chat", async () => {
     const c = check("conversations", await gemini.getConversation(open({ [CHAT_A]: be("hNvQHb", [[turn("q", "a").slice(0, 4)]]) }).http, stub(A)));
-    expect([c.messages[0]!.createdAt, c.createdAt, c.updatedAt]).toEqual([undefined, stub(A).updatedAt, stub(A).updatedAt]);
+    expect([c.messages[0]!.createdAt, c.createdAt, c.updatedAt]).toEqual([undefined, stub(A).rowAt, stub(A).rowAt]);
   });
   it("cuts a huge reply to the text limit and marks it", async () => {
     const c = check("conversations", await gemini.getConversation(open({ [CHAT_A]: be("hNvQHb", [[turn("q", "x".repeat(MAX_TEXT + 5))]]) }).http, stub(A)));
