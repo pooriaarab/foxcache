@@ -10,10 +10,13 @@
 | Grok | https://grok.com | yes, conversations only; the message text is one POST read | [grok.md](grok.md) |
 | Perplexity | https://www.perplexity.ai | yes, conversations and memories; the list and the memories are POST reads | [perplexity.md](perplexity.md) |
 | GitHub Copilot | https://github.com | yes, conversations only; read from https://api.individual.githubcopilot.com | [github-copilot.md](github-copilot.md) |
+| Kimi | https://www.kimi.com | yes, conversations only, by read POST | [kimi.md](kimi.md) |
 
 foxcache sends only the reads each adapter lists (`src/reads.ts`): exact GET
 paths, and POST calls whose body names a read operation, each checked by
-hand against its source. Gemini reads by POST, so it needs its list of
-read-only POST calls before it gets an adapter.
+hand against its source. ChatGPT, Claude, Le Chat and DeepSeek send GET
+only. Grok, Perplexity and Kimi read by POST, each a read method or a read
+operation. Gemini reads by POST, so it needs its list of read-only POST
+calls before it gets an adapter.
 
 To add a provider, follow [ADDING.md](ADDING.md).

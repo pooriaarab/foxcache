@@ -31,7 +31,8 @@
     "https://grok.com/*",
     "https://www.perplexity.ai/*",
     "https://github.com/*",
-    "https://api.individual.githubcopilot.com/*"
+    "https://api.individual.githubcopilot.com/*",
+    "https://www.kimi.com/*"
   ],
   "background": {
     "scripts": [

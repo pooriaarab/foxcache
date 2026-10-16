@@ -6,6 +6,7 @@ import { claude } from "./claude.js";
 import { deepseek } from "./deepseek.js";
 import { githubCopilot } from "./github-copilot.js";
 import { grok } from "./grok.js";
+import { kimi } from "./kimi.js";
 import { mistral } from "./mistral.js";
 import { perplexity } from "./perplexity.js";
 import type { Adapter } from "./types.js";
@@ -19,6 +20,7 @@ export const ADAPTERS: readonly Adapter[] = Object.freeze([
   grok,
   perplexity,
   githubCopilot,
+  kimi,
 ]);
 
 /** The adapter for a provider id. Throws for a provider with no adapter. */
