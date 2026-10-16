@@ -11,8 +11,11 @@ export type Body = Readonly<Record<string, unknown>>;
 
 /** What the body of a POST read must be. */
 export type BodyRule =
-  /** A JSON object. Each key of match is a dotted path whose value must equal it: a GraphQL queryName, a persisted query hash, an IM cmd. `{}` takes any object. */
-  | { type: "json"; match: Readonly<Record<string, string | number | boolean>> }
+  /**
+   * A JSON object. Each key of match is a dotted path whose value must equal it: a GraphQL queryName, a persisted query hash, an IM cmd. `{}` takes any object.
+   * keys, when given, are the only top-level keys the body may have, so a body that names a read cannot also carry a query text (H30).
+   */
+  | { type: "json"; match: Readonly<Record<string, string | number | boolean>>; keys?: readonly string[] }
   /** Form fields, all text. Each key of match must have that value. */
   | { type: "form"; match: Readonly<Record<string, string>> }
   /** Google batchexecute: form fields with f.req. Every rpc id that f.req calls must be listed, and the rpcids query must name exactly those ids. */
@@ -74,6 +77,10 @@ function deepFreeze<T>(x: T): T {
 }
 const frozen = (x: unknown): boolean => typeof x !== "object" || x === null || (Object.isFrozen(x) && Object.values(x).every(frozen));
 
+/** True when keys are distinct names and each match path starts at one of them. */
+const closedKeys = (keys: unknown, match: Readonly<Record<string, unknown>>): boolean =>
+  Array.isArray(keys) && keys.every((k) => typeof k === "string" && k !== "") && new Set(keys).size === keys.length && Object.keys(match).every((p) => keys.includes(p.split(".")[0]));
+
 /** A reads table, frozen all the way down. */
 export const defineReads = (reads: Read[]): readonly Read[] => deepFreeze(reads);
 
@@ -93,6 +100,7 @@ export function checkSite(site: Site): void {
     const rule = read.body;
     if (rule && rule.type !== "json" && rule.type !== "form" && rule.type !== "batchexecute") throw bad(`${at} has a body rule foxcache does not know`);
     if ((rule?.type === "json" || rule?.type === "form") && (typeof rule.match !== "object" || rule.match === null)) throw bad(`${at} has no match; write {} to take any body`);
+    if (rule?.type === "json" && rule.keys !== undefined && !closedKeys(rule.keys, rule.match)) throw bad(`${at} has keys that are not distinct names holding each match path`);
     if (rule?.type === "batchexecute" && (!Array.isArray(rule.rpcids) || rule.rpcids.length === 0)) throw bad(`${at} lists no rpc id`);
     if (rule?.type === "batchexecute" && !read.query?.includes("rpcids")) throw bad(`${at} must allow the rpcids query`);
     const segments = read.path.split("/");
@@ -151,7 +159,10 @@ function rpcCalls(fReq: unknown): string[] | undefined {
 /** The body on the wire when it fits the rule, or undefined. */
 function encode(rule: BodyRule, body: Body, query: Query): { type: string; text: string } | undefined {
   if (typeof body !== "object" || body === null || Array.isArray(body)) return undefined;
-  if (rule.type === "json") return Object.entries(rule.match).every(([k, v]) => at(body, k) === v) ? { type: "application/json", text: JSON.stringify(body) } : undefined;
+  if (rule.type === "json") {
+    if (rule.keys && !Object.keys(body).every((k) => rule.keys!.includes(k))) return undefined;
+    return Object.entries(rule.match).every(([k, v]) => at(body, k) === v) ? { type: "application/json", text: JSON.stringify(body) } : undefined;
+  }
   if (!Object.values(body).every((v) => typeof v === "string")) return undefined;
   const form = { type: "application/x-www-form-urlencoded;charset=UTF-8", text: new URLSearchParams(body as Record<string, string>).toString() };
   if (rule.type === "form") return Object.entries(rule.match).every(([k, v]) => body[k] === v) ? form : undefined;
