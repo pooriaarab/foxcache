@@ -20,6 +20,8 @@ export type BodyRule =
 
 export interface Read {
   method: "GET" | "POST";
+  /** One of the site's apiOrigins, for a read on an API host. Left out: the site's own origin. */
+  origin?: string;
   /** The exact path. `{name}` stands for one segment of letters, digits and `-_.~:@`, not `.` or `..`. */
   path: string;
   /** The query keys the read may carry. None when left out. */
@@ -34,9 +36,14 @@ export interface Read {
 export interface Site {
   /** The origin of the site's page, such as https://chatgpt.com. */
   origin: string;
+  /** Other origins the site's page calls for its API, such as https://api.individual.githubcopilot.com. Bare https origins. */
+  apiOrigins?: readonly string[];
   /** Every request the adapter may send. Made with defineReads. */
   reads: readonly Read[];
 }
+
+/** Every origin a site reads from: its own first, then its API origins. Each needs a host grant (X12). */
+export const originsOf = (site: Site): string[] => [site.origin, ...(site.apiOrigins ?? [])];
 
 const LITERAL = /^[A-Za-z0-9\-_.~:@,]+$/;
 const PLACEHOLDER = /^\{[a-z][A-Za-z0-9]*\}$/;
@@ -58,9 +65,13 @@ export const defineReads = (reads: Read[]): readonly Read[] => deepFreeze(reads)
 export function checkSite(site: Site): void {
   const bad = (why: string) => new Error(`The reads of ${site.origin} are wrong: ${why}.`);
   if (!frozen(site.reads)) throw bad("the table is not frozen; make it with defineReads");
+  if (!/^https:\/\/[a-z0-9.-]+$/.test(site.origin)) throw bad("the origin is not a bare https origin");
+  const apis = site.apiOrigins ?? [];
+  for (const api of apis) if (!/^https:\/\/[a-z0-9.-]+$/.test(api) || api === site.origin || apis.indexOf(api) !== apis.lastIndexOf(api)) throw bad(`the API origin ${api} is not a bare https origin of its own`);
   const seen = new Set<string>();
   for (const read of site.reads) {
-    const at = `${read.method} ${read.path}`;
+    const at = `${read.method} ${read.origin ?? ""}${read.path}`;
+    if (read.origin !== undefined && !apis.includes(read.origin)) throw bad(`${at} names an origin that is not one of the apiOrigins`);
     if (read.method !== "GET" && read.method !== "POST") throw bad(`${at} has a method foxcache does not send`);
     if ((read.method === "POST") !== (read.body !== undefined)) throw bad(`${at} needs a body rule for a POST, and none for a GET`);
     const rule = read.body;
@@ -82,13 +93,17 @@ const matches = (template: string, path: string): boolean => {
   return want.length === have.length && want.every((w, i) => (PLACEHOLDER.test(w) ? VALUE.test(have[i]!) && have[i] !== "." && have[i] !== ".." : w === have[i]));
 };
 
+const fits = (site: Site, read: Read, method: string, origin: string, path: string, keys: readonly string[]): boolean =>
+  read.method === method && (read.origin ?? site.origin) === origin && matches(read.path, path) && keys.every((k) => read.query?.includes(k));
+
 /**
- * The first read whose method, path and query keys fit a request, or
- * undefined. It does not look at a body: http checks that when it sends.
- * The E2E uses it on the requests it intercepts.
+ * The first read whose method, origin, path and query keys fit a request
+ * URL, or undefined. It does not look at a body: http checks that when it
+ * sends. The E2E uses it on the requests it intercepts.
  */
-export function findRead(site: Site, method: string, path: string, keys: readonly string[]): Read | undefined {
-  return site.reads.find((r) => r.method === method && matches(r.path, path) && keys.every((k) => r.query?.includes(k)));
+export function findRead(site: Site, method: string, url: string): Read | undefined {
+  const u = new URL(url);
+  return site.reads.find((r) => fits(site, r, method, u.origin, u.pathname, [...u.searchParams.keys()]));
 }
 
 const at = (x: unknown, dotted: string): unknown => dotted.split(".").reduce<unknown>((o, k) => (typeof o === "object" && o !== null && Object.hasOwn(o, k) ? (o as Record<string, unknown>)[k] : undefined), x);
@@ -124,10 +139,15 @@ export interface Prepared {
   body?: { type: string; text: string };
 }
 
-/** The request when it is a read, or not-allowed before any request (H1, H8, H9, H10). */
-export function prepare(site: Site, method: "GET" | "POST", path: string, query: Query = {}, body?: Body): Prepared {
-  const origin = new URL(site.origin).origin;
-  const refuse = () => new FoxcacheError("not-allowed", `${method} ${path} on ${origin} is not one of the reads foxcache lists for this site.`);
+/**
+ * The request when it is a read, or not-allowed before any request (H1,
+ * H8, H9, H10, H12). target is a path of the site's origin, or an API
+ * origin followed by a path.
+ */
+export function prepare(site: Site, method: "GET" | "POST", target: string, query: Query = {}, body?: Body): Prepared {
+  const refuse = () => new FoxcacheError("not-allowed", `${method} ${target} is not one of the reads foxcache lists for ${site.origin}.`);
+  const origin = (site.apiOrigins ?? []).find((o) => target.startsWith(`${o}/`)) ?? site.origin;
+  const path = origin === site.origin ? target : target.slice(origin.length);
   if (!path.startsWith("/") || /[?#\\]/.test(path)) throw refuse();
   const u = new URL(path, origin);
   // URL parsing drops dot segments and would move the request: refuse instead.
@@ -135,7 +155,7 @@ export function prepare(site: Site, method: "GET" | "POST", path: string, query:
   // The keys come from the query object: in a Firefox content script, searchParams.keys() is not iterable.
   const keys = Object.keys(query).filter((k) => query[k] !== undefined);
   for (const read of site.reads) {
-    if (read.method !== method || !matches(read.path, path) || !keys.every((k) => read.query?.includes(k))) continue;
+    if (!fits(site, read, method, origin, path, keys)) continue;
     const wire = read.body && encode(read.body, body ?? {}, query);
     if (read.body && !wire) continue;
     for (const k of keys) u.searchParams.set(k, String(query[k]));

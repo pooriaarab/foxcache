@@ -47,7 +47,9 @@ A GET is not trusted to be safe, since some sites delete with one. A POST
 read also names its operation: the GraphQL `queryName` or hash, the IM
 `cmd`, or the batchexecute rpc ids, so the same endpoint cannot carry a
 write. `http` refuses any other request before it is sent. An adapter cannot
-send, edit or delete anything on the provider.
+send, edit or delete anything on the provider. A site whose page reads from
+another host names it in `apiOrigins`; those reads also go from the tab, as
+the page's own calls do ([cors.md](cors.md)).
 
 Each endpoint, its source and a confidence level are in
 `docs/providers/<id>.md`. An endpoint that no open-source exporter confirms
