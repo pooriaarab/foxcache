@@ -20,6 +20,7 @@ export const PROVIDERS = [
   "kagi",
   "poe",
   "meta",
+  "qwen",
 ] as const;
 export type ProviderId = (typeof PROVIDERS)[number];
 export const ROLES = ["user", "assistant", "system", "tool"] as const;

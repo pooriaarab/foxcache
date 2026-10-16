@@ -37,7 +37,8 @@
     "https://app.notion.com/*",
     "https://assistant.kagi.com/*",
     "https://poe.com/*",
-    "https://www.meta.ai/*"
+    "https://www.meta.ai/*",
+    "https://chat.qwen.ai/*"
   ],
   "background": {
     "scripts": [
