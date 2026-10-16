@@ -1,6 +1,6 @@
 // P60 in docs/failure-modes.md: the README and docs/providers/README.md
 // name every adapter, and say which ones read by POST, as the reads do.
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { ADAPTERS } from "../src/index.js";
 
@@ -48,5 +48,25 @@ describe("P61 the design auth table lists every adapter under its kind", () => {
   const rows = Object.fromEntries([...readFileSync("docs/design.md", "utf8").matchAll(/^\| `([a-zA-Z-]+)` \| [^|]+ \| ([^|]+) \|$/gm)].map((m) => [m[1]!, m[2]!]));
   it("names each adapter in the Used by cell of its auth kind", () => {
     for (const a of ADAPTERS) expect(rows[a.auth.kind] ?? "", `${a.id} (${a.auth.kind})`).toContain(a.label);
+  });
+});
+
+const adapterTest = (t: string) => ADAPTERS.some((a) => t === `tests/${a.id}.test.ts`);
+
+describe("P62 the failure-mode tables cite the tests of each row", () => {
+  const docs = ["docs/failure-modes.md", ...readdirSync("docs/providers").map((f) => `docs/providers/${f}`)];
+  /** id -> the Test cell of its row. */
+  const cells = new Map(docs.flatMap((file) => [...readFileSync(file, "utf8").matchAll(/^\| ([A-Z]+\d+) \|.*\| ([^|]*) \|$/gm)].map((m) => [m[1]!, { file, cell: m[2]! }] as const)));
+  const tests = readdirSync("tests").filter((f) => f.endsWith(".test.ts")).map((f) => `tests/${f}`);
+  it("finds every tests/ file a row names", () => {
+    for (const { file, cell } of cells.values()) for (const [cited] of cell.matchAll(/tests\/[\w.-]+\.test\.ts/g)) expect(existsSync(cited), `${file}: ${cited}`).toBe(true);
+  });
+  it("names each test file whose describe is for the row's id", () => {
+    for (const t of tests) {
+      for (const [, id] of readFileSync(t, "utf8").matchAll(/describe\("([A-Z]+\d+) /g)) {
+        const row = cells.get(id!);
+        if (row && !(adapterTest(t) && row.cell.includes("tests/<provider>.test.ts"))) expect(row.cell, `${row.file} ${id} should cite ${t}`).toContain(t);
+      }
+    }
   });
 });
