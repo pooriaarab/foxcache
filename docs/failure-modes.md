@@ -111,6 +111,7 @@ All errors are `FoxcacheError` with a `code`. The codes are in the rows.
 | P60 | An adapter is added or changed and the README or `docs/providers/README.md` still describes the old set: no Coverage row, a missing site, or a GET-only list that names a site that reads by POST. | A test reads both files: one README Coverage row and one providers row per adapter, the README site list equal to the adapters, and the GET-only and POST lists equal to what each adapter's reads send. | `tests/docs.test.ts` |
 | P61 | An adapter gets a new auth kind and `docs/design.md` still lists it under the old one, or not at all. | A test reads the auth table: each adapter's label is in the Used by cell of its own kind. | `tests/docs.test.ts` |
 | P62 | A failure-mode row cites a test file that does not exist, or not the file whose `describe` names its id, as X12 once cited `tests/background.test.ts` for a test in `tests/background-api.test.ts`. | A test reads every failure-mode table: each cited `tests/` file exists, and a row cites each test file with a `describe` for its id. | `tests/docs.test.ts` |
+| P63 | Two failure-mode tables use the same id, as Notion's N1-N6 did with the CLI's and Kagi's K1-K7 with Kimi's, so a citation points at two rows. | A test reads `docs/failure-modes.md` and every `docs/providers/*.md`: each id has one row. A provider's ids carry its own prefix (Notion NO, Kagi KA). | `tests/failure-mode-ids.test.ts` |
 
 ## SCENT
 
