@@ -53,10 +53,12 @@ table and your manifest lines with no edit.
 - GET: the exact `path`, with `{name}` for one id segment (letters, digits
   and `-_.~:@`), and every `query` key it sends.
 - POST: a `body` rule. `json` with `match` (dotted paths and the values they
-  must have: the GraphQL `queryName`, a persisted query hash, an IM `cmd`),
+  must have: the GraphQL `queryName`, a persisted query hash, an IM `cmd`)
+  and `keys` (every top-level key the adapter sends, and no other: a body
+  with another key, such as a GraphQL `query` text, is refused (H30)),
   `form` with `match`, or `batchexecute` with `rpcids` (list `rpcids` in
-  `query` too). `match: {}` takes any body: use it only for an endpoint that
-  only reads.
+  `query` too). `match: {}` takes any values of those keys: use it only for
+  an endpoint that only reads.
 - An API host: add it to `apiOrigins` and give the read its `origin`. Call
   `http.get("https://api.host/path")`. Read [../cors.md](../cors.md) first.
   The API must answer CORS for the site's page. Confirm it with a live smoke
@@ -128,7 +130,7 @@ export const example: Adapter = {
     { method: "GET", path: "/api/v1/user", source: `${SRC}#L10-L20` },
     { method: "GET", path: "/api/v1/chats", query: ["offset", "limit"], source: `${SRC}#L30-L60` },
     // One endpoint, many operations: the read names its own. The writes are under "Never call" in the doc.
-    { method: "POST", path: "/api/v1/rpc", body: { type: "json", match: { op: "chat.history" } }, source: `${SRC}#L70-L90` },
+    { method: "POST", path: "/api/v1/rpc", body: { type: "json", match: { op: "chat.history" }, keys: ["op", "chat_id"] }, source: `${SRC}#L70-L90` },
   ]),
   // True only when the list is sorted by updatedAt, newest first.
   newestFirst: true,

@@ -13,9 +13,9 @@ export type Body = Readonly<Record<string, unknown>>;
 export type BodyRule =
   /**
    * A JSON object. Each key of match is a dotted path whose value must equal it: a GraphQL queryName, a persisted query hash, an IM cmd. `{}` takes any object.
-   * keys, when given, are the only top-level keys the body may have, so a body that names a read cannot also carry a query text (H30).
+   * keys are the only top-level keys the body may have, so a body that names a read cannot also carry a query text (H30). Required: `[]` takes only `{}`.
    */
-  | { type: "json"; match: Readonly<Record<string, string | number | boolean>>; keys?: readonly string[] }
+  | { type: "json"; match: Readonly<Record<string, string | number | boolean>>; keys: readonly string[] }
   /** Form fields, all text. Each key of match must have that value. */
   | { type: "form"; match: Readonly<Record<string, string>> }
   /** Google batchexecute: form fields with f.req. Every rpc id that f.req calls must be listed, and the rpcids query must name exactly those ids. */
@@ -100,7 +100,7 @@ export function checkSite(site: Site): void {
     const rule = read.body;
     if (rule && rule.type !== "json" && rule.type !== "form" && rule.type !== "batchexecute") throw bad(`${at} has a body rule foxcache does not know`);
     if ((rule?.type === "json" || rule?.type === "form") && (typeof rule.match !== "object" || rule.match === null)) throw bad(`${at} has no match; write {} to take any body`);
-    if (rule?.type === "json" && rule.keys !== undefined && !closedKeys(rule.keys, rule.match)) throw bad(`${at} has keys that are not distinct names holding each match path`);
+    if (rule?.type === "json" && !closedKeys(rule.keys, rule.match)) throw bad(`${at} has no keys, or keys that are not distinct names holding each match path`);
     if (rule?.type === "batchexecute" && (!Array.isArray(rule.rpcids) || rule.rpcids.length === 0)) throw bad(`${at} lists no rpc id`);
     if (rule?.type === "batchexecute" && !read.query?.includes("rpcids")) throw bad(`${at} must allow the rpcids query`);
     const segments = read.path.split("/");
@@ -160,7 +160,7 @@ function rpcCalls(fReq: unknown): string[] | undefined {
 function encode(rule: BodyRule, body: Body, query: Query): { type: string; text: string } | undefined {
   if (typeof body !== "object" || body === null || Array.isArray(body)) return undefined;
   if (rule.type === "json") {
-    if (rule.keys && !Object.keys(body).every((k) => rule.keys!.includes(k))) return undefined;
+    if (!Object.keys(body).every((k) => rule.keys.includes(k))) return undefined;
     return Object.entries(rule.match).every(([k, v]) => at(body, k) === v) ? { type: "application/json", text: JSON.stringify(body) } : undefined;
   }
   if (!Object.values(body).every((v) => typeof v === "string")) return undefined;
