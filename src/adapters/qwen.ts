@@ -18,15 +18,20 @@ const MA = "https://github.com/mrlnlms/multi-ai-session-data-extractor/blob/0145
 const MEMORY_PAGE = 50;
 const PERSONALIZATION: Record<string, PreferenceKind> = { name: "name", description: "about-me", instruction: "instructions", style: "response-style" };
 
+/** The error of a success: false answer: logged-out when its data names the session, else provider-error (QWEN1). */
+function failed(env: Obj, path: string): FoxcacheError {
+  // Not the site's text in the message: it may echo a prompt or a token (QWEN41).
+  const why = JSON.stringify(env.data ?? null).slice(0, 200);
+  if (/unauthori[sz]ed|not.?log|login|token/i.test(why)) return new FoxcacheError("logged-out", `qwen: ${path} says the session is not valid: sign in again.`);
+  return new FoxcacheError("provider-error", `qwen: ${path} answered success: false.`);
+}
+
 /** Every v2 answer is {success, request_id, data}; a failure can come with HTTP 200. */
 async function v2(http: Http, path: string, query?: Query): Promise<unknown> {
   const env = r.obj(await http.get(path, query), path);
   if (env.success === true) return env.data;
   if (env.success !== false) throw r.fail(`${path} success`, "is not true or false");
-  // Not the site's text in the message: it may echo a prompt or a token (QWEN41).
-  const why = JSON.stringify(env.data ?? null).slice(0, 200);
-  if (/unauthori[sz]ed|not.?log|login|token/i.test(why)) throw new FoxcacheError("logged-out", `qwen: ${path} says the session is not valid: sign in again.`);
-  throw new FoxcacheError("provider-error", `qwen: ${path} answered success: false.`);
+  throw failed(env, path);
 }
 
 /** The pinned chats with main page 1, then the main list (chats outside projects), then each project's list, page by page from 1; an empty page ends a list. */
@@ -67,7 +72,8 @@ export const qwen: Adapter = {
   async detect(http) {
     try {
       const user = r.obj(await http.get("/api/v1/auths/"), "auths");
-      if (user.success === false) return false;
+      // A failure for another reason than the session is not "signed out" (QWEN42).
+      if (user.success === false) throw failed(user, "/api/v1/auths/");
       r.str((user.success === true ? r.obj(user.data, "auths data") : user).id, "auths id");
       return true;
     } catch (error) {
