@@ -12,6 +12,7 @@ import { kimi } from "./kimi.js";
 import { mistral } from "./mistral.js";
 import { notion } from "./notion.js";
 import { perplexity } from "./perplexity.js";
+import { poe } from "./poe.js";
 import type { Adapter } from "./types.js";
 
 // One adapter per line: docs/providers/ADDING.md.
@@ -27,6 +28,7 @@ export const ADAPTERS: readonly Adapter[] = Object.freeze([
   doubao,
   notion,
   kagi,
+  poe,
 ]);
 
 /** The adapter for a provider id. Throws for a provider with no adapter. */

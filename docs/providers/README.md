@@ -14,12 +14,13 @@
 | Doubao | https://www.doubao.com | yes, conversations only, by read POST | [doubao.md](doubao.md) |
 | Notion AI | https://app.notion.com | yes, AI chats only (read POSTs) | [notion.md](notion.md) |
 | Kagi Assistant | https://assistant.kagi.com | yes, conversations, instructions, assistants | [kagi.md](kagi.md) |
+| Poe | https://poe.com | yes, conversations only; read POST | [poe.md](poe.md) |
 
 foxcache sends only the reads each adapter lists (`src/reads.ts`): exact
 GET paths, and POST calls whose body names a read operation, each
 checked by hand against its source. ChatGPT, Claude, Le Chat, DeepSeek
-and Kagi Assistant send GET only. Grok, Perplexity, Kimi, Doubao and
-Notion AI read by POST, each on its own read paths or commands. Gemini
+and Kagi Assistant send GET only. Grok, Perplexity, Kimi, Doubao, Notion
+AI and Poe read by POST, each on its own read paths or commands. Gemini
 reads by POST, so it needs its list of read-only POST calls before it
 gets an adapter.
 
