@@ -108,6 +108,7 @@ All errors are `FoxcacheError` with a `code`. The codes are in the rows.
 | P9 | A list inside one call never ends: the ChatGPT project sidebar or the Le Chat `message.all` pages give a new cursor each time. | The adapter throws `pagination-loop` after 1 000 pages. Le Chat throws `too-large` once a chat passes 20 000 messages, while it reads them, not after (S4). | `tests/chatgpt.test.ts`, `tests/mistral.test.ts` |
 | P10 | Claude's `detect` gets an answer that is not JSON (a "Just a moment..." challenge page) or a changed shape. | `detect` throws that error, so the capture ends with `provider-schema` and does not tell the user to sign in. Only a 401, a 403 or an account with no chat organization means signed out. | `tests/claude.test.ts` |
 | P30 | A library user imports an adapter the extension ships, or an auth kind an adapter uses (`withHeaders`), and `foxcache` does not export it. | `src/index.ts` exports every adapter in `ADAPTERS` and every auth kind in `src/auth/`. A test checks both lists. | `tests/exports.test.ts` |
+| P60 | An adapter is added or changed and the README or `docs/providers/README.md` still describes the old set: no Coverage row, a missing site, or a GET-only list that names a site that reads by POST. | A test reads both files: one README Coverage row and one providers row per adapter, the README site list equal to the adapters, and the GET-only and POST lists equal to what each adapter's reads send. | `tests/docs.test.ts` |
 
 ## SCENT
 
@@ -144,7 +145,7 @@ All errors are `FoxcacheError` with a `code`. The codes are in the rows.
 | X2 | The origin permission is not granted. | The provider shows "Allow in settings". Nothing is injected. | E2E |
 | X3 | No tab of the provider is open. | The provider shows "Open <site>". | E2E |
 | X4 | The provider tab is closed during a capture. | The capture is marked interrupted and can be resumed. | E2E |
-| X5 | Capture sends a request that no read of the adapter lists, or a request other than GET from an adapter that has no POST read. | Never: the E2E checks every intercepted request against the adapter's reads, and that the four adapters send GET only. | E2E |
+| X5 | Capture sends a request that no read of the adapter lists, or a request other than GET from an adapter that has no POST read. | Never: the E2E checks every intercepted request of every adapter against that adapter's reads, method included, so an adapter with no POST read cannot send a POST. It also checks that the ChatGPT and Claude captures sent GET only. | E2E |
 | X6 | The archive page shows a message with HTML in it. | It shows the text. No element from the message is in the page. | E2E |
 | X7 | Delete all runs while a capture is writing a record. | The record that raced the delete is removed again, and the capture is told to stop. | `tests/background.test.ts`, E2E (delete all) |
 | X8 | A capture fails again and again at the same place on Resume, for example a project that no longer exists. | The popup offers Start over next to Resume. Start over leaves the old checkpoint behind. | E2E |

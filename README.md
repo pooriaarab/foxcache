@@ -51,7 +51,7 @@ npx foxcache-ai export --memories > memories.md
 
 ```mermaid
 flowchart LR
-  T[Your tab on chatgpt.com, claude.ai ...] -->|agent.js: GET with the tab's own session| A[Adapter]
+  T[Your tab on chatgpt.com, claude.ai ...] -->|agent.js: listed reads with the tab's own session| A[Adapter]
   A -->|one record at a time| E[Event page]
   E --> S[(IndexedDB)]
   S --> P[Popup, archive page, settings]
@@ -70,10 +70,13 @@ flowchart LR
 3. Every request is one of the reads the adapter lists (`src/reads.ts`): GETs, and POSTs
    that only read, such as Grok's message text by id or a Gemini or NotebookLM
    batchexecute call whose rpc id is on the list. So foxcache cannot send, edit or delete
-   anything on the site. ChatGPT, DeepSeek and GitHub Copilot send a bearer token, and
-   Gemini and NotebookLM a token from their page, that their own page script reads;
-   foxcache's agent reads it the same way, keeps it in the tab, and never stores or
-   passes it on.
+   anything on the site. Nine adapters read by POST; the rest send GET only
+   ([docs/providers/](docs/providers/README.md) lists them). GitHub Copilot reads from its
+   API host, api.individual.githubcopilot.com, as github.com's own chat does.
+   ChatGPT, DeepSeek, GitHub Copilot, Kimi, Qwen Chat and Z.ai send a bearer token, Poe a
+   formkey and a tag of each body, and Gemini and NotebookLM tokens from their page, that
+   their own page script reads; foxcache's agent reads it the same way, keeps it in the
+   tab, and never stores or passes it on.
 4. Requests go one at a time, 1.5 s apart. A 429 waits for `Retry-After` or backs off
    2, 4, 8 ... seconds. A second capture fetches only the conversations that changed;
    it reads the whole list again unless the last capture ended with no error.
@@ -99,7 +102,7 @@ Checked on 2026-10-15 against the linked pages.
 
 | Item | foxcache | Official exports (ChatGPT, Claude) | [chatgpt-exporter](https://github.com/pionxzh/chatgpt-exporter) |
 |---|---|---|---|
-| Sites | ChatGPT, Claude, Le Chat, DeepSeek, Gemini, NotebookLM, Kimi, Doubao | One each | ChatGPT |
+| Sites | ChatGPT, Claude, Le Chat, DeepSeek, Grok, Perplexity, GitHub Copilot, Kimi, Doubao, Notion AI, Kagi Assistant, Poe, Meta AI, Qwen Chat, Z.ai, HuggingChat, Genspark, Gemini, NotebookLM | One each | ChatGPT |
 | How you get it | One click, in a minute or so | An email link, up to days later | One click |
 | Memories and custom instructions | Yes, where a read endpoint exists | Claude: `memories.json`; ChatGPT: not reliably | No |
 | Kept where | Your browser, then a local file | A zip you download | A file per export |
@@ -110,22 +113,33 @@ Checked on 2026-10-15 against the linked pages.
 
 | Surface | Status | How it is checked |
 |---|---|---|
-| Library (`foxcache`) | Implemented | 175 vitest tests, written from the failure modes |
-| ChatGPT, Claude adapters | Implemented | vitest on synthetic fixtures, and E2E at the real origins |
-| Le Chat, DeepSeek adapters | Implemented, conversations only | vitest on synthetic fixtures |
-| Grok adapter | Implemented, conversations only | vitest on synthetic fixtures, and E2E at grok.com |
-| Perplexity adapter | Implemented, conversations and memories | vitest on synthetic fixtures, and E2E at www.perplexity.ai |
-| GitHub Copilot adapter | Implemented, conversations only, individual plan | vitest on synthetic fixtures, and E2E at github.com and its API host |
-| Kimi, Doubao adapters | Implemented, conversations only, by read POST | vitest on synthetic fixtures, and E2E at its origin |
-| Gemini adapter | Implemented: conversations, Gems, saved info | vitest on synthetic fixtures, and E2E at the real origin |
-| NotebookLM adapter | Implemented: notebooks, each one's latest chat | vitest on synthetic fixtures, and E2E at the real origin |
+| Library (`foxcache`) | Implemented | 680 vitest tests, written from the failure modes |
+| ChatGPT adapter | Conversations, projects, memories, custom instructions, Codex tasks | vitest on synthetic fixtures, and E2E at chatgpt.com |
+| Claude adapter | Conversations, projects, memories, preferences | vitest on synthetic fixtures, and E2E at claude.ai |
+| Le Chat adapter | Conversations only | vitest on synthetic fixtures, and E2E at chat.mistral.ai |
+| DeepSeek adapter | Conversations only | vitest on synthetic fixtures; the E2E leaves it not allowed and checks the popup says so |
+| Grok adapter | Conversations only | vitest on synthetic fixtures, and E2E at grok.com |
+| Perplexity adapter | Conversations and memories | vitest on synthetic fixtures, and E2E at www.perplexity.ai |
+| GitHub Copilot adapter | Conversations only, individual plan | vitest on synthetic fixtures, and E2E at github.com and its API host |
+| Kimi adapter | Conversations only, by read POST | vitest on synthetic fixtures, and E2E at www.kimi.com |
+| Doubao adapter | Conversations only, by read POST | vitest on synthetic fixtures, and E2E at www.doubao.com |
+| Notion AI adapter | AI chats only, by read POST | vitest on synthetic fixtures, and E2E at app.notion.com |
+| Kagi Assistant adapter | Conversations, instructions, assistants | vitest on synthetic fixtures, and E2E at assistant.kagi.com |
+| Poe adapter | Conversations only, by read POST | vitest on synthetic fixtures, and E2E at poe.com |
+| Meta AI adapter | Conversations only, by read POST | vitest on synthetic fixtures, and E2E at www.meta.ai |
+| Qwen Chat adapter | Conversations, projects, memories, personalization | vitest on synthetic fixtures, and E2E at chat.qwen.ai |
+| Z.ai adapter | Conversations, custom instructions | vitest on synthetic fixtures, and E2E at chat.z.ai |
+| HuggingChat adapter | Conversations only | vitest on synthetic fixtures, and E2E at huggingface.co |
+| Genspark adapter | Conversations only | vitest on synthetic fixtures, and E2E at www.genspark.ai |
+| Gemini adapter | Conversations, Gems, saved info | vitest on synthetic fixtures, and E2E at gemini.google.com |
+| NotebookLM adapter | Notebooks, each one's latest chat | vitest on synthetic fixtures, and E2E at notebook.google.com |
 | File store, CLI, MCP server | Implemented | vitest, the MCP server with the SDK in-memory client |
-| Firefox extension | Implemented | E2E on Ichabod (remote Firefox 158) and local Firefox, 32 checks |
+| Firefox extension | Implemented | E2E on Ichabod (remote Firefox 158) and local Firefox, 88 checks |
 | SCENT with the real foxscope | Not tested | A stand-in extension with the foxscope id is used |
 | Real accounts | Not tested here | `e2e/live-smoke.mjs` runs on your own logins and prints counts only |
 
-The E2E serves synthetic fixtures at `https://chatgpt.com` and `https://claude.ai` with
-WebDriver BiDi network interception, so the real origin matching, permission checks and
+The E2E serves synthetic fixtures at each site's real origin, and at GitHub Copilot's API
+host, with WebDriver BiDi network interception, so the real origin matching, permission checks and
 same-origin fetches run. No real chat is in this repo.
 
 ## Runtime surfaces
@@ -157,7 +171,7 @@ same-origin fetches run. No real chat is in this repo.
 | `check(kind, record)` | Check one `foxcache/v1` record; keeps only the named fields. |
 | `parseArchive(text)`, `toArchive(store)`, `importArchive(store, text)` | The archive file. An import checks every record before it writes any. |
 | `toMarkdown`, `markdownFiles`, `toMemoryList`, `zip` | The exports. Markdown escapes HTML. |
-| `createHttp`, `runCapture`, `ADAPTERS` | The GET-only request layer, the polite capture runner and the adapters. |
+| `createHttp`, `runCapture`, `ADAPTERS` | The request layer that sends only each adapter's listed reads, the polite capture runner and the adapters. |
 | `cacheResolver(store)`, `answerScent(resolver, sender, message)` | SCENT v0.1 for the `cache` namespace. |
 | `openNodeStore(env)` from `foxcache/node` | Read the file store at `$FOXCACHE_HOME/archive.json`. |
 | `updateNodeStore(change, env)` from `foxcache/node` | Change the file store and write it, one writer at a time (`archive.json.lock`). |
@@ -231,14 +245,15 @@ flowchart LR
 ### Can foxcache post or delete anything on a site?
 
 No. It can only send the reads its adapter lists (`src/reads.ts`): exact paths, and for a
-POST the read operation in the body. The four sites it reads today get GET requests only,
-and the E2E checks that every request it sent was one of those reads.
+POST the read operation in the body. Ten of the 19 sites get GET requests only; the
+other nine read some data by POST, as their own pages do. The E2E checks that every
+request it sent was one of those reads.
 
 ### Does foxcache see my password?
 
 No. It uses the session your tab already has and never reads a password or a login form.
-It reads no cookie on the four sites it supports. A bearer token that a site's own page
-uses stays inside the tab.
+It reads no cookie: the browser adds the site's cookies, as it does for the site's own
+page. A token or key that a site's own page uses stays inside the tab.
 
 ### Can an agent read my chats?
 
