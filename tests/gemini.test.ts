@@ -40,6 +40,10 @@ describe("gemini detect (GE5)", () => {
     expect(await gemini.detect(open({ "/app": { $status: 302 } }).http)).toBe(false);
     expect(await gemini.detect(open({ [post("ESY5D", "/app")]: { $status: 401 } }).http)).toBe(false);
   });
+  it("H40 is signed out when Google answers status 7", async () => {
+    const status7 = `)]}'\n\n40\n${JSON.stringify([["wrb.fr", "ESY5D", null, null, null, [7], "generic"]])}`;
+    expect(await gemini.detect(open({ [post("ESY5D", "/app")]: { $text: status7 } }).http)).toBe(false);
+  });
 });
 
 describe("gemini list", () => {
