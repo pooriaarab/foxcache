@@ -25,7 +25,7 @@ describe("qwen detect and sign-in", () => {
   });
   it("sends the page's source header with the bearer", async () => {
     const seen: Headers[] = [];
-    const http = createHttp(qwen, { storage, cookie: () => "", scripts: () => [], call: () => undefined, fetch: async (_u, init) => (seen.push(new Headers(init.headers)), new Response("{}")) });
+    const http = createHttp(qwen, { storage, scripts: () => [], call: () => undefined, fetch: async (_u, init) => (seen.push(new Headers(init.headers)), new Response("{}")) });
     await http.get("/api/v1/auths/");
     expect([seen[0]!.get("source"), seen[0]!.get("authorization")]).toEqual(["web", "Bearer synthetic-token"]);
   });
@@ -81,7 +81,7 @@ describe("qwen conversations", () => {
     expect(await code(qwen.getConversation(open(swap(`/api/v2/chats/${Q1}`, { success: true, data: { id: Q1, chat: {} } })).http, stub(Q1)))).toMatch(/^provider-schema: qwen: chat.chat.history/);
   });
   it("throws too-large on a huge answer, and the check refuses a chat over the message limit", async () => {
-    expect(await code(qwen.getConversation(createHttp(qwen, { fetch: hugeFetch, storage, cookie: () => "", scripts: () => [], call: () => undefined }), stub(Q1)))).toMatch(/^too-large: /);
+    expect(await code(qwen.getConversation(createHttp(qwen, { fetch: hugeFetch, storage, scripts: () => [], call: () => undefined }), stub(Q1)))).toMatch(/^too-large: /);
     const messages = Object.fromEntries(Array.from({ length: 20_001 }, (_, i) => [`m${i}`, { id: `m${i}`, parentId: i ? `m${i - 1}` : null, role: i % 2 ? "assistant" : "user", content: "x" }]));
     const big = { success: true, data: { id: Q1, title: "big", created_at: 1, updated_at: 2, currentId: "m20000", chat: { history: { messages } } } };
     expect(await code(qwen.getConversation(open(swap(`/api/v2/chats/${Q1}`, big)).http, stub(Q1)).then((c) => check("conversations", c)))).toMatch(/^too-large: /);

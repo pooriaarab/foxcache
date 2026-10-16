@@ -22,7 +22,7 @@ const chat = (id: string, edges: unknown[], pageInfo: unknown = { hasNextPage: f
 const msg = (messageId: number, author: string, text: string, creationTime: number) => ({ node: { messageId, author, text, contentType: "text_markdown", creationTime, state: "complete" } });
 const page = (ids: string[], hasNextPage: boolean, endCursor: string) => ({ data: { chats: { edges: ids.map((id) => ({ node: { id, chatId: 1, chatCode: id, title: `t ${id}`, defaultBotObject: { displayName: "Assistant" } } })), pageInfo: { hasNextPage, endCursor } } } });
 /** An Http on poe whose fetch is given, on a page with the formkey. */
-const raw = (fetch: (url: string, init: RequestInit) => Promise<Response>) => createHttp(poe, { fetch, storage: { getItem: () => null }, cookie: () => "", scripts: () => PAGE.scripts, call: (n) => (n === "ereNdsRqhp2Rd3LEW" ? PAGE.globals.ereNdsRqhp2Rd3LEW() : undefined) });
+const raw = (fetch: (url: string, init: RequestInit) => Promise<Response>) => createHttp(poe, { fetch, storage: { getItem: () => null }, scripts: () => PAGE.scripts, call: (n) => (n === "ereNdsRqhp2Rd3LEW" ? PAGE.globals.ereNdsRqhp2Rd3LEW() : undefined) });
 const go = async () => ({ stop: false });
 
 async function code(p: Promise<unknown>): Promise<string> {

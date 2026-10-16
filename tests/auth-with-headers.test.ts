@@ -11,7 +11,7 @@ const reads = defineReads([{ method: "GET", path: "/api/v1/auths/", source: "htt
 function open(token: string | null) {
   const sent: Headers[] = [];
   const fetch = async (_url: string, init: RequestInit) => (sent.push(new Headers(init.headers)), new Response("{}"));
-  const http = createHttp({ origin: "https://chat.qwen.ai", reads, auth }, { fetch, storage: { getItem: (k) => (k === "token" ? token : null) }, cookie: () => "", scripts: () => [], call: () => undefined });
+  const http = createHttp({ origin: "https://chat.qwen.ai", reads, auth }, { fetch, storage: { getItem: (k) => (k === "token" ? token : null) }, scripts: () => [], call: () => undefined });
   return { http, sent };
 }
 

@@ -9,7 +9,7 @@ import { prepare } from "../src/reads.js";
 const LIST = poe.reads[0]!.body as { match: Record<string, string> };
 const MUTATION = "mutation { deleteChat(chatId: 1) { ok } }";
 const notAllowed = { code: "not-allowed" };
-const page = { fetch: async () => new Response("{}"), storage: { getItem: () => null }, cookie: () => "", scripts: () => [], call: () => undefined };
+const page = { fetch: async () => new Response("{}"), storage: { getItem: () => null }, scripts: () => [], call: () => undefined };
 const post = (body: unknown): Read => ({ method: "POST", path: "/graphql", body: body as Read["body"], source: "https://example.test/docs" });
 const open = (read: Read) => () => createHttp({ origin: "https://chatgpt.com", reads: defineReads([read]), auth: cookie }, page);
 

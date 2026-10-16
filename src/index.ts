@@ -8,7 +8,6 @@ export * from "./http.js";
 export { batchRead, callBatch, decodeBatch } from "./batchexecute.js";
 export type * from "./auth/types.js";
 export { cookie } from "./auth/cookie.js";
-export { cookieBearer } from "./auth/cookie-bearer.js";
 export { googlePageTokens } from "./auth/google-page-tokens.js";
 export { localStorageBearer } from "./auth/localStorage-bearer.js";
 export { inlineScripts, pageFormkey } from "./auth/page-formkey.js";

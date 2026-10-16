@@ -32,8 +32,6 @@ export interface Page {
   fetch: (url: string, init: RequestInit) => Promise<Response>;
   /** The page's localStorage. */
   storage: { getItem(key: string): string | null };
-  /** The page's document.cookie. */
-  cookie(): string;
   /** The text of the page's inline JavaScript scripts (inlineScripts). */
   scripts(): string[];
   /** Call a function the page's script set on window, in the page (Firefox: wrappedJSObject). */
@@ -135,7 +133,6 @@ export function createHttp(site: HttpSite, page: Page): Http {
   const sign = site.auth.open({
     origin,
     storage: page.storage,
-    cookie: () => page.cookie(),
     scripts: () => page.scripts(),
     call: (name) => page.call(name),
     getJson: async (path) => tokenPath(path),
