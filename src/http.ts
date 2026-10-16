@@ -34,6 +34,10 @@ export interface Page {
   storage: { getItem(key: string): string | null };
   /** The page's document.cookie. */
   cookie(): string;
+  /** The text of the page's inline scripts. */
+  scripts(): string[];
+  /** Call a function the page's script set on window, in the page (Firefox: wrappedJSObject). */
+  call(name: string): unknown;
 }
 
 
@@ -128,6 +132,8 @@ export function createHttp(site: HttpSite, page: Page): Http {
     origin,
     storage: page.storage,
     cookie: () => page.cookie(),
+    scripts: () => page.scripts(),
+    call: (name) => page.call(name),
     getJson: async (path) => {
       if (!site.auth.tokenPaths.includes(path)) throw new FoxcacheError("not-allowed", `${path} is not a token path of the ${site.auth.kind} auth.`);
       return send({ url: new URL(path, origin) });
