@@ -40,6 +40,16 @@ describe("H11 a wrong reads table", () => {
   it("takes POST reads of one path that differ in their body rule", () => {
     expect(open(defineReads([op("ThreadList"), op("Thread")]))).not.toThrow();
   });
+  it.each([["http://api.example"], ["https://api.example/v1"], ["https://api.example/"], [ORIGIN], ["api.example"]])("refuses the API origin %j", (api) => {
+    expect(() => createHttp({ origin: ORIGIN, apiOrigins: [api], reads: defineReads([get("/a")]) }, page)).toThrow(/API origin/);
+  });
+  it("refuses a read on an origin that is not one of the API origins", () => {
+    expect(() => createHttp({ origin: ORIGIN, apiOrigins: ["https://api.example"], reads: defineReads([get("/a", { origin: "https://other.example" })]) }, page)).toThrow(/apiOrigins/);
+    expect(() => createHttp({ origin: ORIGIN, reads: defineReads([get("/a", { origin: ORIGIN })]) }, page)).toThrow(/apiOrigins/);
+  });
+  it("takes the same GET path on two origins", () => {
+    expect(() => createHttp({ origin: ORIGIN, apiOrigins: ["https://api.example"], reads: defineReads([get("/a"), get("/a", { origin: "https://api.example" })]) }, page)).not.toThrow();
+  });
   it("refuses a method it does not know", () => {
     expect(open(defineReads([get("/a", { method: "DELETE" as "GET" })]))).toThrow(/method/);
   });

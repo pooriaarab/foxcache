@@ -6,8 +6,9 @@ const ask = async (type, data = {}) => {
 };
 const $ = (id) => document.getElementById(id);
 
+// One switch per site: it asks for the page and the site's API hosts at once (X12).
 async function site(p) {
-  const origins = [`${p.origin}/*`];
+  const origins = p.origins;
   const label = document.createElement("label");
   label.className = "switch";
   label.dataset.provider = p.id;

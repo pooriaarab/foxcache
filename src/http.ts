@@ -1,5 +1,6 @@
 // The only way an adapter reaches the network: a GET or POST on its own
-// origin, with the page's cookies, and only a request its reads list
+// origin or one of its API origins, from the tab with the page's cookies
+// (docs/cors.md), and only a request its reads list
 // (src/reads.ts): the exact path, the query keys and, for a POST, the read
 // operation in the body. So an adapter cannot send, edit or delete
 // anything on the provider (H1, H8, H9).
@@ -10,7 +11,7 @@
 import { FoxcacheError } from "./errors.js";
 import { type Body, type Prepared, type Query, type Site, checkSite, prepare } from "./reads.js";
 
-export { type Body, type BodyRule, type Query, type Read, type Site, defineReads, findRead } from "./reads.js";
+export { type Body, type BodyRule, type Query, type Read, type Site, defineReads, findRead, originsOf } from "./reads.js";
 
 export const MAX_RESPONSE_BYTES = 50 * 1024 * 1024;
 
@@ -78,15 +79,21 @@ async function readCapped(res: Response, where: string): Promise<string> {
 
 export function createHttp(site: HttpSite, page: Page): Http {
   checkSite(site);
-  const origin = new URL(site.origin).origin;
+  const origin = site.origin;
   let token: string | undefined;
 
   async function send({ url: u, body }: Prepared, auth?: string): Promise<unknown> {
     const headers: Record<string, string> = { accept: "application/json" };
     if (auth) headers.authorization = `Bearer ${auth}`;
     if (body) headers["content-type"] = body.type;
-    const res = await page.fetch(u.href, { method: body ? "POST" : "GET", credentials: "include", redirect: "manual", headers, ...(body ? { body: body.text } : {}) });
-    const where = `${origin}${u.pathname}`;
+    const where = `${u.origin}${u.pathname}`;
+    let res: Response;
+    try {
+      res = await page.fetch(u.href, { method: body ? "POST" : "GET", credentials: "include", redirect: "manual", headers, ...(body ? { body: body.text } : {}) });
+    } catch {
+      // Firefox gives the same TypeError for a network error and a CORS refusal (H13).
+      throw new FoxcacheError("provider-error", `Could not reach ${where}: the network failed, or the site does not let this page read it (CORS).`);
+    }
     // redirect: "manual" gives an opaque redirect: a login page is where it goes.
     if (res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400)) throw new FoxcacheError("logged-out", `${where} redirected: sign in to ${origin}.`);
     if (res.status === 401 || res.status === 403) throw new FoxcacheError("logged-out", `${where} answered ${res.status}: sign in to ${origin}.`, { status: res.status });

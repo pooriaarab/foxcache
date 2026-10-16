@@ -3,12 +3,15 @@
 // extension's own pages, and answers foxscope over onMessageExternal.
 // Firefox unloads it when idle. Every capture state is in the store, so a
 // wake loses nothing.
-import { ADAPTERS, FoxcacheError, MAX_ARCHIVE_BYTES, adapterAt, adapterFor, answerScent, cacheResolver, check, createStore, markdownFiles, recordKey, toArchive, toMemoryList, zip } from "../src/index.ts";
+import { ADAPTERS, FoxcacheError, MAX_ARCHIVE_BYTES, adapterAt, adapterFor, answerScent, cacheResolver, check, createStore, markdownFiles, originsOf, recordKey, toArchive, toMemoryList, zip } from "../src/index.ts";
 import { idbBackend } from "./idb.js";
 
 export const store = createStore(idbBackend());
 const resolver = cacheResolver(store);
 const pattern = (adapter) => `${adapter.origin}/*`;
+// A site is allowed only when its page and every API origin it reads are granted (X12).
+const grants = (adapter) => originsOf(adapter).map((o) => `${o}/*`);
+const allowed = (adapter) => browser.permissions.contains({ origins: grants(adapter) });
 const RESUMABLE = new Set(["stopped", "failed", "interrupted"]);
 const KEEP_KINDS = new Set(["projects", "memories", "preferences", "library"]);
 
@@ -57,8 +60,8 @@ const inject = (tabId) => browser.scripting.executeScript({ target: { tabId }, f
 /** What the popup shows for one provider (X2, X3). */
 async function status(adapter) {
   const capture = await refresh(adapter);
-  const base = { id: adapter.id, label: adapter.label, origin: adapter.origin, checkpoint: capture?.checkpoint ?? null };
-  if (!(await browser.permissions.contains({ origins: [pattern(adapter)] }))) return { ...base, state: "no-permission" };
+  const base = { id: adapter.id, label: adapter.label, origin: adapter.origin, origins: grants(adapter), checkpoint: capture?.checkpoint ?? null };
+  if (!(await allowed(adapter))) return { ...base, state: "no-permission" };
   if (capture?.checkpoint.status === "running") return { ...base, state: "running" };
   const tab = await providerTab(adapter);
   if (!tab) return { ...base, state: "no-tab" };
@@ -83,7 +86,7 @@ export const handlers = {
   // fresh: start over and leave a stopped or failed capture behind, instead of resuming it.
   "capture:start": async ({ provider, fresh }) => {
     const adapter = adapterFor(provider);
-    if (!(await browser.permissions.contains({ origins: [pattern(adapter)] }))) fail("not-allowed", `Allow ${adapter.origin} in the settings first.`);
+    if (!(await allowed(adapter))) fail("not-allowed", `Allow ${adapter.origin} in the settings first.`);
     const since = generation;
     const previous = await refresh(adapter);
     if (previous?.checkpoint.status === "running") fail("bad-request", `A ${adapter.label} capture is running.`);
@@ -153,8 +156,8 @@ async function fromAgent(sender) {
   if (sender?.id !== browser.runtime.id || !sender.tab || typeof sender.url !== "string") return null;
   const adapter = adapterAt(new URL(sender.url).origin);
   if (!adapter) return null;
-  // The agent's fetches are same-origin and need no grant, so a site the user turned off is checked here (X11).
-  if (!(await browser.permissions.contains({ origins: [pattern(adapter)] }))) return null;
+  // The agent's fetches run as the page and need no grant, so a site the user turned off is checked here (X11, X12).
+  if (!(await allowed(adapter))) return null;
   const capture = await captureOf(adapter.id);
   if (!capture || capture.tabId !== sender.tab.id || capture.checkpoint.status !== "running") return null;
   return { adapter, capture, since };
@@ -212,7 +215,7 @@ browser.tabs.onRemoved.addListener(async (tabId) => {
 
 // A site the user turns off ends its capture: the agent stops before its next request (X11).
 browser.permissions.onRemoved.addListener(async ({ origins = [] }) => {
-  for (const adapter of ADAPTERS.filter((a) => origins.includes(pattern(a)))) {
+  for (const adapter of ADAPTERS.filter((a) => grants(a).some((g) => origins.includes(g)))) {
     const capture = await captureOf(adapter.id);
     if (capture?.checkpoint.status !== "running") continue;
     await store.backend.put("checkpoints", stopKey(adapter.id), true);
