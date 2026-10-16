@@ -51,6 +51,14 @@ describe("github-copilot expired token (GC40)", () => {
       expect(f.calls).toEqual([]);
     }
   });
+  it("takes an epoch-ms expiration as the ZiuChen script's new Date does", async () => {
+    expect(await githubCopilot.detect(fixtureHttp(githubCopilot, fixture("github-copilot"), cached(Date.now() + 3_600_000)).http)).toBe(true);
+    for (const expiration of [Date.now() - 1000, 0, null, true, {}]) {
+      const f = fixtureHttp(githubCopilot, fixture("github-copilot"), cached(expiration));
+      expect(await githubCopilot.detect(f.http)).toBe(false);
+      expect(f.calls).toEqual([]);
+    }
+  });
   it("is signed out when the API answers 400 to detect", async () => {
     expect(await githubCopilot.detect(open({ [LIST]: { $status: 400 } }).http)).toBe(false);
     expect(await code(githubCopilot.getConversation(open({ [THREAD(C1)]: { $status: 400 } }).http, stub(C1)))).toMatch(/^provider-error: /);
