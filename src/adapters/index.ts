@@ -9,6 +9,7 @@ import { githubCopilot } from "./github-copilot.js";
 import { grok } from "./grok.js";
 import { kagi } from "./kagi.js";
 import { kimi } from "./kimi.js";
+import { meta } from "./meta.js";
 import { mistral } from "./mistral.js";
 import { notion } from "./notion.js";
 import { perplexity } from "./perplexity.js";
@@ -29,6 +30,7 @@ export const ADAPTERS: readonly Adapter[] = Object.freeze([
   notion,
   kagi,
   poe,
+  meta,
 ]);
 
 /** The adapter for a provider id. Throws for a provider with no adapter. */
