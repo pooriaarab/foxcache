@@ -13,7 +13,8 @@
 //   checks the exports, and imports the archive with the CLI;
 //   asks for SCENT values as foxscope and as another extension;
 //   deletes everything from the settings page.
-//   turns ChatGPT off in the settings during a capture, which ends it.
+//   turns ChatGPT off in the settings during a capture, which ends it;
+//   runs the check of each provider in e2e/providers/<id>.mjs.
 // Writes artifacts/e2e-<date>.json after the checks.
 // Usage: pnpm e2e [--headed]. Env: FIREFOX, or FOXKIT_BROWSER=ichabod with ICHABOD_API_KEY.
 import { execFileSync } from "node:child_process";
@@ -47,6 +48,8 @@ function isRead(l) {
 
 // The API hosts of the stand-in in e2e/api-ext/. Each answers CORS for the ChatGPT page as a real API does for its own site, except /no-cors.
 const API_JSON = (u) => ({ status: 200, body: '{"threads":[]}', headers: u.pathname === "/no-cors" ? {} : { "access-control-allow-origin": CHATGPT, "access-control-allow-credentials": "true" } });
+/** Every fixture in tests/fixtures/, each served at its provider's origin. */
+const FIXTURES = readdirSync("tests/fixtures").filter((f) => f.endsWith(".json")).map((f) => f.slice(0, -".json".length));
 const API_HOSTS = { "api.chatgpt.com": API_JSON, "api.copilot-fixture.test": API_JSON, "api.not-listed.test": API_JSON };
 /** The stand-in MV3 add-on with foxcache's http in a content script on chatgpt.com. */
 async function apiStandIn() {
@@ -154,7 +157,7 @@ try {
   record.firefox = await fox.browser.version();
   for (const role of Object.keys(STUBS)) await install(fox, stub(role));
   await install(fox, await apiStandIn());
-  const net = await serveFixtures(fox.browser.connection, ["chatgpt", "claude"], API_HOSTS);
+  const net = await serveFixtures(fox.browser.connection, FIXTURES, API_HOSTS);
   // The first read of conversation A answers 429 with Retry-After: 2 (C3).
   net.override(CHATGPT, `/backend-api/conversation/${A}`, (n) => (n === 1 ? { status: 429, body: "{}", headers: { "retry-after": "2" } } : undefined));
 
@@ -185,11 +188,14 @@ try {
   }, 240_000);
   const running = (provider) => until(`the ${provider} capture runs`, async () => (await ask("capture:progress"))[provider]?.status === "running");
 
-  // 1. The popup shows each site's state (X2, X3).
-  check("popup states", { chatgpt: "ready", claude: "ready", mistral: "no-tab", deepseek: "no-permission" }, await until("four provider cards", async () => {
+  // 1. The popup shows each site's state (X2, X3). A site added later has no tab open yet.
+  const KNOWN = { chatgpt: "ready", claude: "ready", mistral: "no-tab", deepseek: "no-permission" };
+  const cards = await until("a card per provider", async () => {
     const s = await states();
-    return Object.keys(s).length === 4 && !Object.values(s).includes(undefined) ? s : null;
-  }));
+    return Object.keys(s).length === ADAPTERS.length && !Object.values(s).includes(undefined) ? s : null;
+  });
+  check("popup states", KNOWN, Object.fromEntries(Object.keys(KNOWN).map((id) => [id, cards[id]])));
+  check("every other site waits for its tab", [], Object.entries(cards).filter(([id, state]) => !(id in KNOWN) && state !== "no-tab"));
 
   // 1b. API origins: foxcache's http in a content script reads other hosts as the page does (H12, H13, docs/cors.md).
   const api = JSON.parse(await until("the API origin reads", () => chat.evaluate(() => document.documentElement.dataset.apiOrigins)));
@@ -259,8 +265,6 @@ try {
 
   // 5. foxcache only read: every request to a provider was a GET (X5).
   check("every request to a provider was a GET", [], net.log.filter((l) => l.method !== "GET").map((l) => `${l.method} ${l.url}`));
-  check("no request went to a path the fixtures do not know", [], net.log.filter((l) => l.status === 404 && !l.url.endsWith("/favicon.ico")).map((l) => l.url));
-  record.requests = net.log.length;
 
   // 6. The archive page lists, searches and shows hostile text as text (X6).
   const archive = await fox.openExtensionPage("archive.html");
@@ -313,7 +317,7 @@ try {
 
   // 9. Delete all from the settings page.
   const settings = await fox.openExtensionPage("settings.html");
-  await until("the sites", () => settings.evaluate(() => document.querySelectorAll("#sites label").length === 4));
+  await until("the sites", () => settings.evaluate((n) => document.querySelectorAll("#sites label").length === n, ADAPTERS.length));
   await settings.click("#delete");
   await settings.click("#delete");
   check("the settings page deletes everything", "Deleted. foxcache holds nothing now.", await until("the delete note", () => settings.evaluate(() => document.getElementById("status").textContent)));
@@ -333,7 +337,15 @@ try {
   check("no record is stored after ChatGPT is turned off", keptBefore, await ask("archive:counts"));
   check("at most the request in flight goes to ChatGPT after it is turned off", true, net.log.slice(sentBefore).filter((l) => l.url.startsWith(CHATGPT)).length <= 1);
 
-  // 11. Every request the adapters sent was one of their reads (X5).
+  // 11. One check per provider, from e2e/providers/<id>.mjs (docs/providers/ADDING.md).
+  for (const name of readdirSync("e2e/providers").filter((f) => f.endsWith(".mjs")).toSorted()) {
+    const { run } = await import(`./providers/${name}`);
+    await run({ fox, net, ask, check, until, ended, running });
+  }
+
+  // 12. Every request the adapters sent was one of their reads, and the fixtures knew it (X5).
+  check("no request went to a path the fixtures do not know", [], net.log.filter((l) => l.status === 404 && !l.url.endsWith("/favicon.ico")).map((l) => l.url));
+  record.requests = net.log.length;
   check("every request to a provider matched one of its reads", [], net.log.filter((l) => adapterOf(l) && !isRead(l)).map((l) => `${l.method} ${l.url}`));
 } catch (error) {
   record.error = error instanceof Error ? error.message : String(error);

@@ -1,8 +1,8 @@
 // Builds extension/ into dist-ext/: esbuild bundles each script, and the
 // other files are copied. It stops when the manifest version is not the
 // package.json version, so AMO signs the version that npm publishes.
-// --e2e builds dist-e2e/: the same, with the ChatGPT, Claude and Le Chat
-// origins as host permissions, which Firefox grants at install. The test
+// --e2e builds dist-e2e/: the same, with every optional origin but
+// DeepSeek's as a host permission, which Firefox grants at install. The test
 // cannot click the permission prompt that the settings page opens. DeepSeek
 // stays optional, so the test sees a site that is not allowed.
 // dist-ext/, which release.yml signs, has every origin optional.
@@ -34,7 +34,7 @@ for (const dir of dirs) {
   for (const file of files.filter((f) => !f.endsWith(".js") && f !== "amo-metadata.json")) cpSync(`${dir}/${file}`, `${out}/${file}`, { recursive: true });
 }
 if (e2e) {
-  const granted = ["https://chatgpt.com/*", "https://claude.ai/*", "https://chat.mistral.ai/*"];
+  const granted = manifest.optional_host_permissions.filter((o) => o !== "https://chat.deepseek.com/*");
   // On Ichabod, create-foxkit frames each extension page on a Cloudflare
   // tunnel page, and its relay (which runs browser.permissions for a framed
   // page) checks the tab URL: Firefox shows that URL only with a host grant.
