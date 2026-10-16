@@ -38,7 +38,8 @@ so a rebase conflict is one line:
 | `src/schema.ts` | the id in `PROVIDERS`, if it is not there |
 | `src/adapters/index.ts` | the import, and the adapter in `ADAPTERS` |
 | `extension/manifest.json` | `"https://<host>/*"` in `optional_host_permissions`, and one per API origin |
-| `docs/providers/README.md` | the table row |
+| `docs/providers/README.md` | the table row, and the label in the GET-only or the POST list |
+| `README.md` | a Coverage row `<Label> adapter`, and the label in the Compare table's Sites (`tests/docs.test.ts`, P60) |
 | `extension/amo-metadata.json` | in the description: the site in the list of sites, each host you added to the manifest under **Permissions**, and the site in the POST sentence if it reads by POST. `pnpm check:amo` fails on a manifest host the listing does not name (R60). Keep [../amo-data.md](../amo-data.md) in step. |
 
 `tests/reads.test.ts` and `tests/registry.test.ts` then check your reads
@@ -79,7 +80,6 @@ table and your manifest lines with no edit.
 | `cookie` | the session cookies alone | `cookie` |
 | `page-session` | a token the page reads from a session endpoint | `pageSession({ path, field })` |
 | `localStorage-bearer` | a token in localStorage | `localStorageBearer({ key, field?, scheme? })` |
-| `cookie-bearer` | a token in a cookie the page's script can read | `cookieBearer({ name, field? })` |
 | `page-formkey` | a key a page function computes (its name changes per build), plus an md5 tag of each POST body | `pageFormkey({ fn, length, header, tag })` |
 | `with-headers` | fixed headers the page adds, on top of a token kind | `withHeaders(kind, { name: value })` |
 | `google-page-tokens` | Google batchexecute: `at`, `bl` and `f.sid` in the HTML of a page | `googlePageTokens({ path })` |
