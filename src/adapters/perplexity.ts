@@ -24,12 +24,14 @@ function stubs(page: unknown, name: string): Stub[] {
   });
 }
 
-/** The answer of an entry: the markdown of its first answer block, or undefined. */
+/** The answer of an entry: the markdown of its first answer block with text, or undefined. An empty answer is skipped, as Deplexity does (PX42). */
 function answer(e: Obj, where: string): string | undefined {
   const blocks = r.arr(e.blocks ?? [], `${where}.blocks`).map((b, i) => r.obj(b, `${where}.blocks[${i}]`));
   for (const usage of ANSWERS) {
-    const b = blocks.find((x) => x.intended_usage === usage && x.markdown_block);
-    if (b) return r.str(r.obj(b.markdown_block, `${where}.${usage}.markdown_block`).answer, `${where}.${usage}.markdown_block.answer`);
+    for (const b of blocks.filter((x) => x.intended_usage === usage && x.markdown_block)) {
+      const text = r.str(r.obj(b.markdown_block, `${where}.${usage}.markdown_block`).answer, `${where}.${usage}.markdown_block.answer`);
+      if (text !== "") return text;
+    }
   }
   return undefined;
 }
