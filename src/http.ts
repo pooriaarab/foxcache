@@ -79,7 +79,7 @@ export function createHttp(site: HttpSite, page: Page): Http {
     if (readsPath(site, path)) throw new Error(`The reads of ${origin} are wrong: a read names ${path}, which holds the ${site.auth.kind} token.`);
   }
 
-  async function send({ url, body, decode }: Prepared, parts: AuthParts = {}): Promise<unknown> {
+  async function send({ url, body, headers: fixed, decode }: Prepared, parts: AuthParts = {}): Promise<unknown> {
     const u = new URL(url);
     for (const [k, v] of Object.entries(parts.query ?? {})) u.searchParams.set(k, v);
     let wire = body?.text;
@@ -89,8 +89,8 @@ export function createHttp(site: HttpSite, page: Page): Http {
       for (const [k, v] of Object.entries(parts.form)) form.set(k, v);
       wire = form.toString();
     }
-    const headers: Record<string, string> = { accept: decode ? "*/*" : "application/json", ...parts.headers };
-    if (body) headers["content-type"] = body.type;
+    // The auth kind's headers last: a read cannot fix authorization (H16).
+    const headers: Record<string, string> = { accept: decode ? "*/*" : "application/json", ...(body ? { "content-type": body.type } : {}), ...fixed, ...parts.headers };
     // Never the query: an auth kind may put a token there.
     const where = `${u.origin}${u.pathname}`;
     let res: Response;
