@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FoxcacheError, MAX_RESPONSE_BYTES, type Read, cookie, createHttp, defineReads, localStorageBearer } from "../src/index.js";
+import { type Auth, FoxcacheError, MAX_RESPONSE_BYTES, type Read, cookie, createHttp, defineReads, localStorageBearer } from "../src/index.js";
 import { reader } from "../src/adapters/read.js";
 
 const ORIGIN = "https://chatgpt.com";
@@ -194,6 +194,14 @@ describe("H16 the fixed headers of a read", () => {
     const http = createHttp(site(localStorageBearer({ key: "t" })), { fetch: f.fetch, ...NO_PAGE, storage: { getItem: () => "synthetic-token" } });
     await http.post("/im/pull", { cmd: 3100 });
     expect(new Headers(f.calls[0]!.init.headers).get("authorization")).toBe("Bearer synthetic-token");
+  });
+  it("sends the auth kind's value when a read fixes the same header", async () => {
+    const fixed = defineReads([{ method: "GET", path: "/api/me", headers: { "poe-formkey": "from-read", "x-same-domain": "0" }, source: SOURCE }]);
+    const auth: Auth = { kind: "test", tokenPaths: [], renews: false, open: () => async () => ({ headers: { "poe-formkey": "from-auth", "x-same-domain": "1" } }) };
+    const f = fakeFetch({ "/api/me": { body: "{}" } });
+    await createHttp({ origin: ORIGIN, reads: fixed, auth }, { fetch: f.fetch, ...NO_PAGE }).get("/api/me");
+    const sent = new Headers(f.calls[0]!.init.headers);
+    expect([sent.get("poe-formkey"), sent.get("x-same-domain")]).toEqual(["from-auth", "1"]);
   });
 });
 
