@@ -51,10 +51,10 @@ Reads are GET only and on four exact paths, so http refuses all of these.
 
 | ID | Failure | What happens | Test |
 |---|---|---|---|
-| K1 | `/api/init` answers 401 or 403, or redirects to sign-in. | `detect` is false. | `tests/kagi.test.ts` |
-| K2 | The list, a conversation or a message changed shape, or a role is new. | `provider-schema` names the field. | `tests/kagi.test.ts` |
-| K3 | The list gives the same page again. | The capture's `pagination-loop` (C4). | `tests/kagi.test.ts` |
-| K4 | The older-message pages never end, or give the same page again. | `pagination-loop`, not a thread with a hole (P9). | `tests/kagi.test.ts` |
-| K5 | A conversation has more messages than foxcache keeps. | `too-large` while it reads (S4). | `tests/kagi.test.ts` |
-| K6 | Kagi answers 429. | `rate-limited` passes on, so the capture waits (C3). | `tests/kagi.test.ts` |
-| K7 | A message or title holds HTML or a script. | It stays text; `html_content` is never read. | `tests/kagi.test.ts` |
+| KA1 | `/api/init` answers 401 or 403, or redirects to sign-in. | `detect` is false. | `tests/kagi.test.ts` |
+| KA2 | The list, a conversation or a message changed shape, or a role is new. | `provider-schema` names the field. | `tests/kagi.test.ts` |
+| KA3 | The list gives the same page again. | The capture's `pagination-loop` (C4). | `tests/kagi.test.ts` |
+| KA4 | The older-message pages never end, or give the same page again. | `pagination-loop`, not a thread with a hole (P9). | `tests/kagi.test.ts` |
+| KA5 | A conversation has more messages than foxcache keeps. | `too-large` while it reads (S4). | `tests/kagi.test.ts` |
+| KA6 | Kagi answers 429. | `rate-limited` passes on, so the capture waits (C3). | `tests/kagi.test.ts` |
+| KA7 | A message or title holds HTML or a script. | It stays text; `html_content` is never read. | `tests/kagi.test.ts` |
