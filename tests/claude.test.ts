@@ -27,7 +27,7 @@ describe("claude detect and list", () => {
     expect(await claude.detect(fixtureHttp(claude, { "/api/organizations": [{ uuid: "o", capabilities: ["api"] }] }).http)).toBe(false);
   });
   it("throws provider-schema on a challenge page or a changed shape, not signed out (P10)", async () => {
-    const challenge = createHttp(claude, { fetch: async () => new Response("<!doctype html><title>Just a moment...</title>", { status: 200, headers: { "content-type": "text/html" } }), storage: { getItem: () => null } });
+    const challenge = createHttp(claude, { fetch: async () => new Response("<!doctype html><title>Just a moment...</title>", { status: 200, headers: { "content-type": "text/html" } }), storage: { getItem: () => null }, cookie: () => "" });
     expect(await code(claude.detect(challenge))).toMatch(/^provider-schema: .*did not answer JSON/);
     expect(await code(claude.detect(fixtureHttp(claude, { "/api/organizations": { orgs: [] } }).http))).toMatch(/^provider-schema: claude: \/api\/organizations is not a list/);
   });

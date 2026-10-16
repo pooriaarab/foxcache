@@ -10,6 +10,8 @@ export interface AuthPage {
   origin: string;
   /** The page's localStorage. */
   storage: { getItem(key: string): string | null };
+  /** The page's document.cookie (cookies that are not HttpOnly). */
+  cookie(): string;
   /** GET one of the kind's tokenPaths on the site's origin with the page cookies, and parse the JSON. */
   getJson(path: string): Promise<unknown>;
 }
@@ -35,7 +37,7 @@ export interface AuthParts {
 export type Sign = (request: AuthRequest, fresh: boolean) => Promise<AuthParts>;
 
 export interface Auth {
-  /** The kind, as in the file name: cookie, page-session, localStorage-bearer. */
+  /** The kind, as in the file name: cookie, page-session, localStorage-bearer, cookie-bearer. */
   readonly kind: string;
   /** Paths on the site's origin that the kind reads itself because they hold the token. No read may name one (H7). */
   readonly tokenPaths: readonly string[];
