@@ -32,18 +32,6 @@ const SRC = {
   saved: "https://github.com/mrlnlms/multi-ai-session-data-extractor/blob/01450c0dafcf4d1af62056392fd387124febe4b2/src/platforms/gemini/extractor/api_client.py#L84-L141",
 };
 
-/** A [seconds, nanos] time as ISO-8601 UTC. */
-function time(x: unknown, where: string): string {
-  const t = r.arr(x, where);
-  const nanos = t[1] === null || t[1] === undefined ? 0 : r.num(t[1], `${where}[1]`);
-  return r.seconds(r.num(t[0], `${where}[0]`) + nanos / 1e9, where);
-}
-/** The value at a path of nested lists, each step checked. */
-function at(x: unknown, path: number[], where: string): unknown {
-  let value = x;
-  path.forEach((i, n) => (value = r.arr(value, `${where}${path.slice(0, n).map((p) => `[${p}]`).join("")}`)[i]));
-  return value;
-}
 const call = (http: Http, rpcid: string, args: unknown, sourcePath: string) => callBatch(http, PATH, rpcid, args, sourcePath);
 
 export const gemini: Adapter = {
@@ -86,7 +74,7 @@ export const gemini: Adapter = {
       .map(({ row, where }) => {
         const id = /^c_([A-Za-z0-9_-]+)$/.exec(r.str(row[0], `${where}[0]`))?.[1];
         if (!id) throw r.fail(`${where}[0]`, "is not a chat id");
-        return { id, title: r.optStr(row[1], `${where}[1]`) ?? "", updatedAt: time(row[5], `${where}[5]`) };
+        return { id, title: r.optStr(row[1], `${where}[1]`) ?? "", updatedAt: r.stamp(row[5], `${where}[5]`) };
       });
     const next = r.optStr(o[1], `${LIST}[1]`);
     return { items, next: next ? `${stream}:${next}` : stream === PINNED ? `${REST}:` : undefined };
@@ -98,13 +86,13 @@ export const gemini: Adapter = {
     // Newest first on the wire.
     const messages: Message[] = turns.toReversed().flatMap((t, n) => {
       const where = `turns[${turns.length - 1 - n}]`;
-      const when = at(t, [4], where);
-      const createdAt = when === null || when === undefined ? undefined : time(when, `${where}[4]`);
+      const when = r.pos(t, [4], where);
+      const createdAt = when === null || when === undefined ? undefined : r.stamp(when, `${where}[4]`);
       const stamp = createdAt ? { createdAt } : {};
       return [
-        { role: "user" as const, text: r.str(at(t, [2, 0, 0], where), `${where}[2][0][0]`), ...stamp, attachments: [] },
+        { role: "user" as const, text: r.str(r.pos(t, [2, 0, 0], where), `${where}[2][0][0]`), ...stamp, attachments: [] },
         // The first candidate: the reply the page shows.
-        { role: "assistant" as const, text: r.str(at(t, [3, 0, 0, 1, 0], where), `${where}[3][0][0][1][0]`), ...stamp, attachments: [] },
+        { role: "assistant" as const, text: r.str(r.pos(t, [3, 0, 0, 1, 0], where), `${where}[3][0][0][1][0]`), ...stamp, attachments: [] },
       ];
     });
     const times = messages.flatMap((m) => (m.createdAt ? [m.createdAt] : []));
@@ -118,7 +106,7 @@ export const gemini: Adapter = {
     const rows = o[2] === null || o[2] === undefined ? [] : r.arr(o[2], `${GEMS}[2]`);
     return rows.map((x, i) => {
       const where = `${GEMS}[2][${i}]`;
-      return { provider: "gemini", id: r.str(at(x, [0], where), `${where}[0]`), name: r.str(at(x, [1, 0], where), `${where}[1][0]`), kind: "gem" };
+      return { provider: "gemini", id: r.str(r.pos(x, [0], where), `${where}[0]`), name: r.str(r.pos(x, [1, 0], where), `${where}[1][0]`), kind: "gem" };
     });
   },
 
@@ -128,7 +116,7 @@ export const gemini: Adapter = {
     if (o.length === 0) return [];
     return r.arr(o[0], `${SAVED_INFO}[0]`).map((x, i) => {
       const where = `${SAVED_INFO}[0][${i}]`;
-      return { provider: "gemini", id: r.str(at(x, [0], where), `${where}[0]`), text: r.str(at(x, [1], where), `${where}[1]`), createdAt: time(at(x, [2], where), `${where}[2]`) };
+      return { provider: "gemini", id: r.str(r.pos(x, [0], where), `${where}[0]`), text: r.str(r.pos(x, [1], where), `${where}[1]`), createdAt: r.stamp(r.pos(x, [2], where), `${where}[2]`) };
     });
   },
 };

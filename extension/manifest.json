@@ -42,7 +42,8 @@
     "https://chat.z.ai/*",
     "https://huggingface.co/*",
     "https://www.genspark.ai/*",
-    "https://gemini.google.com/*"
+    "https://gemini.google.com/*",
+    "https://notebook.google.com/*"
   ],
   "background": {
     "scripts": [

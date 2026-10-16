@@ -18,9 +18,9 @@ that by specifying the `none` required permission in the manifest."
 
 | What | From, to | When | Leaves the browser? |
 |---|---|---|---|
-| Read requests to the AI site's own endpoints: GETs, and Gemini's batchexecute POSTs that only read | From the user's tab on that site to that site | Only after the user allows the site and clicks Capture | The request goes to the site the user is signed in to, from the user's own tab, as the site's own page does. foxcache sends no data of its own in it: no id and no analytics, only the parameters the read needs, as the page sends them. |
+| Read requests to the AI site's own endpoints: GETs, and the Gemini and NotebookLM batchexecute POSTs that only read | From the user's tab on that site to that site | Only after the user allows the site and clicks Capture | The request goes to the site the user is signed in to, from the user's own tab, as the site's own page does. foxcache sends no data of its own in it: no id and no analytics, only the parameters the read needs, as the page sends them. |
 | The answers: conversations, projects, memories, custom instructions | From the site, into IndexedDB in this browser | During a capture | No. They stay in this browser. |
-| A token that chatgpt.com, DeepSeek, GitHub Copilot or Gemini uses | Read in the site's tab, the way the site's own script reads it | During a capture | No. It stays in the tab and is never stored or passed on. |
+| A token that chatgpt.com, DeepSeek, GitHub Copilot, Gemini or NotebookLM uses | Read in the site's tab, the way the site's own script reads it | During a capture | No. It stays in the tab and is never stored or passed on. |
 | SCENT answers: memories, preferences, project names | To foxscope@pooriaarab, another add-on in this browser | Only when foxscope asks, which asks the user first | No. foxscope runs in this browser. Conversations are never answered. |
 | Exports: the archive, Markdown, the memory list | Saved to a file by the user | Only when the user clicks an export button | Only to a file the user picks on this computer. |
 
