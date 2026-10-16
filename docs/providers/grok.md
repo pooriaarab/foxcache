@@ -55,3 +55,4 @@ refuses each before it is sent (H8, H9).
 | GR5 | A chat has more responses than foxcache keeps. | `too-large` before any `load-responses` call. | `tests/grok.test.ts` |
 | GR6 | A node of the tree has no body in `load-responses`, names a parent that is not in the tree, or the tree has a cycle. | `provider-schema`. foxcache does not store a thread with a gap (P7). | `tests/grok.test.ts` |
 | GR7 | A message holds HTML or a script. | It is kept as text (S3). | `tests/grok.test.ts` |
+| GR40 | A list page has no conversations but a `nextPageToken`. ConversationExporters, cited above, keeps paging past such a page (`EMPTY_INVENTORY_PAGE`). | The list follows the token; only a missing or empty token ends it. A token that repeats still ends in `pagination-loop` (GR4, C4). | `tests/grok.test.ts` |
