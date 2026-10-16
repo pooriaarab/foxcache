@@ -64,8 +64,12 @@ export const genspark: Adapter = {
     const offset = cursor ? Number(cursor) : 0;
     const data = await read(http, "/api/project/my", { from: "agents", offset, limit: LIMIT });
     const rows = r.arr(data.projects, "project/my projects").map((p, i) => r.obj(p, `projects[${i}]`));
-    // The list has no update time: ctime is the only time it gives.
-    const items = rows.map((p, i) => ({ id: r.str(p.id, `projects[${i}].id`), title: r.optStr(p.name, `projects[${i}].name`) ?? "", updatedAt: r.time(p.ctime, `projects[${i}].ctime`) }));
+    // The list has no update time, only ctime: each stub gets the time of this read, so every project is read again (GENSPARK41).
+    const listedAt = new Date().toISOString();
+    const items = rows.map((p, i) => {
+      r.time(p.ctime, `projects[${i}].ctime`);
+      return { id: r.str(p.id, `projects[${i}].id`), title: r.optStr(p.name, `projects[${i}].name`) ?? "", updatedAt: listedAt };
+    });
     return { items, next: rows.length === LIMIT ? String(offset + LIMIT) : undefined };
   },
 
@@ -82,7 +86,8 @@ export const genspark: Adapter = {
       id: r.str(p.id, `${where}.id`),
       title: r.optStr(p.name, `${where}.name`) ?? "",
       createdAt,
-      updatedAt: createdAt,
+      // The time of the list read: a later capture's copy is newer, so the store keeps its new messages (GENSPARK41).
+      updatedAt: s.updatedAt,
       ...(model ? { model } : {}),
       messages,
     };

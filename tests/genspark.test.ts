@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { type Conversation, FoxcacheError, type Http, MAX_RESPONSE_BYTES, type Stub, check, createHttp, runCapture } from "../src/index.js";
 import { genspark } from "../src/adapters/genspark.js";
 import { type Routes, fixture, fixtureHttp } from "./fixture-http.js";
@@ -11,7 +11,7 @@ const open = (routes: Routes = fixture("genspark")) => fixtureHttp(genspark, rou
 const PATHS = genspark.reads.map((r) => r.path);
 /** An Http on the adapter's own reads over a fetch stand-in. */
 const httpOver = (fetch: () => Promise<Response>) => createHttp(genspark, { fetch, storage: { getItem: () => null }, scripts: () => [], call: () => undefined });
-const stub = (id: string) => ({ id, title: "", updatedAt: "" });
+const stub = (id: string) => ({ id, title: "", updatedAt: "2026-10-15T00:00:00.000Z" });
 const project = (n: number) => ({ id: `p-${n}`, name: `Chat ${n}`, type: "ai_chat", ctime: "2026-09-01T00:00:00.000000" });
 const list = (projects: unknown[]) => ({ status: 0, data: { projects } });
 const go = async () => ({ stop: false });
@@ -88,12 +88,16 @@ describe("genspark detect", () => {
 });
 
 describe("genspark list", () => {
-  it("reads one page shorter than the limit and ends, with ctime as ISO-8601 UTC (P4)", async () => {
+  it("reads one page shorter than the limit and ends, each stub with the time of the read (GENSPARK41)", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-15T00:00:00Z"));
     const page = await genspark.listConversations(open().http);
+    vi.useRealTimers();
+    const updatedAt = "2026-10-15T00:00:00.000Z";
     expect(page.items).toEqual([
-      { id: G1, title: "Porto weekend", updatedAt: "2026-09-14T08:30:00.125Z" },
-      { id: G2, title: "<b>Hostile</b> Genspark", updatedAt: "2026-09-12T10:00:00.000Z" },
-      { id: G3, title: "Pitch deck", updatedAt: "2026-09-10T16:46:20.955Z" },
+      { id: G1, title: "Porto weekend", updatedAt },
+      { id: G2, title: "<b>Hostile</b> Genspark", updatedAt },
+      { id: G3, title: "Pitch deck", updatedAt },
     ]);
     expect(page.next).toBeUndefined();
   });
@@ -119,11 +123,36 @@ describe("genspark list", () => {
   });
 });
 
+describe("genspark capture again (GENSPARK41)", () => {
+  afterEach(() => void vi.useRealTimers());
+  it("reads a continued project again and stores the copy with the new messages", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const stored: Record<string, Conversation> = {};
+    // The store keeps the copy with the newer updatedAt (ST1).
+    const put = async (_: unknown, c: unknown) => {
+      const conv = c as Conversation;
+      if (!stored[conv.id] || stored[conv.id]!.updatedAt < conv.updatedAt) stored[conv.id] = conv;
+      return { stop: false };
+    };
+    const capture = (routes: Routes) => runCapture({ adapter: genspark, http: open(routes).http, stamps: Object.fromEntries(Object.values(stored).map((c) => [c.id, c.updatedAt])), delayMs: 0, sink: { put, checkpoint: go, keep: go } });
+    vi.setSystemTime(new Date("2026-10-01T00:00:00Z"));
+    await capture(fixture("genspark"));
+    const key = `/api/project?id=${G1}`;
+    const p = structuredClone(fixture("genspark")[key]) as { data: { session_state: { messages: unknown[] } } };
+    p.data.session_state.messages.push({ id: "m6", role: "user", content: "And a third day?" });
+    vi.setSystemTime(new Date("2026-10-02T00:00:00Z"));
+    const again = await capture({ ...fixture("genspark"), [key]: p });
+    expect([again.status, again.counts.skipped]).toEqual(["done", 0]);
+    expect(stored[G1]!.messages.at(-1)?.text).toBe("And a third day?");
+    expect([stored[G1]!.createdAt, stored[G1]!.updatedAt]).toEqual(["2026-09-14T08:30:00.125Z", "2026-10-02T00:00:00.000Z"]);
+  });
+});
+
 describe("genspark conversations", () => {
-  it("keeps user and assistant text, and drops system, tool and empty tool-call turns", async () => {
+  it("keeps user and assistant text, drops system, tool and empty tool-call turns, and reads ctime as ISO-8601 UTC (P4)", async () => {
     const c = await genspark.getConversation(open().http, stub(G1));
     expect(check("conversations", c)).toEqual(c);
-    expect(c).toMatchObject({ provider: "genspark", id: G1, title: "Porto weekend", createdAt: "2026-09-14T08:30:00.125Z", updatedAt: "2026-09-14T08:30:00.125Z", model: "synthetic-model-1" });
+    expect(c).toMatchObject({ provider: "genspark", id: G1, title: "Porto weekend", createdAt: "2026-09-14T08:30:00.125Z", updatedAt: "2026-10-15T00:00:00.000Z", model: "synthetic-model-1" });
     expect(c.messages.map((m) => [m.role, m.text])).toEqual([
       ["user", "Two days in Porto?"],
       ["assistant", "Day 1: Ribeira. Day 2: Foz."],
