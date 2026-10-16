@@ -116,6 +116,15 @@ describe("localStorage-bearer", () => {
     expect(bearerOf(f.calls[0])).toBe(`Bearer ${TOKEN}`);
     expect(leaks(await err(http.get("/api/fail")))).toBe(false);
   });
+  it("sends the scheme the site's page sends (GitHub Copilot GitHub-Bearer)", async () => {
+    const f = fakeFetch({ "/api/me": "{}" });
+    const storage = { COPILOT_AUTH_TOKEN: JSON.stringify({ value: TOKEN, expiration: "2026-10-15T12:00:00Z" }) };
+    await open(localStorageBearer({ key: "COPILOT_AUTH_TOKEN", field: "value", scheme: "GitHub-Bearer" }), f.fetch, { storage }).get("/api/me");
+    expect(bearerOf(f.calls[0])).toBe(`GitHub-Bearer ${TOKEN}`);
+  });
+  it.each([[""], ["Git Hub"], ["Bearer\r\nX-Evil: 1"], ["1Bearer"]])("refuses the scheme %j when it is made", (scheme) => {
+    expect(() => localStorageBearer({ key: "k", scheme })).toThrow(/scheme/);
+  });
   it.each([
     ["no value", {}, "value"],
     ["a value that is not JSON", { userToken: `x${TOKEN}` }, "value"],
