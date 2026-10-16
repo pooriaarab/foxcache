@@ -112,7 +112,8 @@ Checked on 2026-10-15 against the linked pages.
 | ChatGPT, Claude adapters | Implemented | vitest on synthetic fixtures, and E2E at the real origins |
 | Le Chat, DeepSeek adapters | Implemented, conversations only | vitest on synthetic fixtures |
 | Grok adapter | Implemented, conversations only | vitest on synthetic fixtures, and E2E at grok.com |
-| Gemini, Perplexity | No adapter: their reads need POST | [docs/providers/](docs/providers/README.md) |
+| Perplexity adapter | Implemented, conversations and memories | vitest on synthetic fixtures, and E2E at www.perplexity.ai |
+| Gemini | No adapter: its reads need POST | [docs/providers/](docs/providers/README.md) |
 | File store, CLI, MCP server | Implemented | vitest, the MCP server with the SDK in-memory client |
 | Firefox extension | Implemented | E2E on Ichabod (remote Firefox 158) and local Firefox, 32 checks |
 | SCENT with the real foxscope | Not tested | A stand-in extension with the foxscope id is used |
@@ -189,7 +190,7 @@ The memory list has one memory per line, for foxpack:
 
 ## Limits
 
-- Gemini and Perplexity have no adapter yet: their chat lists are read
+- Gemini has no adapter yet: its chat list is read
   by POST, and each POST read must be listed and checked by hand first. [docs/providers/](docs/providers/README.md) has the sources.
 - Not captured: Claude's topic memory (POST only), ChatGPT's GPTs (no confirmed endpoint),
   Le Chat and DeepSeek projects and memories (no known endpoint), and the contents of any file.

@@ -1,11 +1,12 @@
-// The adapters foxcache has, in the order the pages show them. Gemini and
-// Perplexity have none: docs/providers/README.md says why.
+// The adapters foxcache has, in the order the pages show them. Gemini has
+// none: docs/providers/README.md says why.
 import type { ProviderId } from "../schema.js";
 import { chatgpt } from "./chatgpt.js";
 import { claude } from "./claude.js";
 import { deepseek } from "./deepseek.js";
 import { grok } from "./grok.js";
 import { mistral } from "./mistral.js";
+import { perplexity } from "./perplexity.js";
 import type { Adapter } from "./types.js";
 
 // One adapter per line: docs/providers/ADDING.md.
@@ -15,6 +16,7 @@ export const ADAPTERS: readonly Adapter[] = Object.freeze([
   mistral,
   deepseek,
   grok,
+  perplexity,
 ]);
 
 /** The adapter for a provider id. Throws for a provider with no adapter. */
