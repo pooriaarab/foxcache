@@ -115,7 +115,7 @@ Checked on 2026-10-15 against the linked pages.
 
 | Surface | Status | How it is checked |
 |---|---|---|
-| Library (`foxcache`) | Implemented | 680 vitest tests, written from the failure modes |
+| Library (`foxcache`) | Implemented | 753 vitest tests, written from the failure modes |
 | ChatGPT adapter | Conversations, projects, memories, custom instructions, Codex tasks | vitest on synthetic fixtures, and E2E at chatgpt.com |
 | Claude adapter | Conversations, projects, memories, preferences | vitest on synthetic fixtures, and E2E at claude.ai |
 | Le Chat adapter | Conversations only | vitest on synthetic fixtures, and E2E at chat.mistral.ai |
