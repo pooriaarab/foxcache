@@ -28,6 +28,20 @@ describe("zai detect", () => {
   });
 });
 
+describe("zai deleted chat (ZAI41)", () => {
+  it("passes a chat that answers 401 while the session still holds", async () => {
+    const { checkpoint } = await captureAll(zai, open(swap(`/api/v1/chats/${Z1}`, { $status: 401 })).http);
+    expect([checkpoint.status, checkpoint.counts.conversations, checkpoint.counts.errors]).toEqual(["done", 2, 1]);
+    expect(checkpoint.lastErrors).toEqual([expect.stringMatching(new RegExp(`^${Z1}: not-found: zai: `))]);
+  });
+  it("ends with logged-out when the session is gone too", async () => {
+    const routes = swap(`/api/v1/chats/${Z1}`, { $status: 401 });
+    const f = open(routes);
+    expect(await code(zai.getConversation(fixtureHttp(zai, { ...routes, "/api/v1/auths/": { $status: 401 } }, storage).http, stub(Z1)))).toMatch(/^logged-out: /);
+    expect(await code(zai.getConversation(f.http, stub(Z1)))).toMatch(/^not-found: /);
+  });
+});
+
 describe("zai list", () => {
   it("pages from 1 to an empty page, with pinned and folder chats asked for", async () => {
     const f = open();
