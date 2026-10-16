@@ -33,7 +33,8 @@
     "https://github.com/*",
     "https://api.individual.githubcopilot.com/*",
     "https://www.kimi.com/*",
-    "https://www.doubao.com/*"
+    "https://www.doubao.com/*",
+    "https://app.notion.com/*"
   ],
   "background": {
     "scripts": [
