@@ -19,13 +19,14 @@
 | Qwen Chat | https://chat.qwen.ai | yes: conversations, projects, memories, personalization | [qwen.md](qwen.md) |
 | Z.ai | https://chat.z.ai | yes: conversations, custom instructions | [zai.md](zai.md) |
 | HuggingChat | https://huggingface.co (under /chat) | yes, conversations only | [huggingchat.md](huggingchat.md) |
+| Genspark | https://www.genspark.ai | yes, conversations only; exact paths only | [genspark.md](genspark.md) |
 
 foxcache sends only the reads each adapter lists (`src/reads.ts`): exact
 GET paths, and POST calls whose body names a read operation, each
 checked by hand against its source. ChatGPT, Claude, Le Chat, DeepSeek,
-Kagi Assistant, Qwen Chat, Z.ai and HuggingChat send GET only. Grok,
-Perplexity, Kimi, Doubao, Notion AI, Poe and Meta AI read by POST, each
-on its own read paths or commands. Gemini reads by POST, so it needs its
-list of read-only POST calls before it gets an adapter.
+Kagi Assistant, Qwen Chat, Z.ai, HuggingChat and Genspark send GET only.
+Grok, Perplexity, Kimi, Doubao, Notion AI, Poe and Meta AI read by POST,
+each on its own read paths or commands. Gemini reads by POST, so it
+needs its list of read-only POST calls before it gets an adapter.
 
 To add a provider, follow [ADDING.md](ADDING.md).
