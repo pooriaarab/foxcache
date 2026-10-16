@@ -1,7 +1,7 @@
 // H5, H7 and H14 in docs/failure-modes.md: each auth kind keeps its token
 // in the tab, inside http, and sends it only with a read.
 import { describe, expect, it } from "vitest";
-import { type Auth, FoxcacheError, type Read, chatgpt, cookie, createHttp, defineReads, localStorageBearer, pageSession } from "../src/index.js";
+import { type Auth, FoxcacheError, type Read, chatgpt, cookie, cookieBearer, createHttp, defineReads, localStorageBearer, pageSession } from "../src/index.js";
 
 const ORIGIN = "https://chat.example";
 const TOKEN = "eyJ-synthetic-secret-token";
@@ -34,9 +34,9 @@ function fakeFetch(routes: Record<string, string | { status: number; body?: stri
 }
 const bearerOf = (c: Call | undefined) => new Headers(c?.init.headers).get("authorization");
 
-function open(auth: Auth, fetch: (url: string, init: RequestInit) => Promise<Response>, page: { storage?: Record<string, string> } = {}) {
+function open(auth: Auth, fetch: (url: string, init: RequestInit) => Promise<Response>, page: { storage?: Record<string, string>; cookie?: string } = {}) {
   const storage = { getItem: (k: string) => page.storage?.[k] ?? null };
-  return createHttp({ origin: ORIGIN, reads: READS, auth }, { fetch, storage });
+  return createHttp({ origin: ORIGIN, reads: READS, auth }, { fetch, storage, cookie: () => page.cookie ?? "" });
 }
 
 async function err(p: Promise<unknown>): Promise<FoxcacheError> {
@@ -75,14 +75,14 @@ describe("page-session (ChatGPT)", () => {
   });
   it("H7 refuses the session answer under every spelling, before any request", async () => {
     const f = fakeFetch(routes);
-    const http = createHttp(chatgpt, { fetch: f.fetch, storage: { getItem: () => null } });
+    const http = createHttp(chatgpt, { fetch: f.fetch, storage: { getItem: () => null }, cookie: () => "" });
     const paths = ["/api/auth/session", "/api/auth/session/", "/api/auth/%73ession", "/api/auth/session;x", "/api/AUTH/session", "/backend-api/..%2Fapi%2Fauth%2Fsession", "/backend-api/%2e%2e/api/auth/session", "/backend-api/x%5C..%5Capi", "/backend-api"];
     for (const path of paths) expect((await err(http.get(path))).code, path).toBe("not-allowed");
     expect(f.calls).toHaveLength(0);
   });
   it.each([["/api/auth/session"], ["/api/auth/{name}"], ["/api/{a}/{b}"]])("H7 refuses a reads table with the read %s", (path) => {
     const reads = defineReads([{ method: "GET", path, source: SOURCE } as Read]);
-    expect(() => createHttp({ origin: ORIGIN, reads, auth: session }, { fetch: fakeFetch({}).fetch, storage: { getItem: () => null } })).toThrow(/token/);
+    expect(() => createHttp({ origin: ORIGIN, reads, auth: session }, { fetch: fakeFetch({}).fetch, storage: { getItem: () => null }, cookie: () => "" })).toThrow(/token/);
   });
   it("H14 throws logged-out when the session has no token, and sends no read", async () => {
     for (const body of ["{}", '{"accessToken":""}', '{"accessToken":5}', "null"]) {
@@ -125,6 +125,24 @@ describe("localStorage-bearer", () => {
   ])("H14 throws logged-out on %s, sends nothing, and names no value", async (_, storage, field) => {
     const f = fakeFetch({ "/api/me": "{}" });
     const e = await err(open(localStorageBearer({ key: "userToken", ...(field ? { field } : {}) }), f.fetch, { storage }).get("/api/me"));
+    expect([e.code, leaks(e), f.calls.length]).toEqual(["logged-out", false, 0]);
+  });
+});
+
+describe("cookie-bearer", () => {
+  it("reads the named cookie (Manus session_id), decoded", async () => {
+    const f = fakeFetch({ "/api/me": "{}" });
+    await open(cookieBearer({ name: "session_id" }), f.fetch, { cookie: `xsession_id=evil; session_id=${encodeURIComponent(`${TOKEN}+/=`)}; b=2` }).get("/api/me");
+    expect(bearerOf(f.calls[0])).toBe(`Bearer ${TOKEN}+/=`);
+  });
+  it("reads a field of a JSON cookie", async () => {
+    const f = fakeFetch({ "/api/me": "{}" });
+    await open(cookieBearer({ name: "sb-auth-token", field: "access_token" }), f.fetch, { cookie: `sb-auth-token=${encodeURIComponent(JSON.stringify({ access_token: TOKEN }))}` }).get("/api/me");
+    expect(bearerOf(f.calls[0])).toBe(`Bearer ${TOKEN}`);
+  });
+  it.each([["no cookie", ""], ["another cookie that ends with the name", `xsession_id=${TOKEN}`], ["an empty cookie", "session_id="], ["a broken escape", `session_id=%ZZ${TOKEN}`]])("H14 throws logged-out on %s", async (_, jar) => {
+    const f = fakeFetch({ "/api/me": "{}" });
+    const e = await err(open(cookieBearer({ name: "session_id" }), f.fetch, { cookie: jar }).get("/api/me"));
     expect([e.code, leaks(e), f.calls.length]).toEqual(["logged-out", false, 0]);
   });
 });

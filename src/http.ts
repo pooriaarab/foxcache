@@ -32,6 +32,8 @@ export interface Page {
   fetch: (url: string, init: RequestInit) => Promise<Response>;
   /** The page's localStorage. */
   storage: { getItem(key: string): string | null };
+  /** The page's document.cookie. */
+  cookie(): string;
 }
 
 
@@ -116,6 +118,7 @@ export function createHttp(site: HttpSite, page: Page): Http {
   const sign = site.auth.open({
     origin,
     storage: page.storage,
+    cookie: () => page.cookie(),
     getJson: async (path) => {
       if (!site.auth.tokenPaths.includes(path)) throw new FoxcacheError("not-allowed", `${path} is not a token path of the ${site.auth.kind} auth.`);
       return send({ url: new URL(path, origin) });
