@@ -12,6 +12,17 @@ function answer(f, method, u, key) {
   for (const k of method === "GET" ? [key, u.pathname] : [`${method} ${key}`, `${method} ${u.pathname}`]) if (f && k in f.routes) return f.routes[k];
   return undefined;
 }
+/** A batchexecute answer, as tests/fixture-http.ts frames it. */
+const batchWire = (frames) => `)]}'\n${Object.entries(frames).map(([id, result]) => {
+  const line = JSON.stringify([["wrb.fr", id, JSON.stringify(result), null, null, null, "generic"]]);
+  return `\n${line.length}\n${line}`;
+}).join("")}`;
+/** The reply for a fixture body: {"$status"}, {"$text", "$type"?} as it is, {"$batchexecute"} framed, or JSON. */
+function encode(body) {
+  if (body && typeof body === "object" && "$text" in body) return { status: 200, body: body.$text, type: body.$type ?? "text/plain" };
+  if (body && typeof body === "object" && "$batchexecute" in body) return { status: 200, body: batchWire(body.$batchexecute), type: "application/json; charset=utf-8" };
+  return { status: typeof body === "object" && body && "$status" in body ? body.$status : 200, body: JSON.stringify(body) };
+}
 const PAGE = (host) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${host} (fixture)</title></head><body><p>A fixture page for ${host}. The E2E serves it in place of the real site.</p></body></html>`;
 
 /**
@@ -42,9 +53,9 @@ export async function serveFixtures(connection, providers, hosts = {}) {
     let reply = overrides.get(`${u.host}${key}`)?.(n) ?? hosts[u.host]?.(u);
     if (!reply) {
       const body = answer(f, event.request.method, u, key);
-      if (u.pathname === "/") reply = { status: 200, body: PAGE(u.host), type: "text/html" };
-      else if (body === undefined) reply = { status: 404, body: '{"error":"not in the fixture"}' };
-      else reply = { status: typeof body === "object" && body && "$status" in body ? body.$status : 200, body: JSON.stringify(body) };
+      if (body !== undefined) reply = encode(body);
+      else if (u.pathname === "/") reply = { status: 200, body: PAGE(u.host), type: "text/html" };
+      else reply = { status: 404, body: '{"error":"not in the fixture"}' };
     }
     if (api) reply = { ...reply, headers: { ...reply.headers, ...api.headers } };
     const origin = event.request.headers.find((h) => h.name.toLowerCase() === "origin")?.value.value;
