@@ -23,7 +23,7 @@ const ICON_SIZES = ["48", "96", "128"];
 const LOCAL_KEYS = ["privacy_policy", "local_hosts"];
 // A match pattern for this computer: test bridges and test servers use these.
 const LOCAL_HOST = /^(\*|https?|wss?):\/\/(127\.0\.0\.1|localhost|\*\.localhost|\[::1\])(:[0-9*]+)?\//;
-// A file named for tests must not ship (AR4).
+// A file named for tests must not ship (R61).
 const TEST_FILE = /(^|[/._-])(e2e|fixtures?|tests?|spec)([/._-]|$)/i;
 
 const meta = JSON.parse(readFileSync(META_FILE, "utf8"));
@@ -101,8 +101,8 @@ function files(dir, prefix = "") {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? files(`${dir}/${e.name}`, `${prefix}${e.name}/`) : [`${prefix}${e.name}`]));
 }
 
-// AR1-AR5: dist-ext/ is what release.yml signs, so it must hold no test-only
-// piece. A local host needs a reason per pattern and use (local_hosts, C29).
+// R61: dist-ext/ is what release.yml signs, so it must hold no test-only
+// piece. A local host needs a reason per pattern and use (local_hosts).
 function scanReleaseBuild(fail) {
   if (!existsSync("dist-ext/manifest.json")) {
     fail("dist-ext/ is missing; run pnpm build:ext (the release build) first");
@@ -155,7 +155,7 @@ function addonUrl() {
   return new URL(`addons/addon/${encodeURIComponent(manifest.browser_specific_settings.gecko.id)}/`, api);
 }
 
-// AR7-AR9. The "v" prefix makes AMO read the path as a version number.
+// The "v" prefix makes AMO read the path as a version number.
 async function versionStatus() {
   const url = new URL(`versions/v${manifest.version}/`, addonUrl());
   const res = await fetch(url, { headers: { Authorization: jwt(), Accept: "application/json" } });
