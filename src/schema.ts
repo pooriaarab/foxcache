@@ -16,6 +16,7 @@ export const PROVIDERS = [
   "github-copilot",
   "kimi",
   "doubao",
+  "notion",
 ] as const;
 export type ProviderId = (typeof PROVIDERS)[number];
 export const ROLES = ["user", "assistant", "system", "tool"] as const;
