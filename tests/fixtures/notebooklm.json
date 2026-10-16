@@ -1,0 +1,14 @@
+{
+ "provider": "notebooklm",
+ "origin": "https://notebook.google.com",
+ "note": "Synthetic data in the documented notebook.google.com batchexecute shapes (docs/providers/notebooklm.md). No real notebook, no real token.",
+ "routes": {
+  "/": {"$text": "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Gemini Notebook (fixture)</title><script>window.WIZ_global_data = {\"Qzxixc\":\"synthetic\",\"SNlM0e\":\"AJpMQsynthetic-notebook-xsrf:1760000000000\",\"cfb2h\":\"boq_labs-tailwind-frontend_20261001.00_p0\",\"FdrFJe\":\"-987654321\"};</script></head><body><p>A fixture page for notebook.google.com. The E2E serves it in place of the real site.</p></body></html>", "$type": "text/html"},
+  "POST /_/LabsTailwindUi/data/batchexecute?rpcids=wXbhsf&source-path=/&hl=en&rt=c&bl=boq_labs-tailwind-frontend_20261001.00_p0&f.sid=-987654321": {"$batchexecute": {"wXbhsf": [[["Thesis sources", null, "0a1b2c3d-1111-4222-8333-444455556666", "📚", null, [1, null, null, null, null, [1790000000, 0], null, null, [1780000000, 0]]], ["thought\nRecipes", null, "0a1b2c3d-2222-4222-8333-444455556666", "🍲", null, [1, null, null, null, null, [1785000000, 0], null, null, [1781000000, 0]]]]]}},
+  "POST /_/LabsTailwindUi/data/batchexecute?rpcids=rLM1Ne&source-path=/notebook/0a1b2c3d-1111-4222-8333-444455556666&hl=en&rt=c&bl=boq_labs-tailwind-frontend_20261001.00_p0&f.sid=-987654321": {"$batchexecute": {"rLM1Ne": [["Thesis sources", [[["src-synthetic-1"], "chapter1.pdf", [null, 1234]], [[null, true, ["drive-synthetic-2"]], "Field notes", []]], "0a1b2c3d-1111-4222-8333-444455556666", "📚", null, [1, null, null, null, null, [1790000000, 0], null, null, [1780000000, 0]], null, [[2, "Answer as a thesis advisor."], [1]]]]}},
+  "POST /_/LabsTailwindUi/data/batchexecute?rpcids=rLM1Ne&source-path=/notebook/0a1b2c3d-2222-4222-8333-444455556666&hl=en&rt=c&bl=boq_labs-tailwind-frontend_20261001.00_p0&f.sid=-987654321": {"$batchexecute": {"rLM1Ne": [["thought\nRecipes", null, "0a1b2c3d-2222-4222-8333-444455556666", "🍲", null, [1, null, null, null, null, [1785000000, 0], null, null, [1781000000, 0]], null, null]]}},
+  "POST /_/LabsTailwindUi/data/batchexecute?rpcids=hPTbtc&source-path=/notebook/0a1b2c3d-1111-4222-8333-444455556666&hl=en&rt=c&bl=boq_labs-tailwind-frontend_20261001.00_p0&f.sid=-987654321": {"$batchexecute": {"hPTbtc": [[["conv-synthetic-1"]]]}},
+  "POST /_/LabsTailwindUi/data/batchexecute?rpcids=hPTbtc&source-path=/notebook/0a1b2c3d-2222-4222-8333-444455556666&hl=en&rt=c&bl=boq_labs-tailwind-frontend_20261001.00_p0&f.sid=-987654321": {"$batchexecute": {"hPTbtc": []}},
+  "POST /_/LabsTailwindUi/data/batchexecute?rpcids=khqZz&source-path=/notebook/0a1b2c3d-1111-4222-8333-444455556666&hl=en&rt=c&bl=boq_labs-tailwind-frontend_20261001.00_p0&f.sid=-987654321": {"$batchexecute": {"khqZz": [[[null, null, 2, null, [["Chapter 1 argues <script>alert(1)</script> is text."]]], [null, null, 1, "What does chapter 1 argue?"]]]}}
+ }
+}

@@ -1,0 +1,28 @@
+{
+ "provider": "poe",
+ "origin": "https://poe.com",
+ "note": "Synthetic data in the documented poe.com shapes (docs/providers/poe.md). No real chat, no real formkey. The E2E sees no POST body, so the plain POST answer holds both data.chats (the list) and data.node (one chat); unit tests answer each operation by its exact body.",
+ "routes": {
+  "POST /api/gql_POST": {
+   "data": {
+    "chats": {
+     "edges": [
+      {"node": {"id": "Q2hhdDoxMDE=", "chatId": 101, "chatCode": "2abc101", "title": "Lisbon in three days", "defaultBotObject": {"displayName": "Assistant"}}},
+      {"node": {"id": "Q2hhdDoxMDI=", "chatId": 102, "chatCode": "2abc102", "title": "<img src=x onerror=alert(1)> recipe", "defaultBotObject": {"displayName": "Claude-Sonnet"}}}
+     ],
+     "pageInfo": {"hasNextPage": false, "endCursor": "Y3Vyc29yOjI="}
+    },
+    "node": {
+     "id": "Q2hhdDoxMDE=",
+     "messagesConnection": {
+      "edges": [
+       {"node": {"messageId": 5001, "author": "human", "text": "Plan three days in Lisbon", "contentType": "text_markdown", "creationTime": 1759312800000000, "state": "complete"}},
+       {"node": {"messageId": 5002, "author": "assistant", "text": "Day 1: Alfama and the castle.", "contentType": "text_markdown", "creationTime": 1759312805123456, "state": "complete"}}
+      ],
+      "pageInfo": {"hasNextPage": false, "startCursor": "bXNnOjUwMDE="}
+     }
+    }
+   }
+  }
+ }
+}

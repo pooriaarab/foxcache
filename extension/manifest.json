@@ -1,0 +1,65 @@
+{
+  "manifest_version": 3,
+  "name": "foxcache — your AI chats in your browser",
+  "version": "0.2.0",
+  "description": "Capture your own AI chats, projects, memories and preferences into your browser.",
+  "icons": {
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png",
+    "128": "icons/icon-128.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "foxcache@pooriaarab",
+      "strict_min_version": "153.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
+    }
+  },
+  "permissions": [
+    "scripting",
+    "unlimitedStorage"
+  ],
+  "optional_host_permissions": [
+    "https://chatgpt.com/*",
+    "https://claude.ai/*",
+    "https://chat.mistral.ai/*",
+    "https://chat.deepseek.com/*",
+    "https://grok.com/*",
+    "https://www.perplexity.ai/*",
+    "https://github.com/*",
+    "https://api.individual.githubcopilot.com/*",
+    "https://www.kimi.com/*",
+    "https://www.doubao.com/*",
+    "https://app.notion.com/*",
+    "https://assistant.kagi.com/*",
+    "https://poe.com/*",
+    "https://www.meta.ai/*",
+    "https://chat.qwen.ai/*",
+    "https://chat.z.ai/*",
+    "https://huggingface.co/*",
+    "https://www.genspark.ai/*",
+    "https://gemini.google.com/*",
+    "https://notebook.google.com/*"
+  ],
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "action": {
+    "default_title": "foxcache",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "48": "icons/icon-48.png",
+      "96": "icons/icon-96.png"
+    }
+  },
+  "options_ui": {
+    "page": "settings.html",
+    "open_in_tab": true
+  }
+}
