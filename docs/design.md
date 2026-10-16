@@ -74,7 +74,7 @@ Each adapter names its auth kind, one file each in `src/auth/`:
 |---|---|---|
 | `cookie` | none: the cookies alone | Claude, Le Chat, Grok, Perplexity, Doubao, Notion AI, Kagi Assistant, Meta AI, HuggingChat, Genspark |
 | `page-session` | a field of a session answer the page reads with its cookies | ChatGPT (`/api/auth/session`) |
-| `localStorage-bearer` | a localStorage key, or a field of its JSON | DeepSeek (`userToken`) |
+| `localStorage-bearer` | a localStorage key, or a field of its JSON | DeepSeek (`userToken`), Kimi (`access_token`), Z.ai (`token`), GitHub Copilot (`COPILOT_AUTH_TOKEN`, sent only before its `expiration`), Qwen Chat (`token`, under `with-headers`) |
 | `page-formkey` | a key a page function gives, found by name in the inline JavaScript (H31), plus an md5 tag of each POST body (`src/md5.ts`) | Poe (`poe-formkey`, `poe-tag-id`) |
 | `with-headers` | fixed headers the page adds, on top of another kind | Qwen Chat (`source: web`, on `localStorage-bearer`) |
 | `google-page-tokens` | `at`, `bl` and `f.sid` from the HTML of a page | Gemini, NotebookLM |
