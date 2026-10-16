@@ -156,6 +156,15 @@ describe("gemini Gems and saved info", () => {
     expect((await gemini.memories!(open().http)).map((m) => check("memories", m))).toEqual([{ provider: "gemini", id: "saved-synthetic-1", text: "I am vegetarian.", createdAt: "2026-05-28T20:26:40.000Z" }]);
     expect(await gemini.memories!(open({ [post("ZKcapf", "/saved-info")]: be("ZKcapf", []) }).http)).toEqual([]);
   });
+  it("GE41 throws too-large for 100 saved-info items, so no stored memory is deleted", async () => {
+    const items = Array.from({ length: 100 }, (_, i) => [`saved-${i}`, `Fact ${i}`, [1780000000, 0]]);
+    const routes = { [post("ZKcapf", "/saved-info")]: be("ZKcapf", [items, "token-synthetic"]) };
+    expect(await code(gemini.memories!(open(routes).http))).toMatch(/^too-large: gemini: /);
+    const kept: string[] = [];
+    const sink = { put: async () => ({ stop: false }), checkpoint: async () => ({ stop: false }), keep: async (kind: string) => (kept.push(kind), { stop: false }) };
+    const cp = await runCapture({ adapter: gemini, http: open(routes).http, stamps: {}, delayMs: 0, sink });
+    expect([cp.counts.errors, kept]).toEqual([1, ["library"]]);
+  });
   it("GE1 throws provider-schema on a saved-info item with no text", async () => {
     expect(await code(gemini.memories!(open({ [post("ZKcapf", "/saved-info")]: be("ZKcapf", [[["id-1", null, [1, 0]]], "t"]) }).http))).toMatch(/^provider-schema: gemini: ZKcapf\[0\]\[0\]\[1\] is not text/);
   });
