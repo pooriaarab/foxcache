@@ -18,6 +18,8 @@ export interface AuthPage {
   call(name: string): unknown;
   /** GET one of the kind's tokenPaths on the site's origin with the page cookies, and parse the JSON. */
   getJson(path: string): Promise<unknown>;
+  /** GET one of the kind's tokenPaths, such as a page whose HTML holds tokens, and give the text. */
+  getText(path: string): Promise<string>;
 }
 
 /** One request that is a read, before the auth adds its parts. */
@@ -41,7 +43,7 @@ export interface AuthParts {
 export type Sign = (request: AuthRequest, fresh: boolean) => Promise<AuthParts>;
 
 export interface Auth {
-  /** The kind, as in the file name: cookie, page-session, localStorage-bearer, cookie-bearer, page-formkey. */
+  /** The kind, as in the file name: cookie, page-session, localStorage-bearer, cookie-bearer, page-formkey, with-headers, google-page-tokens. */
   readonly kind: string;
   /** Paths on the site's origin that the kind reads itself because they hold the token. No read may name one (H7). */
   readonly tokenPaths: readonly string[];
