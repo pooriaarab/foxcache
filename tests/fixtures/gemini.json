@@ -1,0 +1,14 @@
+{
+ "provider": "gemini",
+ "origin": "https://gemini.google.com",
+ "note": "Synthetic data in the documented gemini.google.com batchexecute shapes (docs/providers/gemini.md). No real chat, no real token.",
+ "routes": {
+  "/app": {"$text": "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Gemini (fixture)</title><script>window.WIZ_global_data = {\"Qzxixc\":\"synthetic\",\"SNlM0e\":\"AJpMQsynthetic-xsrf-token:1760000000000\",\"cfb2h\":\"boq_assistant-bard-web-server_20261001.00_p0\",\"FdrFJe\":\"-1234567890\",\"TuX5cc\":\"en\"};</script></head><body><p>A fixture page for gemini.google.com. The E2E serves it in place of the real site.</p></body></html>", "$type": "text/html"},
+  "POST /_/BardChatUi/data/batchexecute?rpcids=ESY5D&source-path=/app&hl=en&rt=c&bl=boq_assistant-bard-web-server_20261001.00_p0&f.sid=-1234567890": {"$batchexecute": {"ESY5D": [[["default_bot_id", "synthetic"]]]}},
+  "POST /_/BardChatUi/data/batchexecute?rpcids=MaZiqc&source-path=/app&hl=en&rt=c&bl=boq_assistant-bard-web-server_20261001.00_p0&f.sid=-1234567890": {"$batchexecute": {"MaZiqc": [null, null, [["c_a1b2c3d4e5f60708", "Lisbon in three days", true, null, null, [1790000000, 500000000], null, null, null, 2], ["c_0f1e2d3c4b5a6978", "<b>Hostile</b> title", null, null, null, [1789000000, 500000000], null, null, null, 2]]]}},
+  "POST /_/BardChatUi/data/batchexecute?rpcids=hNvQHb&source-path=/app/a1b2c3d4e5f60708&hl=en&rt=c&bl=boq_assistant-bard-web-server_20261001.00_p0&f.sid=-1234567890": {"$batchexecute": {"hNvQHb": [[[["c_x", "r_2"], ["c_x", "r_2", "rc_2"], [["And day 3?"], 1, null, 0], [[["rc_2", ["Day 3: Sintra."], [], null, null, null, null, null, [2]]]], [1790000000, 0]], [["c_x", "r_1"], ["c_x", "r_1", "rc_1"], [["Plan three days in Lisbon"], 1, null, 0], [[["rc_1", ["Day 1: Alfama. Day 2: Belem."], [], null, null, null, null, null, [2]]]], [1789990000, 0]]]]}},
+  "POST /_/BardChatUi/data/batchexecute?rpcids=hNvQHb&source-path=/app/0f1e2d3c4b5a6978&hl=en&rt=c&bl=boq_assistant-bard-web-server_20261001.00_p0&f.sid=-1234567890": {"$batchexecute": {"hNvQHb": [[[["c_x", "r_3"], ["c_x", "r_3", "rc_3"], [["<img src=x onerror=alert(1)>"], 1, null, 0], [[["rc_3", ["I show <script>alert(2)</script> as text."], [], null, null, null, null, null, [2]]]], [1789000000, 0]]]]}},
+  "POST /_/BardChatUi/data/batchexecute?rpcids=CNgdBe&source-path=/app&hl=en&rt=c&bl=boq_assistant-bard-web-server_20261001.00_p0&f.sid=-1234567890": {"$batchexecute": {"CNgdBe": [null, null, [["gem-synthetic-1", ["Travel planner", "Plans short trips"], ["You plan trips."]]]]}},
+  "POST /_/BardChatUi/data/batchexecute?rpcids=ZKcapf&source-path=/saved-info&hl=en&rt=c&bl=boq_assistant-bard-web-server_20261001.00_p0&f.sid=-1234567890": {"$batchexecute": {"ZKcapf": [[["saved-synthetic-1", "I am vegetarian.", [1780000000, 0], null, [1780000000, 0], null, null, null, null, 1, 1]], "token-synthetic"]}}
+ }
+}
