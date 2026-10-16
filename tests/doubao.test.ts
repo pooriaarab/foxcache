@@ -64,9 +64,13 @@ describe("doubao detect (D1, D2)", () => {
     expect(await doubao.detect(open().http)).toBe(true);
     expect(await doubao.detect(open(routes({ "POST /im/chain/recent_conv": { $status: 401 } })).http)).toBe(false);
   });
-  it("D40 is signed out when the probe answers a status_code that is not 0 and not a known other error", async () => {
-    expect(await doubao.detect(open(routes({ "POST /im/chain/recent_conv": { status_code: 710012001, status_desc: "login expired" } })).http)).toBe(false);
-    expect(await code(doubao.detect(open(routes({ "POST /im/chain/recent_conv": { status_code: 712012002, status_desc: "unsupported encoding" } })).http))).toMatch(/^provider-error: doubao: .* 712012002\.$/);
+  it("D40 is signed out only on the documented 401; an unknown status_code is provider-error", async () => {
+    for (const [status, desc] of [[710012001, "login expired"], [712012002, "unsupported encoding"], [712010702, "error"]] as const) {
+      expect(await code(doubao.detect(open(routes({ "POST /im/chain/recent_conv": { status_code: status, status_desc: desc } })).http))).toBe(`provider-error: doubao: /im/chain/recent_conv answered status ${status}.`);
+    }
+  });
+  it("D40 is rate-limited, not signed out, when the probe answers 429", async () => {
+    expect(await code(doubao.detect(open(routes({ "POST /im/chain/recent_conv": { $status: 429 } })).http))).toMatch(/^rate-limited: /);
   });
   it("throws provider-error with the code when status_code is not 0", async () => {
     expect(await code(doubao.detect(open(routes({ "POST /im/chain/recent_conv": { status_code: 710022004, status_desc: "<b>verify</b>" } })).http))).toBe("provider-error: doubao: /im/chain/recent_conv answered status 710022004.");
