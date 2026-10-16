@@ -31,3 +31,15 @@ describe("P60 the docs name every adapter", () => {
     expect(listed("By POST as well")).toEqual(labels(posts));
   });
 });
+
+describe("C8 the docs say which sites read every chat again", () => {
+  // GE40 and GENSPARK41: their lists give no time that moves on a new message.
+  const texts = { "README.md": readme, "docs/design.md": readFileSync("docs/design.md", "utf8"), "extension/amo-metadata.json": (JSON.parse(readFileSync("extension/amo-metadata.json", "utf8")) as { description: Record<string, string> }).description["en-US"]! };
+  it("names Gemini and Genspark, and why, wherever a second capture fetches only what changed", () => {
+    for (const [file, text] of Object.entries(texts)) {
+      const claims = text.split(/(?<=\.)\s|\n\n|\|\n/).filter((s) => /changed/i.test(s) && /second (capture|run)|only what/i.test(s));
+      expect(claims.length, file).toBeGreaterThan(0);
+      for (const claim of claims) expect(claim.replace(/\s+/g, " "), file).toMatch(/most sites[\s\S]*Gemini and Genspark read every [\s\S]*no time that moves/i);
+    }
+  });
+});
