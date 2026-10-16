@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "foxcache — your AI chats in your browser",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Capture your own AI chats, projects, memories and preferences into your browser.",
   "icons": {
     "48": "icons/icon-48.png",
