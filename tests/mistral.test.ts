@@ -3,12 +3,11 @@ import { FoxcacheError, type Http, MAX_MESSAGES, check, mistral } from "../src/i
 import { MAX_SUBPAGES } from "../src/adapters/read.js";
 import { fixture, fixtureHttp } from "./fixture-http.js";
 
-const ORIGIN = "https://chat.mistral.ai";
 const C1 = "0b6f0000-0000-4000-8000-000000000001";
 const C2 = "0b6f0000-0000-4000-8000-000000000002";
 const SESSION = '/api/trpc/user.session?batch=1&input={"0":{"json":{}}}';
 const LIST = '/api/trpc/chat.last?batch=1&input={"0":{"json":{}}}';
-const open = (routes = fixture("mistral")) => fixtureHttp(ORIGIN, routes);
+const open = (routes = fixture("mistral")) => fixtureHttp(mistral, routes);
 const stub = (id: string) => ({ id, title: "", updatedAt: "" });
 
 async function code(p: Promise<unknown>): Promise<string> {

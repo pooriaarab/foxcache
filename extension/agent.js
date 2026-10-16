@@ -3,7 +3,7 @@
 // It runs the provider's adapter here, so each fetch is same-origin and
 // carries the session the page already has. It sends each record to the
 // event page, one at a time, and stops when the answer says so.
-// Read-only: http (src/http.ts) has GET on this origin and nothing else.
+// Read-only: http (src/http.ts) sends the adapter's reads and nothing else.
 import { adapterAt, createHttp, runCapture } from "../src/index.ts";
 
 /** The event page stores each record and answers { stop }. No answer means stop. */
@@ -17,7 +17,7 @@ async function send(message) {
 if (!globalThis.foxcacheAgent) {
   globalThis.foxcacheAgent = true;
   const adapter = adapterAt(location.origin);
-  const http = () => createHttp({ origin: location.origin, fetch: (url, init) => fetch(url, init), auth: adapter.auth, storage: window.localStorage });
+  const http = () => createHttp(adapter, { fetch: (url, init) => fetch(url, init), storage: window.localStorage });
   let running = false;
   let stopper;
 
