@@ -26,7 +26,7 @@ const FROM_LATEST = 3;
 const OLDER = 1;
 const BOT_CHAT = 3;
 const TEXT_BLOCK = 10000;
-const read = (c: typeof LIST, source: string) => ({ method: "POST" as const, path: c.path, query: Object.keys(QUERY), body: { type: "json" as const, match: { cmd: c.cmd } }, headers: HEADERS, source });
+const read = (c: typeof LIST, source: string) => ({ method: "POST" as const, path: c.path, query: Object.keys(QUERY), body: { type: "json" as const, match: { cmd: c.cmd }, keys: ["cmd", "uplink_body", "sequence_id", "channel", "version"] }, headers: HEADERS, source });
 
 /** One pull. An error comes with HTTP 200 and a status_code that is not 0 (D2). */
 async function pull(http: Http, c: typeof LIST, payload: Obj): Promise<Obj> {

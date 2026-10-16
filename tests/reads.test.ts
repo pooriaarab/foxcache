@@ -8,7 +8,7 @@ const SOURCE = "https://example.test/docs#get";
 const page = { fetch: async () => new Response("{}"), storage: { getItem: () => null }, scripts: () => [], call: () => undefined };
 const open = (reads: readonly Read[]) => () => createHttp({ origin: ORIGIN, reads, auth: cookie }, page);
 const get = (path: string, extra: Partial<Read> = {}): Read => ({ method: "GET", path, source: SOURCE, ...extra });
-const op = (queryName: string): Read => get("/graphql", { method: "POST", body: { type: "json", match: { queryName } } });
+const op = (queryName: string): Read => get("/graphql", { method: "POST", body: { type: "json", match: { queryName }, keys: ["queryName"] } });
 
 describe("H11 a wrong reads table", () => {
   it("refuses a table that is not frozen", () => {
@@ -31,7 +31,7 @@ describe("H11 a wrong reads table", () => {
     expect(open(defineReads([get("/a/{id}"), get("/a/{id}", { query: ["x"] })]))).toThrow(/twice/);
   });
   it("refuses a GET with a body rule, and a POST without one", () => {
-    expect(open(defineReads([get("/a", { body: { type: "json", match: {} } })]))).toThrow(/body/);
+    expect(open(defineReads([get("/a", { body: { type: "json", match: {}, keys: [] } })]))).toThrow(/body/);
     expect(open(defineReads([get("/a", { method: "POST" })]))).toThrow(/body/);
   });
   it("refuses a body rule it does not know, or one with no match", () => {

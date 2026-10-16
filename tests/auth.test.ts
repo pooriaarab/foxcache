@@ -11,7 +11,7 @@ const READS = defineReads([
   { method: "GET", path: "/api/me", source: SOURCE },
   { method: "GET", path: "/api/fail", source: SOURCE },
   { method: "POST", path: "/api/list", body: { type: "form", match: {} }, source: SOURCE },
-  { method: "POST", path: "/api/graph", body: { type: "json", match: {} }, source: SOURCE },
+  { method: "POST", path: "/api/graph", body: { type: "json", match: {}, keys: ["queryName", "variables"] }, source: SOURCE },
 ]);
 
 interface Call {
