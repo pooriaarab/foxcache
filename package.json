@@ -42,17 +42,17 @@
     "e2e": "pnpm build && node scripts/build-ext.mjs --e2e && node e2e/run.mjs"
   },
   "devDependencies": {
-    "@types/node": "^24.19.1",
-    "create-foxkit": "^0.1.8",
+    "@types/node": "^26.6.6",
+    "create-foxkit": "^0.1.9",
     "esbuild": "^0.28.2",
-    "oxlint": "^1.87.0",
-    "puppeteer-core": "^25.14.0",
+    "oxlint": "^1.90.0",
+    "puppeteer-core": "^25.16.0",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.3",
-    "web-ext": "^10.7.0"
+    "vitest": "^5.1.0",
+    "web-ext": "^10.8.0"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "zod": "^4.6.7"
   },
   "keywords": [
